@@ -15,8 +15,8 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-[env(safe-area-inset-bottom)]">
-      <div className="w-full max-w-[480px] border-t border-border bg-bg-primary/95 backdrop-blur-sm">
-        <div className="flex items-center justify-around">
+      <div className="w-full max-w-[480px] min-w-0 border-t border-border bg-bg-primary/95 backdrop-blur-sm">
+        <div className="flex min-w-0 items-center justify-around">
           {tabs.map((tab) => {
             const active = tab.path === "/" ? location.pathname === "/" : location.pathname.startsWith(tab.path);
             return (

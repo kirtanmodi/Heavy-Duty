@@ -12,8 +12,8 @@ function AppRoutes() {
   const activeProgram = useSettingsStore((s) => s.activeProgram);
 
   return (
-    <div className="w-full min-h-dvh flex flex-col items-center">
-      <div className="w-full max-w-[480px] mx-auto flex-1 flex flex-col">
+    <div className="w-full min-h-dvh min-w-0 flex flex-col items-center overflow-x-hidden">
+      <div className="w-full max-w-[480px] min-w-0 mx-auto flex-1 flex flex-col">
         <Routes>
           <Route path="/" element={activeProgram ? <Home /> : <Navigate to="/program-select" replace />} />
           <Route path="/program-select" element={<ProgramSelect />} />
