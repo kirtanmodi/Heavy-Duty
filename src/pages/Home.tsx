@@ -42,7 +42,7 @@ export function Home() {
   return (
     <PageLayout>
       {/* Header */}
-      <div className="flex items-baseline justify-between pt-8 pb-2">
+      <div className="flex items-baseline justify-between pt-12 pb-3">
         <h1 className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[3px] text-text-primary">
           Heavy Duty
         </h1>
@@ -74,7 +74,7 @@ export function Home() {
           {todayDay.type === 'lift' && (
             <button
               onClick={() => navigate(`/workout/${todayDay.id}`)}
-              className="mt-6 w-full rounded-xl bg-accent-red py-4 font-[var(--font-display)] text-sm font-semibold uppercase tracking-[1.5px] text-white transition-all active:scale-[0.98]"
+              className="mt-6 w-full rounded-xl bg-accent-red py-5 font-[var(--font-display)] text-sm font-semibold uppercase tracking-[1.5px] text-white transition-all active:scale-[0.98]"
             >
               Start Workout
             </button>

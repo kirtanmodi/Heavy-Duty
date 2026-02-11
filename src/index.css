@@ -51,6 +51,13 @@ html {
 body {
   min-height: 100dvh;
   overscroll-behavior: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+@supports (padding: max(0px)) {
+  body {
+    padding: max(env(safe-area-inset-top), 0px) max(env(safe-area-inset-right), 0px) max(env(safe-area-inset-bottom), 0px) max(env(safe-area-inset-left), 0px);
+  }
 }
 
 input[type="number"]::-webkit-inner-spin-button,

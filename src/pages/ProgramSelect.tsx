@@ -16,7 +16,7 @@ export function ProgramSelect() {
 
   return (
     <PageLayout>
-      <div className="pt-10 pb-6">
+      <div className="pt-12 pb-6">
         <h1 className="font-[var(--font-display)] text-2xl font-bold tracking-wide text-text-primary">
           Choose Program
         </h1>
@@ -30,7 +30,7 @@ export function ProgramSelect() {
           <button
             key={program.id}
             onClick={() => handleSelect(program.id as ProgramId)}
-            className={`rounded-xl p-5 text-left transition-all active:scale-[0.98] ${
+            className={`rounded-xl p-6 text-left transition-all active:scale-[0.98] ${
               isActive
                 ? 'border-l-[3px] border-accent-red bg-bg-card pl-[17px]'
                 : 'bg-bg-card'

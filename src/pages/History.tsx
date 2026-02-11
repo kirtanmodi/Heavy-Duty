@@ -8,7 +8,7 @@ export function History() {
 
   return (
     <PageLayout>
-      <div className="pt-6 pb-4">
+      <div className="pt-8 pb-5">
         <h1 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[2px] text-text-primary">
           History
         </h1>
@@ -24,7 +24,7 @@ export function History() {
           <p className="mt-1 text-xs text-text-dim">Complete your first workout to see it here</p>
           <button
             onClick={() => navigate('/')}
-            className="mt-4 rounded-xl bg-gradient-to-r from-accent-red to-accent-orange px-6 py-3 font-[var(--font-display)] text-sm font-semibold uppercase tracking-wider text-white"
+            className="mt-4 rounded-xl bg-gradient-to-r from-accent-red to-accent-orange px-6 py-4 font-[var(--font-display)] text-sm font-semibold uppercase tracking-wider text-white"
           >
             Start Training
           </button>

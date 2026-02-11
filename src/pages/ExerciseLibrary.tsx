@@ -7,7 +7,7 @@ export function ExerciseLibrary() {
 
   return (
     <PageLayout>
-      <div className="pt-6 pb-4">
+      <div className="pt-8 pb-5">
         <h1 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[2px] text-text-primary">
           Exercise Library
         </h1>
@@ -29,7 +29,7 @@ export function ExerciseLibrary() {
                 <button
                   key={ex.id}
                   onClick={() => navigate(`/exercise/${ex.id}`)}
-                  className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-bg-input"
+                  className="flex w-full items-center gap-3 px-5 py-5 text-left transition-colors active:bg-bg-input"
                 >
                   <div className="flex-1">
                     <div className="text-sm font-medium text-text-primary">{ex.name}</div>

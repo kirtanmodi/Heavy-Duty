@@ -135,7 +135,7 @@ export function Workout() {
 
       <PageLayout>
         {/* Header */}
-        <div className="flex items-center justify-between pt-4 pb-2">
+        <div className="flex items-center justify-between pt-6 pb-3">
           <div>
             <h1 className="font-[var(--font-display)] text-lg font-bold uppercase tracking-wider text-text-primary">
               {day.day.focus}
@@ -146,25 +146,25 @@ export function Workout() {
           </div>
           <button
             onClick={() => setShowCancel(true)}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted active:bg-bg-input"
+            className="rounded-lg border border-border px-4 py-2 text-xs text-text-muted active:bg-bg-input"
           >
             Cancel
           </button>
         </div>
 
         {showCancel && (
-          <div className="mb-4 rounded-[14px] border border-accent-red/30 bg-accent-red/5 p-4">
+          <div className="mb-4 rounded-[14px] border border-accent-red/30 bg-accent-red/5 p-5">
             <p className="mb-3 text-sm text-text-secondary">Cancel this workout? All logged sets will be lost.</p>
             <div className="flex gap-3">
               <button
                 onClick={handleCancel}
-                className="flex-1 rounded-xl bg-accent-red py-2.5 text-sm font-semibold text-white"
+                className="flex-1 rounded-xl bg-accent-red py-3.5 text-sm font-semibold text-white"
               >
                 Yes, cancel
               </button>
               <button
                 onClick={() => setShowCancel(false)}
-                className="flex-1 rounded-xl border border-border py-2.5 text-sm text-text-muted"
+                className="flex-1 rounded-xl border border-border py-3.5 text-sm text-text-muted"
               >
                 Keep going
               </button>
@@ -203,7 +203,7 @@ export function Workout() {
                 </div>
               )}
 
-              <div className={`mb-3 rounded-[14px] border bg-bg-card p-4 ${
+              <div className={`mb-3 rounded-[14px] border bg-bg-card p-5 ${
                 firstInSS || secondInSS ? 'border-accent-yellow/20' : 'border-border-card'
               }`}>
                 {/* Exercise header */}
@@ -249,7 +249,7 @@ export function Workout() {
                         inputMode="decimal"
                         value={set.weight || ''}
                         onChange={e => handleSetChange(exIndex, setIndex, 'weight', parseFloat(e.target.value) || 0)}
-                        className="rounded-lg border border-border bg-bg-input px-3 py-2.5 text-center text-sm text-text-primary outline-none focus:border-accent-red"
+                        className="rounded-lg border border-border bg-bg-input px-3 py-3 text-center text-sm text-text-primary outline-none focus:border-accent-red"
                         placeholder="0"
                       />
                       <input
@@ -257,7 +257,7 @@ export function Workout() {
                         inputMode="numeric"
                         value={set.reps || ''}
                         onChange={e => handleSetChange(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)}
-                        className="rounded-lg border border-border bg-bg-input px-3 py-2.5 text-center text-sm text-text-primary outline-none focus:border-accent-red"
+                        className="rounded-lg border border-border bg-bg-input px-3 py-3 text-center text-sm text-text-primary outline-none focus:border-accent-red"
                         placeholder="0"
                       />
                       <button
@@ -286,14 +286,14 @@ export function Workout() {
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => handleAddSet(exIndex)}
-                    className="flex-1 rounded-lg border border-dashed border-border py-2.5 text-xs text-text-dim active:border-text-muted active:text-text-muted"
+                    className="flex-1 rounded-lg border border-dashed border-border py-3 text-xs text-text-dim active:border-text-muted active:text-text-muted"
                   >
                     + Add Set
                   </button>
                   {exercise.restSeconds > 0 && !firstInSS && (
                     <button
                       onClick={() => handleRest(entry.id)}
-                      className="rounded-lg border border-accent-yellow/30 bg-accent-yellow/5 px-4 py-2.5 text-xs font-semibold text-accent-yellow active:bg-accent-yellow/10"
+                      className="rounded-lg border border-accent-yellow/30 bg-accent-yellow/5 px-5 py-3 text-xs font-semibold text-accent-yellow active:bg-accent-yellow/10"
                     >
                       Rest {exercise.restSeconds}s
                     </button>
@@ -301,7 +301,7 @@ export function Workout() {
                   {secondInSS && (
                     <button
                       onClick={() => timer.start(120, 'REST AFTER SUPERSET')}
-                      className="rounded-lg border border-accent-yellow/30 bg-accent-yellow/5 px-4 py-2.5 text-xs font-semibold text-accent-yellow active:bg-accent-yellow/10"
+                      className="rounded-lg border border-accent-yellow/30 bg-accent-yellow/5 px-5 py-3 text-xs font-semibold text-accent-yellow active:bg-accent-yellow/10"
                     >
                       Rest 2min
                     </button>
@@ -322,7 +322,7 @@ export function Workout() {
         {/* Finish */}
         <button
           onClick={handleFinish}
-          className="mt-4 w-full rounded-xl bg-gradient-to-r from-accent-red to-accent-orange py-4 font-[var(--font-display)] text-base font-semibold uppercase tracking-[1.5px] text-white transition-all active:scale-[0.98]"
+          className="mt-4 w-full rounded-xl bg-gradient-to-r from-accent-red to-accent-orange py-5 font-[var(--font-display)] text-base font-semibold uppercase tracking-[1.5px] text-white transition-all active:scale-[0.98]"
         >
           Finish Workout
         </button>

@@ -36,7 +36,7 @@ export function ExerciseDetail() {
       {/* Back button */}
       <button
         onClick={() => navigate(-1)}
-        className="mt-4 mb-2 flex items-center gap-1 text-sm text-text-muted active:text-text-primary"
+        className="mt-6 mb-3 flex items-center gap-1 py-2 text-sm text-text-muted active:text-text-primary"
       >
         ‹ Back
       </button>
