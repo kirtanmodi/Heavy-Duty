@@ -10,6 +10,7 @@ import { MuscleMap } from '../components/anatomy/MuscleMap'
 import type { ProgramDay } from '../types'
 
 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const fullDayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const dayTypeColors: Record<string, string> = {
   lift: 'bg-accent-red',
   cardio: 'bg-accent-blue',
@@ -90,6 +91,14 @@ export function Home() {
         </p>
       </div>
 
+      {/* Today's Workout Hero Card */}
+      <TodayHeroCard
+        todayDay={getDayForDow(todayDow)}
+        todayDow={todayDow}
+        muscles={getDayForDow(todayDow) ? getAllMusclesForDay(getDayForDow(todayDow)!) : []}
+        onStartWorkout={getDayForDow(todayDow) ? () => navigate(`/workout/${getDayForDow(todayDow)!.id}`) : () => {}}
+      />
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
@@ -148,7 +157,7 @@ export function Home() {
       </div>
 
       {/* Weekly calendar strip */}
-      <div className="mb-5 grid grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-7 gap-1.5">
         {[1, 2, 3, 4, 5, 6, 0].map(dow => {
           const day = getDayForDow(dow)
           const isToday = dow === todayDow
@@ -169,6 +178,16 @@ export function Home() {
         })}
       </div>
 
+      {/* Day-type legend */}
+      <div className="mt-2 mb-5 flex items-center justify-center gap-4">
+        {Object.entries(dayTypeColors).map(([type, colorClass]) => (
+          <div key={type} className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${colorClass}`} />
+            <span className="text-[10px] font-medium capitalize text-text-dim">{type}</span>
+          </div>
+        ))}
+      </div>
+
       {/* Selected day card */}
       {selectedDay && (
         <DayCard
@@ -178,15 +197,29 @@ export function Home() {
         />
       )}
 
-      {/* All lift days (if none selected) */}
-      {!selectedDay && program.days.filter(d => d.type === 'lift').map(day => (
-        <DayCard
-          key={day.id}
-          day={day}
-          onStartWorkout={() => navigate(`/workout/${day.id}`)}
-          muscles={getAllMusclesForDay(day)}
-        />
-      ))}
+      {/* Remaining lift days (if none selected) */}
+      {!selectedDay && (() => {
+        const todayDay = getDayForDow(todayDow)
+        const remainingLiftDays = program.days.filter(
+          d => d.type === 'lift' && !(todayDay?.type === 'lift' && d.dayOfWeek === todayDow)
+        )
+        if (remainingLiftDays.length === 0) return null
+        return (
+          <>
+            <h2 className="mb-3 font-[var(--font-display)] text-sm font-semibold uppercase tracking-wider text-text-muted">
+              This Week's Workouts
+            </h2>
+            {remainingLiftDays.map(day => (
+              <CompactDayCard
+                key={day.id}
+                day={day}
+                onStartWorkout={() => navigate(`/workout/${day.id}`)}
+                muscles={getAllMusclesForDay(day)}
+              />
+            ))}
+          </>
+        )
+      })()}
 
       {/* Cardio/rest info (if selected) */}
       {selectedDay && selectedDay.type !== 'lift' && (
@@ -322,6 +355,118 @@ function DayCard({
       >
         Start Workout
       </button>
+    </div>
+  )
+}
+
+function CompactDayCard({
+  day,
+  onStartWorkout,
+  muscles,
+}: {
+  day: ProgramDay
+  onStartWorkout: () => void
+  muscles: string[]
+}) {
+  if (day.type !== 'lift') return null
+
+  return (
+    <div className="mb-3 rounded-[14px] border border-border-card bg-bg-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-[var(--font-display)] text-sm font-semibold uppercase tracking-wide text-text-primary">
+            {fullDayLabels[day.dayOfWeek]} — {day.focus}
+          </h3>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-xs text-text-muted">
+              {day.exercises.length} exercises
+            </span>
+            {day.supersets.length > 0 && (
+              <span className="text-[10px] text-accent-yellow">⚡ {day.supersets.length} superset{day.supersets.length > 1 ? 's' : ''}</span>
+            )}
+          </div>
+        </div>
+        <MuscleMap primaryMuscles={muscles} size="small" />
+      </div>
+      <button
+        onClick={onStartWorkout}
+        className="mt-3 w-full rounded-xl bg-gradient-to-r from-accent-red to-accent-orange py-3 font-[var(--font-display)] text-xs font-semibold uppercase tracking-[1.5px] text-white transition-all active:scale-[0.98]"
+      >
+        Start Workout
+      </button>
+    </div>
+  )
+}
+
+const dayTypeLabels: Record<string, string> = {
+  lift: 'Lift',
+  cardio: 'Cardio',
+  recovery: 'Recovery',
+  rest: 'Rest',
+}
+
+function TodayHeroCard({
+  todayDay,
+  todayDow,
+  muscles,
+  onStartWorkout,
+}: {
+  todayDay: ProgramDay | undefined
+  todayDow: number
+  muscles: string[]
+  onStartWorkout: () => void
+}) {
+  if (!todayDay) return null
+
+  return (
+    <div className="mb-5 rounded-[14px] border border-border-card bg-bg-card overflow-hidden">
+      <div className="p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`h-2.5 w-2.5 rounded-full ${dayTypeColors[todayDay.type]}`} />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            {dayTypeLabels[todayDay.type]}
+          </span>
+        </div>
+        <h2 className="font-[var(--font-display)] text-xl font-bold uppercase tracking-wide text-text-primary">
+          {fullDayLabels[todayDow]} — {todayDay.focus}
+        </h2>
+
+        {todayDay.type === 'lift' ? (
+          <>
+            <div className="mt-2 flex items-center gap-3">
+              <span className="text-xs text-text-muted">
+                {todayDay.exercises.length} exercises
+              </span>
+              {todayDay.supersets.length > 0 && (
+                <span className="text-xs text-accent-yellow">
+                  ⚡ {todayDay.supersets.length} superset{todayDay.supersets.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-4">
+              <MuscleMap primaryMuscles={muscles} size="small" />
+              <button
+                onClick={onStartWorkout}
+                className="flex-1 rounded-xl bg-gradient-to-r from-accent-red to-accent-orange py-4 font-[var(--font-display)] text-sm font-semibold uppercase tracking-[1.5px] text-white transition-all active:scale-[0.98]"
+              >
+                Start Workout
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="mt-3">
+            {todayDay.duration && (
+              <p className="mb-2 text-sm text-accent-yellow">{todayDay.duration}</p>
+            )}
+            {todayDay.description && (
+              <p className="text-sm leading-relaxed text-text-secondary">{todayDay.description}</p>
+            )}
+            {todayDay.tips && (
+              <p className="mt-3 text-xs italic text-text-dim">{todayDay.tips}</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

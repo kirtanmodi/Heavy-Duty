@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 const tabs = [
   { path: '/', label: 'Home', icon: '⚡' },
+  { path: '/program-select', label: 'Programs', icon: '📋' },
   { path: '/library', label: 'Library', icon: '📖' },
   { path: '/history', label: 'History', icon: '📊' },
 ]

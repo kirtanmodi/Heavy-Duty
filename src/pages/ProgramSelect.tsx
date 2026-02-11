@@ -6,6 +6,7 @@ import type { ProgramId } from '../types'
 
 export function ProgramSelect() {
   const navigate = useNavigate()
+  const activeProgram = useSettingsStore(s => s.activeProgram)
   const setActiveProgram = useSettingsStore(s => s.setActiveProgram)
 
   const handleSelect = (id: ProgramId) => {
@@ -25,12 +26,23 @@ export function ProgramSelect() {
       </div>
 
       <div className="flex flex-col gap-4">
-        {programs.map(program => (
+        {programs.map(program => {
+          const isActive = activeProgram === program.id
+          return (
           <button
             key={program.id}
             onClick={() => handleSelect(program.id as ProgramId)}
-            className="group relative rounded-[14px] border border-border-card bg-bg-card p-5 text-left transition-all active:scale-[0.98]"
+            className={`group relative rounded-[14px] border p-5 text-left transition-all active:scale-[0.98] ${
+              isActive
+                ? 'border-accent-red bg-bg-card'
+                : 'border-border-card bg-bg-card'
+            }`}
           >
+            {isActive && (
+              <span className="absolute -top-2.5 left-4 flex items-center gap-1 rounded-full bg-accent-red px-3 py-0.5 font-[var(--font-display)] text-[10px] font-semibold uppercase tracking-wider text-white">
+                <span>✓</span> Active
+              </span>
+            )}
             {program.recommended && (
               <span className="absolute -top-2.5 right-4 rounded-full bg-gradient-to-r from-accent-red to-accent-orange px-3 py-0.5 font-[var(--font-display)] text-[10px] font-semibold uppercase tracking-wider text-white">
                 Recommended
@@ -63,7 +75,8 @@ export function ProgramSelect() {
               {program.days.some(d => d.supersets.length > 0) && ' • Supersets'}
             </div>
           </button>
-        ))}
+          )
+        })}
       </div>
     </PageLayout>
   )
