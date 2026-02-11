@@ -16,12 +16,14 @@ export function History() {
       </header>
 
       {history.length === 0 ? (
-        <section className="rounded-2xl border border-border-card bg-bg-card p-8 text-center">
-          <p className="text-lg font-medium text-text-primary">No workouts yet</p>
-          <p className="mt-4 text-base leading-relaxed text-text-muted">Complete your first workout and it will show up here.</p>
+        <section className="flex flex-col gap-7 rounded-2xl border border-border-card bg-bg-card p-8 text-center">
+          <div className="flex flex-col gap-4">
+            <p className="text-lg font-medium text-text-primary">No workouts yet</p>
+            <p className="text-base leading-relaxed text-text-muted">Complete your first workout and it will show up here.</p>
+          </div>
           <button
             onClick={() => navigate("/")}
-            className="mt-7 rounded-xl bg-accent-red px-6 py-4 text-base font-semibold text-white active:scale-[0.99]"
+            className="rounded-xl bg-accent-red px-6 py-4 text-base font-semibold text-white active:scale-[0.99]"
           >
             Start Training
           </button>
@@ -31,9 +33,9 @@ export function History() {
           {history.map((workout) => (
             <section key={workout.id} className="rounded-2xl border border-border-card bg-bg-card p-6">
               <div className="flex items-start justify-between gap-4">
-                <div>
+                <div className="flex flex-col gap-2">
                   <h2 className="font-[var(--font-display)] text-2xl leading-tight text-text-primary">{workout.day}</h2>
-                  <p className="mt-2 text-sm text-text-muted">
+                  <p className="text-sm text-text-muted">
                     {new Date(workout.date).toLocaleDateString("en-US", {
                       weekday: "short",
                       month: "short",

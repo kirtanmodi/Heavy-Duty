@@ -46,9 +46,9 @@ export function Home() {
   return (
     <PageLayout className="flex flex-col gap-8">
       <header className="flex items-start justify-between gap-3 pt-2">
-        <div>
+        <div className="flex flex-col gap-3">
           <p className="text-xs text-text-muted">Heavy Duty</p>
-          <h1 className="mt-3 font-[var(--font-display)] text-4xl leading-none text-text-primary">Train smarter.</h1>
+          <h1 className="font-[var(--font-display)] text-4xl leading-none text-text-primary">Train smarter.</h1>
         </div>
         <button
           onClick={() => navigate("/program-select")}
@@ -105,32 +105,34 @@ export function Home() {
 
       {otherLiftDays.length > 0 && (
         <section className="rounded-2xl border border-border-card bg-bg-card p-6">
-          <h3 className="text-base font-medium text-text-secondary">Upcoming Lift Days</h3>
-          <div className="mt-4 flex flex-col gap-2.5">
+          <div className="flex flex-col gap-4">
+            <h3 className="text-base font-medium text-text-secondary">Upcoming Lift Days</h3>
+            <div className="flex flex-col gap-2.5">
             {otherLiftDays.map((day) => (
               <button
                 key={day.id}
                 onClick={() => navigate(`/workout/${day.id}`)}
                 className="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left active:bg-bg-input"
               >
-                <span>
+                <span className="flex flex-col gap-1">
                   <span className="block text-base font-medium text-text-primary">{day.focus}</span>
-                  <span className="mt-1 block text-sm text-text-muted">{fullDayLabels[day.dayOfWeek]}</span>
+                  <span className="block text-sm text-text-muted">{fullDayLabels[day.dayOfWeek]}</span>
                 </span>
                 <span className="text-lg text-text-dim">›</span>
               </button>
             ))}
+          </div>
           </div>
         </section>
       )}
 
       <section>
         {showClearConfirm ? (
-          <div className="rounded-2xl border border-accent-red/25 bg-accent-red/5 p-6">
+          <div className="flex flex-col gap-5 rounded-2xl border border-accent-red/25 bg-accent-red/5 p-6">
             <p className="text-base leading-relaxed text-text-secondary">
               Delete all workout history and settings? This cannot be undone.
             </p>
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button onClick={handleClearAll} className="rounded-xl bg-accent-red py-4 text-base font-semibold text-white">
                 Delete
               </button>

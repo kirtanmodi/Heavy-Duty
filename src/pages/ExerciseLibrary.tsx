@@ -19,9 +19,10 @@ export function ExerciseLibrary() {
             if (exercises.length === 0) return null;
 
             return (
-              <section key={group.label} className="rounded-2xl border border-border-card bg-bg-card p-8">
-                <h2 className="text-base font-medium text-text-secondary">{group.label}</h2>
-                <div className="mt-5 flex flex-col gap-2">
+      <section key={group.label} className="rounded-2xl border border-border-card bg-bg-card p-8">
+        <div className="flex flex-col gap-5">
+          <h2 className="text-base font-medium text-text-secondary">{group.label}</h2>
+          <div className="flex flex-col gap-2">
                   {exercises.map((exercise) => (
                     <button
                       key={exercise.id}
@@ -38,7 +39,8 @@ export function ExerciseLibrary() {
                     </button>
                   ))}
                 </div>
-              </section>
+              </div>
+            </section>
             );
           })}
         </div>
