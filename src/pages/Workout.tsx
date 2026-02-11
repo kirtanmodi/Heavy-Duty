@@ -1,332 +1,287 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { PageLayout } from '../components/layout/PageLayout'
-import { useWorkoutStore, getLastSets } from '../store/workoutStore'
-import { useTimer } from '../hooks/useTimer'
-import { programs } from '../data/programs'
-import { getExercise, muscleColors } from '../data/exercises'
-import { getOverloadSuggestion } from '../lib/overload'
-import type { ExerciseEntry, SetEntry } from '../types'
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { PageLayout } from "../components/layout/PageLayout";
+import { getExercise } from "../data/exercises";
+import { programs } from "../data/programs";
+import { useTimer } from "../hooks/useTimer";
+import { getOverloadSuggestion } from "../lib/overload";
+import { getLastSets, useWorkoutStore } from "../store/workoutStore";
+import type { ExerciseEntry, SetEntry } from "../types";
 
 export function Workout() {
-  const { dayId } = useParams<{ dayId: string }>()
-  const navigate = useNavigate()
-  const { activeWorkout, startWorkout, updateExercise, finishWorkout, cancelWorkout, history } = useWorkoutStore()
-  const timer = useTimer()
-  const [showCancel, setShowCancel] = useState(false)
-  const [restPresets] = useState([60, 90, 120, 180, 300])
+  const { dayId } = useParams<{ dayId: string }>();
+  const navigate = useNavigate();
+  const { activeWorkout, startWorkout, updateExercise, finishWorkout, cancelWorkout, history } = useWorkoutStore();
+  const timer = useTimer();
+  const [showCancel, setShowCancel] = useState(false);
+  const restPresets = [60, 90, 120, 180, 300];
 
-  const day = useMemo(() => {
-    for (const p of programs) {
-      const found = p.days.find(d => d.id === dayId)
-      if (found) return { day: found, program: p }
+  const day = (() => {
+    for (const program of programs) {
+      const found = program.days.find((d) => d.id === dayId);
+      if (found) return { day: found, program };
     }
-    return null
-  }, [dayId])
+    return null;
+  })();
 
   useEffect(() => {
-    if (!day || activeWorkout) return
+    if (!day || activeWorkout) return;
 
-    const exercises: ExerciseEntry[] = day.day.exercises.map(exId => {
-      const ex = getExercise(exId)
-      if (!ex) return { id: exId, name: exId, sets: [] }
+    const exercises: ExerciseEntry[] = day.day.exercises.map((exerciseId) => {
+      const exercise = getExercise(exerciseId);
+      if (!exercise) return { id: exerciseId, name: exerciseId, sets: [] };
 
-      const lastSets = getLastSets(exId, history)
-      const suggestion = getOverloadSuggestion(ex, lastSets)
-
+      const lastSets = getLastSets(exerciseId, history);
+      const suggestion = getOverloadSuggestion(exercise, lastSets);
       const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
         weight: suggestion.suggestedWeight ?? 0,
         reps: suggestion.suggestedReps,
         toFailure: false,
-        tempo: '4-1-4',
-      }))
+        tempo: "4-1-4",
+      }));
 
-      return { id: exId, name: ex.name, sets }
-    })
+      return { id: exerciseId, name: exercise.name, sets };
+    });
 
-    startWorkout(day.day.id, day.day.name, day.program.name, exercises)
-  }, [day, activeWorkout, history, startWorkout])
+    startWorkout(day.day.id, day.day.name, day.program.name, exercises);
+  }, [activeWorkout, day, history, startWorkout]);
+
+  const supersets = day?.day.supersets ?? [];
+  const isFirstInSuperset = (exerciseId: string) => supersets.some(([a]) => a === exerciseId);
+  const isSecondInSuperset = (exerciseId: string) => supersets.some(([, b]) => b === exerciseId);
+
+  const handleSetChange = (exerciseIndex: number, setIndex: number, field: keyof SetEntry, value: number | boolean) => {
+    const exercise = { ...activeWorkout!.exercises[exerciseIndex] };
+    const sets = [...exercise.sets];
+    sets[setIndex] = { ...sets[setIndex], [field]: value };
+    updateExercise(exerciseIndex, { ...exercise, sets });
+  };
+
+  const handleAddSet = (exerciseIndex: number) => {
+    const exercise = { ...activeWorkout!.exercises[exerciseIndex] };
+    const lastSet = exercise.sets[exercise.sets.length - 1];
+    updateExercise(exerciseIndex, {
+      ...exercise,
+      sets: [...exercise.sets, { weight: lastSet?.weight ?? 0, reps: lastSet?.reps ?? 0, toFailure: false, tempo: "4-1-4" }],
+    });
+  };
+
+  const handleRemoveSet = (exerciseIndex: number, setIndex: number) => {
+    const exercise = { ...activeWorkout!.exercises[exerciseIndex] };
+    if (exercise.sets.length <= 1) return;
+    updateExercise(exerciseIndex, { ...exercise, sets: exercise.sets.filter((_, i) => i !== setIndex) });
+  };
+
+  const handleFinish = () => {
+    finishWorkout();
+    navigate("/");
+  };
+
+  const handleCancel = () => {
+    cancelWorkout();
+    navigate("/");
+  };
+
+  const handleRest = (exerciseId: string) => {
+    const exercise = getExercise(exerciseId);
+    if (!exercise) return;
+    const seconds = exercise.restSeconds || 120;
+    timer.start(seconds, isSecondInSuperset(exerciseId) ? "Rest after superset" : "Rest");
+  };
 
   if (!day || !activeWorkout) {
     return (
-      <PageLayout>
+      <PageLayout withBottomNavPadding={false}>
         <div className="pt-20 text-center text-text-muted">Loading workout...</div>
       </PageLayout>
-    )
-  }
-
-  const supersetMap = new Map<string, string>()
-  day.day.supersets.forEach(([a, b]) => {
-    supersetMap.set(a, b)
-    supersetMap.set(b, a)
-  })
-
-  const isFirstInSuperset = (exId: string) => day.day.supersets.some(s => s[0] === exId)
-  const isSecondInSuperset = (exId: string) => day.day.supersets.some(s => s[1] === exId)
-
-  const handleSetChange = (exIndex: number, setIndex: number, field: keyof SetEntry, value: number | boolean) => {
-    const ex = { ...activeWorkout.exercises[exIndex] }
-    const sets = [...ex.sets]
-    sets[setIndex] = { ...sets[setIndex], [field]: value }
-    updateExercise(exIndex, { ...ex, sets })
-  }
-
-  const handleAddSet = (exIndex: number) => {
-    const ex = { ...activeWorkout.exercises[exIndex] }
-    const lastSet = ex.sets[ex.sets.length - 1]
-    updateExercise(exIndex, {
-      ...ex,
-      sets: [...ex.sets, { weight: lastSet?.weight ?? 0, reps: lastSet?.reps ?? 0, toFailure: false, tempo: '4-1-4' }],
-    })
-  }
-
-  const handleRemoveSet = (exIndex: number, setIndex: number) => {
-    const ex = { ...activeWorkout.exercises[exIndex] }
-    if (ex.sets.length <= 1) return
-    updateExercise(exIndex, { ...ex, sets: ex.sets.filter((_, i) => i !== setIndex) })
-  }
-
-  const handleFinish = () => {
-    finishWorkout()
-    navigate('/')
-  }
-
-  const handleCancel = () => {
-    cancelWorkout()
-    navigate('/')
-  }
-
-  const handleRest = (exerciseId: string) => {
-    const ex = getExercise(exerciseId)
-    if (!ex) return
-    const seconds = ex.restSeconds || 120
-    const isSS = isSecondInSuperset(exerciseId)
-    timer.start(seconds, isSS ? 'REST AFTER SUPERSET' : 'REST BETWEEN EXERCISES')
+    );
   }
 
   return (
-    <div className="min-h-dvh bg-bg-primary">
-      {/* Rest Timer Overlay */}
+    <>
       {timer.isRunning && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg-primary/95 backdrop-blur">
-          <div className="text-sm uppercase tracking-wider text-accent-yellow">{timer.label}</div>
-          <div className="mt-4 font-[var(--font-display)] text-7xl font-bold text-text-primary">
-            {timer.formatTime(timer.secondsLeft)}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-primary/95 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-[380px] rounded-2xl border border-border-card bg-bg-card p-6 text-center">
+            <p className="text-xs font-medium tracking-wide text-text-muted">{timer.label}</p>
+            <p className="mt-3 font-[var(--font-display)] text-6xl leading-none text-text-primary">{timer.formatTime(timer.secondsLeft)}</p>
+
+            <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+              {restPresets.map((seconds) => (
+                <button
+                  key={seconds}
+                  onClick={() => timer.start(seconds, timer.label)}
+                  className="rounded-full border border-border bg-bg-input px-3.5 py-2 text-sm text-text-secondary"
+                >
+                  {seconds >= 60 ? `${seconds / 60}m` : `${seconds}s`}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={timer.stop}
+              className="mt-6 w-full rounded-xl border border-border bg-bg-input py-3.5 text-base font-medium text-text-secondary"
+            >
+              Skip Rest
+            </button>
           </div>
-          <div className="mt-6 flex gap-3">
-            {restPresets.map(s => (
-              <button
-                key={s}
-                onClick={() => timer.start(s, timer.label)}
-                className="rounded-lg border border-border bg-bg-input px-3 py-2 text-xs text-text-muted active:bg-bg-card"
-              >
-                {s >= 60 ? `${s / 60}m` : `${s}s`}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={timer.stop}
-            className="mt-8 rounded-xl border border-border bg-bg-card px-8 py-3 font-[var(--font-display)] text-sm font-semibold uppercase tracking-wider text-text-muted active:bg-bg-input"
-          >
-            Skip
-          </button>
         </div>
       )}
 
-      <PageLayout>
-        {/* Header */}
-        <div className="flex items-center justify-between pt-6 pb-3">
+      <PageLayout withBottomNavPadding={false} className="space-y-7">
+        <header className="flex items-start justify-between gap-4 pt-1">
           <div>
-            <h1 className="font-[var(--font-display)] text-lg font-bold uppercase tracking-wider text-text-primary">
-              {day.day.focus}
-            </h1>
-            <p className="text-[10px] uppercase tracking-wider text-accent-red">
-              2 sets to failure • slow reps
-            </p>
+            <p className="text-sm font-medium tracking-wide text-text-muted">{day.program.shortName}</p>
+            <h1 className="mt-2 font-[var(--font-display)] text-4xl leading-[1.08] text-text-primary">{day.day.focus}</h1>
           </div>
           <button
             onClick={() => setShowCancel(true)}
-            className="rounded-lg border border-border px-4 py-2 text-xs text-text-muted active:bg-bg-input"
+            className="rounded-full border border-border bg-bg-input px-4 py-2.5 text-sm text-text-secondary"
           >
             Cancel
           </button>
-        </div>
+        </header>
 
         {showCancel && (
-          <div className="mb-4 rounded-[14px] border border-accent-red/30 bg-accent-red/5 p-5">
-            <p className="mb-3 text-sm text-text-secondary">Cancel this workout? All logged sets will be lost.</p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancel}
-                className="flex-1 rounded-xl bg-accent-red py-3.5 text-sm font-semibold text-white"
-              >
-                Yes, cancel
+          <section className="rounded-2xl border border-accent-red/30 bg-accent-red/5 p-6">
+            <p className="text-base text-text-secondary">Cancel this workout? Logged sets from this session will be lost.</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button onClick={handleCancel} className="rounded-xl bg-accent-red py-3.5 text-base font-semibold text-white">
+                Cancel Workout
               </button>
               <button
                 onClick={() => setShowCancel(false)}
-                className="flex-1 rounded-xl border border-border py-3.5 text-sm text-text-muted"
+                className="rounded-xl border border-border bg-bg-input py-3.5 text-base font-medium text-text-secondary"
               >
-                Keep going
+                Keep Going
               </button>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Exercise Cards */}
-        {activeWorkout.exercises.map((entry, exIndex) => {
-          const exercise = getExercise(entry.id)
-          if (!exercise) return null
+        {activeWorkout.exercises.length === 0 && (
+          <section className="rounded-2xl border border-border-card bg-bg-card p-6 text-base text-text-secondary">
+            No lifting exercises for this day.
+          </section>
+        )}
 
-          const firstInSS = isFirstInSuperset(entry.id)
-          const secondInSS = isSecondInSuperset(entry.id)
-          const lastSets = getLastSets(entry.id, history)
-          const suggestion = getOverloadSuggestion(exercise, lastSets)
+        {activeWorkout.exercises.map((entry, exerciseIndex) => {
+          const exercise = getExercise(entry.id);
+          if (!exercise) return null;
+
+          const firstInSuperset = isFirstInSuperset(entry.id);
+          const secondInSuperset = isSecondInSuperset(entry.id);
+          const lastSets = getLastSets(entry.id, history);
+          const suggestion = getOverloadSuggestion(exercise, lastSets);
 
           return (
-            <div key={entry.id}>
-              {/* Superset header */}
-              {firstInSS && (
-                <div className="mb-1 mt-4 flex items-center gap-2">
-                  <span className="rounded-full bg-accent-yellow/10 px-2.5 py-0.5 font-[var(--font-display)] text-[10px] font-semibold uppercase tracking-wider text-accent-yellow">
-                    Superset
-                  </span>
-                  <div className="h-px flex-1 bg-accent-yellow/20" />
-                </div>
+            <section key={entry.id} className="space-y-3">
+              {firstInSuperset && (
+                <p className="px-1 text-sm font-medium tracking-wide text-accent-yellow">Superset block</p>
               )}
 
-              {/* No rest indicator between superset exercises */}
-              {secondInSS && (
-                <div className="flex items-center justify-center gap-2 py-1">
-                  <div className="h-px w-8 bg-accent-yellow/30" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-accent-yellow">No Rest</span>
-                  <div className="h-px w-8 bg-accent-yellow/30" />
-                </div>
-              )}
-
-              <div className={`mb-3 rounded-[14px] border bg-bg-card p-5 ${
-                firstInSS || secondInSS ? 'border-accent-yellow/20' : 'border-border-card'
-              }`}>
-                {/* Exercise header */}
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex gap-1">
-                    {exercise.primaryMuscles.slice(0, 2).map(m => (
-                      <span key={m} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: muscleColors[m] }} />
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => navigate(`/exercise/${entry.id}`)}
-                    className="flex-1 text-left"
-                  >
-                    <span className="text-sm font-medium text-text-primary">{entry.name}</span>
-                    <span className="ml-2 text-xs text-text-dim">{exercise.equipment}</span>
+              <div className="rounded-2xl border border-border-card bg-bg-card p-6">
+                <div className="space-y-4">
+                  <button onClick={() => navigate(`/exercise/${entry.id}`)} className="text-left">
+                    <h2 className="text-xl font-semibold leading-tight text-text-primary">{entry.name}</h2>
+                    <p className="mt-2 text-sm text-text-muted">
+                      {exercise.equipment} · {exercise.repRange[0]}-{exercise.repRange[1]} reps
+                    </p>
                   </button>
-                </div>
 
-                {/* Overload suggestion */}
-                <div className={`mb-3 rounded-lg px-3 py-2 text-xs ${
-                  suggestion.type === 'increase' ? 'bg-accent-green/10 text-accent-green' :
-                  suggestion.type === 'decrease' ? 'bg-accent-red/10 text-accent-red' :
-                  suggestion.type === 'testing' ? 'bg-accent-blue/10 text-accent-blue' :
-                  'bg-accent-yellow/10 text-accent-yellow'
-                }`}>
-                  {suggestion.message}
-                </div>
+                  <p className="rounded-xl bg-bg-input px-4 py-3 text-sm text-text-secondary">{suggestion.message}</p>
 
-                {/* Set rows */}
-                <div className="space-y-2">
-                  <div className="grid grid-cols-[32px_1fr_1fr_44px_32px] gap-2 text-[10px] uppercase tracking-wider text-text-dim">
+                  <div className="space-y-3">
+                  <div className="grid grid-cols-[2rem_1fr_1fr_3.25rem_1.75rem] gap-2 text-xs text-text-muted">
                     <span>Set</span>
-                    <span>KG</span>
+                    <span>Kg</span>
                     <span>Reps</span>
                     <span className="text-center">Fail</span>
                     <span />
                   </div>
+
                   {entry.sets.map((set, setIndex) => (
-                    <div key={setIndex} className="grid grid-cols-[32px_1fr_1fr_44px_32px] items-center gap-2">
-                      <span className="text-center text-xs font-semibold text-text-dim">{setIndex + 1}</span>
+                    <div key={setIndex} className="grid grid-cols-[2rem_1fr_1fr_3.25rem_1.75rem] items-center gap-2">
+                      <span className="text-center text-base text-text-muted">{setIndex + 1}</span>
+
                       <input
                         type="number"
                         inputMode="decimal"
-                        value={set.weight || ''}
-                        onChange={e => handleSetChange(exIndex, setIndex, 'weight', parseFloat(e.target.value) || 0)}
-                        className="rounded-lg border border-border bg-bg-input px-3 py-3 text-center text-sm text-text-primary outline-none focus:border-accent-red"
+                        value={set.weight || ""}
+                        onChange={(event) => handleSetChange(exerciseIndex, setIndex, "weight", parseFloat(event.target.value) || 0)}
+                        className="h-11 rounded-xl border border-border bg-bg-input px-2 text-center text-base text-text-primary outline-none focus:border-accent-red"
                         placeholder="0"
                       />
+
                       <input
                         type="number"
                         inputMode="numeric"
-                        value={set.reps || ''}
-                        onChange={e => handleSetChange(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)}
-                        className="rounded-lg border border-border bg-bg-input px-3 py-3 text-center text-sm text-text-primary outline-none focus:border-accent-red"
+                        value={set.reps || ""}
+                        onChange={(event) => handleSetChange(exerciseIndex, setIndex, "reps", parseInt(event.target.value) || 0)}
+                        className="h-11 rounded-xl border border-border bg-bg-input px-2 text-center text-base text-text-primary outline-none focus:border-accent-red"
                         placeholder="0"
                       />
+
                       <button
-                        onClick={() => handleSetChange(exIndex, setIndex, 'toFailure', !set.toFailure)}
-                        className={`flex h-[44px] items-center justify-center rounded-lg border text-lg transition-colors ${
+                        onClick={() => handleSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
+                        className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
                           set.toFailure
-                            ? 'border-accent-red bg-accent-red/10'
-                            : 'border-border bg-bg-input'
+                            ? "border-accent-red bg-accent-red/12 text-accent-red"
+                            : "border-border bg-bg-input text-text-muted"
                         }`}
                       >
-                        {set.toFailure ? '💀' : '○'}
+                        {set.toFailure ? "Yes" : "No"}
                       </button>
+
                       <button
-                        onClick={() => handleRemoveSet(exIndex, setIndex)}
-                        className={`flex h-[44px] items-center justify-center rounded-lg text-text-dim transition-colors active:text-accent-red ${
-                          entry.sets.length <= 1 ? 'opacity-0 pointer-events-none' : ''
-                        }`}
+                        onClick={() => handleRemoveSet(exerciseIndex, setIndex)}
+                        className={`h-11 text-xl text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
+                        aria-label={`Remove set ${setIndex + 1}`}
                       >
                         ×
                       </button>
                     </div>
                   ))}
-                </div>
+                  </div>
 
-                {/* Add set + Rest buttons */}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => handleAddSet(exIndex)}
-                    className="flex-1 rounded-lg border border-dashed border-border py-3 text-xs text-text-dim active:border-text-muted active:text-text-muted"
-                  >
-                    + Add Set
-                  </button>
-                  {exercise.restSeconds > 0 && !firstInSS && (
+                  <div className="flex gap-2.5">
                     <button
-                      onClick={() => handleRest(entry.id)}
-                      className="rounded-lg border border-accent-yellow/30 bg-accent-yellow/5 px-5 py-3 text-xs font-semibold text-accent-yellow active:bg-accent-yellow/10"
+                      onClick={() => handleAddSet(exerciseIndex)}
+                      className="flex-1 rounded-xl border border-border bg-bg-input py-3 text-base font-medium text-text-secondary"
                     >
-                      Rest {exercise.restSeconds}s
+                      Add Set
                     </button>
-                  )}
-                  {secondInSS && (
-                    <button
-                      onClick={() => timer.start(120, 'REST AFTER SUPERSET')}
-                      className="rounded-lg border border-accent-yellow/30 bg-accent-yellow/5 px-5 py-3 text-xs font-semibold text-accent-yellow active:bg-accent-yellow/10"
-                    >
-                      Rest 2min
-                    </button>
-                  )}
+
+                    {exercise.restSeconds > 0 && !firstInSuperset && (
+                      <button
+                        onClick={() => handleRest(entry.id)}
+                        className="rounded-xl border border-border bg-bg-input px-4 py-3 text-base font-medium text-text-secondary"
+                      >
+                        Rest {exercise.restSeconds}s
+                      </button>
+                    )}
+
+                    {secondInSuperset && (
+                      <button
+                        onClick={() => timer.start(120, "Rest after superset")}
+                        className="rounded-xl border border-border bg-bg-input px-4 py-3 text-base font-medium text-text-secondary"
+                      >
+                        Rest 2m
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-
-              {/* Superset end divider */}
-              {secondInSS && (
-                <div className="mb-4 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-accent-yellow/20" />
-                </div>
-              )}
-            </div>
-          )
+            </section>
+          );
         })}
 
-        {/* Finish */}
         <button
           onClick={handleFinish}
-          className="mt-4 w-full rounded-xl bg-gradient-to-r from-accent-red to-accent-orange py-5 font-[var(--font-display)] text-base font-semibold uppercase tracking-[1.5px] text-white transition-all active:scale-[0.98]"
+          className="w-full rounded-xl bg-accent-red py-4 text-base font-semibold text-white active:scale-[0.99]"
         >
           Finish Workout
         </button>
       </PageLayout>
-    </div>
-  )
+    </>
+  );
 }

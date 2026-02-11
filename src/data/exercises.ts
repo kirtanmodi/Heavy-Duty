@@ -1,4 +1,4 @@
-import type { Exercise } from '../types'
+import type { Exercise, MuscleGroup } from '../types'
 
 export const exercises: Exercise[] = [
   // === CHEST ===
@@ -387,8 +387,9 @@ export function getExercise(id: string): Exercise | undefined {
 }
 
 export function getExercisesByMuscle(muscle: string): Exercise[] {
+  const targetMuscle = muscle as MuscleGroup
   return exercises.filter(
-    e => e.primaryMuscles.includes(muscle as any) || e.secondaryMuscles.includes(muscle as any)
+    e => e.primaryMuscles.includes(targetMuscle) || e.secondaryMuscles.includes(targetMuscle)
   )
 }
 

@@ -1,83 +1,78 @@
-import { useNavigate } from 'react-router-dom'
-import { PageLayout } from '../components/layout/PageLayout'
-import { useWorkoutStore } from '../store/workoutStore'
+import { useNavigate } from "react-router-dom";
+import { PageLayout } from "../components/layout/PageLayout";
+import { useWorkoutStore } from "../store/workoutStore";
 
 export function History() {
-  const navigate = useNavigate()
-  const history = useWorkoutStore(s => s.history)
+  const navigate = useNavigate();
+  const history = useWorkoutStore((s) => s.history);
 
   return (
-    <PageLayout>
-      <div className="pt-8 pb-5">
-        <h1 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-[2px] text-text-primary">
-          History
-        </h1>
-        <p className="mt-1 text-xs text-text-muted">
-          {history.length} workout{history.length !== 1 ? 's' : ''} logged
+    <PageLayout className="space-y-8">
+      <header className="space-y-3 pt-2">
+        <h1 className="font-[var(--font-display)] text-4xl leading-none text-text-primary">Workout History</h1>
+        <p className="text-base leading-relaxed text-text-secondary">
+          {history.length} workout{history.length !== 1 ? "s" : ""} logged
         </p>
-      </div>
+      </header>
 
       {history.length === 0 ? (
-        <div className="mt-12 text-center">
-          <div className="text-4xl mb-3">🏋️</div>
-          <p className="text-sm text-text-muted">No workouts yet</p>
-          <p className="mt-1 text-xs text-text-dim">Complete your first workout to see it here</p>
+        <section className="rounded-2xl border border-border-card bg-bg-card p-8 text-center">
+          <p className="text-lg font-medium text-text-primary">No workouts yet</p>
+          <p className="mt-4 text-base leading-relaxed text-text-muted">Complete your first workout and it will show up here.</p>
           <button
-            onClick={() => navigate('/')}
-            className="mt-4 rounded-xl bg-gradient-to-r from-accent-red to-accent-orange px-6 py-4 font-[var(--font-display)] text-sm font-semibold uppercase tracking-wider text-white"
+            onClick={() => navigate("/")}
+            className="mt-7 rounded-xl bg-accent-red px-6 py-4 text-base font-semibold text-white active:scale-[0.99]"
           >
             Start Training
           </button>
-        </div>
+        </section>
       ) : (
-        <div className="space-y-3">
-          {history.map(workout => (
-            <div key={workout.id} className="rounded-[14px] border border-border-card bg-bg-card p-4">
-              <div className="flex items-start justify-between">
+        <div className="space-y-5">
+          {history.map((workout) => (
+            <section key={workout.id} className="rounded-2xl border border-border-card bg-bg-card p-6">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="font-[var(--font-display)] text-sm font-semibold uppercase tracking-wide text-text-primary">
-                    {workout.day}
-                  </h3>
-                  <div className="mt-0.5 text-xs text-text-dim">
-                    {new Date(workout.date).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
+                  <h2 className="font-[var(--font-display)] text-2xl leading-tight text-text-primary">{workout.day}</h2>
+                  <p className="mt-2 text-sm text-text-muted">
+                    {new Date(workout.date).toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
                     })}
-                  </div>
+                  </p>
                 </div>
-                <span className="rounded-full bg-bg-input px-2.5 py-0.5 text-[10px] text-text-dim">
+                <span className="rounded-full border border-border bg-bg-input px-3 py-1.5 text-sm text-text-muted">
                   {workout.program}
                 </span>
               </div>
 
-              <div className="mt-3 space-y-2">
-                {workout.exercises.map(ex => (
-                  <div key={ex.id}>
-                    <button
-                      onClick={() => navigate(`/exercise/${ex.id}`)}
-                      className="text-xs font-medium text-text-secondary active:text-text-primary"
-                    >
-                      {ex.name}
-                    </button>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {ex.sets.map((set, i) => (
-                        <span
-                          key={i}
-                          className="rounded-full border border-border bg-bg-input px-2.5 py-0.5 text-[11px] text-text-muted"
-                        >
-                          {set.weight}kg × {set.reps} {set.toFailure ? '💀' : ''}
-                        </span>
-                      ))}
+              <div className="mt-6 space-y-4">
+                {workout.exercises.map((exercise) => (
+                  <div key={exercise.id} className="rounded-xl bg-bg-input p-4">
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => navigate(`/exercise/${exercise.id}`)}
+                        className="text-base font-medium text-text-primary active:text-accent-red"
+                      >
+                        {exercise.name}
+                      </button>
+                      <div className="flex flex-wrap gap-2.5">
+                        {exercise.sets.map((set, i) => (
+                          <span key={i} className="rounded-full border border-border-card bg-bg-card px-3 py-1.5 text-sm text-text-secondary">
+                            {set.weight}kg x {set.reps}
+                            {set.toFailure ? " fail" : ""}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
     </PageLayout>
-  )
+  );
 }

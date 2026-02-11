@@ -1,9 +1,24 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-export function PageLayout({ children, className = "" }: { children: ReactNode; className?: string }) {
+interface PageLayoutProps {
+  children: ReactNode;
+  className?: string;
+  withBottomNavPadding?: boolean;
+}
+
+export function PageLayout({ children, className = "", withBottomNavPadding = true }: PageLayoutProps) {
+  const style: CSSProperties = {
+    paddingTop: "max(1.75rem, env(safe-area-inset-top))",
+    paddingLeft: "max(1.5rem, calc(env(safe-area-inset-left) + 1rem))",
+    paddingRight: "max(1.5rem, calc(env(safe-area-inset-right) + 1rem))",
+    paddingBottom: withBottomNavPadding
+      ? "calc(7.5rem + env(safe-area-inset-bottom))"
+      : "max(2rem, env(safe-area-inset-bottom))",
+  };
+
   return (
-    <div className="w-full min-h-dvh flex flex-col items-center">
-      <div className={`w-full min-w-0 mx-auto max-w-[480px] flex-1 px-8 pt-6 pb-28 overflow-x-hidden ${className}`}>{children}</div>
+    <div className={`w-full min-h-dvh overflow-x-hidden ${className}`} style={style}>
+      {children}
     </div>
   );
 }

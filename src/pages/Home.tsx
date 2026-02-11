@@ -1,139 +1,142 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { PageLayout } from '../components/layout/PageLayout'
-import { useSettingsStore } from '../store/settingsStore'
-import { useWorkoutStore } from '../store/workoutStore'
-import { getProgram } from '../data/programs'
-import { getExercise } from '../data/exercises'
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PageLayout } from "../components/layout/PageLayout";
+import { getExercise } from "../data/exercises";
+import { getProgram } from "../data/programs";
+import { useSettingsStore } from "../store/settingsStore";
+import { useWorkoutStore } from "../store/workoutStore";
 
-const fullDayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const fullDayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function Home() {
-  const navigate = useNavigate()
-  const activeProgram = useSettingsStore(s => s.activeProgram)
-  const clearWorkouts = useWorkoutStore(s => s.clearAll)
-  const clearSettings = useSettingsStore(s => s.clearAll)
-  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const navigate = useNavigate();
+  const activeProgram = useSettingsStore((s) => s.activeProgram);
+  const clearWorkouts = useWorkoutStore((s) => s.clearAll);
+  const clearSettings = useSettingsStore((s) => s.clearAll);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const program = activeProgram ? getProgram(activeProgram) : null
+  const program = activeProgram ? getProgram(activeProgram) : null;
+
+  useEffect(() => {
+    if (!program) {
+      navigate("/program-select", { replace: true });
+    }
+  }, [navigate, program]);
+
+  const todayDow = new Date().getDay();
+  const todayDay = program?.days.find((d) => d.dayOfWeek === todayDow);
+
+  const otherLiftDays = program
+    ? [...program.days]
+        .filter((d) => d.type === "lift" && d.dayOfWeek !== todayDow)
+        .sort((a, b) => ((a.dayOfWeek - todayDow + 7) % 7) - ((b.dayOfWeek - todayDow + 7) % 7))
+    : [];
+
+  const getExerciseCount = (exerciseIds: string[]) => exerciseIds.filter((id) => getExercise(id)).length;
 
   const handleClearAll = () => {
-    clearWorkouts()
-    clearSettings()
-    setShowClearConfirm(false)
-    window.location.reload()
-  }
+    clearWorkouts();
+    clearSettings();
+    setShowClearConfirm(false);
+    window.location.reload();
+  };
 
-  if (!program) {
-    navigate('/program-select')
-    return null
-  }
-
-  const todayDow = new Date().getDay()
-  const todayDay = program.days.find(d => d.dayOfWeek === todayDow)
-
-  const otherLiftDays = program.days.filter(
-    d => d.type === 'lift' && d.dayOfWeek !== todayDow
-  )
-
-  const getExerciseCount = (exerciseIds: string[]) =>
-    exerciseIds.filter(id => getExercise(id)).length
+  if (!program) return null;
 
   return (
-    <PageLayout>
-      {/* Header */}
-      <div className="flex items-baseline justify-between pt-12 pb-3">
-        <h1 className="font-[var(--font-display)] text-3xl font-bold uppercase tracking-[3px] text-text-primary">
-          Heavy Duty
-        </h1>
+    <PageLayout className="space-y-8">
+      <header className="flex items-start justify-between gap-3 pt-2">
+        <div>
+          <p className="text-xs text-text-muted">Heavy Duty</p>
+          <h1 className="mt-3 font-[var(--font-display)] text-4xl leading-none text-text-primary">Train smarter.</h1>
+        </div>
         <button
-          onClick={() => navigate('/program-select')}
-          className="text-xs font-medium text-text-muted"
+          onClick={() => navigate("/program-select")}
+          className="rounded-full border border-border bg-bg-input px-4 py-2.5 text-sm text-text-secondary"
         >
           {program.shortName}
         </button>
-      </div>
+      </header>
 
-      {/* Today section */}
-      {todayDay && (
-        <div className="mt-10 mb-12">
-          <div className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-text-dim">
-            Today — {fullDayLabels[todayDow]}
-          </div>
-          <h2 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-wide text-text-primary">
-            {todayDay.focus}
-          </h2>
-          {todayDay.type === 'lift' && (
-            <p className="mt-1 text-sm text-text-muted">
-              {getExerciseCount(todayDay.exercises)} exercises
-            </p>
-          )}
-          {todayDay.type !== 'lift' && todayDay.duration && (
-            <p className="mt-1 text-sm text-text-muted">{todayDay.duration}</p>
-          )}
-          {todayDay.type === 'lift' && (
-            <button
-              onClick={() => navigate(`/workout/${todayDay.id}`)}
-              className="mt-6 w-full rounded-xl bg-accent-red py-5 font-[var(--font-display)] text-sm font-semibold uppercase tracking-[1.5px] text-white transition-all active:scale-[0.98]"
-            >
-              Start Workout
-            </button>
+      <section className="rounded-2xl border border-border-card bg-bg-card p-6">
+        <div className="space-y-4">
+          <p className="text-sm font-medium text-text-muted">Today · {fullDayLabels[todayDow]}</p>
+
+          {todayDay ? (
+            <>
+              <h2 className="font-[var(--font-display)] text-[2.05rem] leading-[1.12] text-text-primary">{todayDay.focus}</h2>
+
+              {todayDay.type === "lift" && (
+                <p className="text-base text-text-secondary">{getExerciseCount(todayDay.exercises)} exercises planned.</p>
+              )}
+
+              {todayDay.type !== "lift" && (
+                <p className="text-base leading-relaxed text-text-secondary">
+                  {[todayDay.duration, todayDay.description].filter(Boolean).join(" · ")}
+                </p>
+              )}
+
+              {todayDay.tips && <p className="text-base leading-relaxed text-text-muted">{todayDay.tips}</p>}
+
+              {todayDay.type === "lift" ? (
+                <button
+                  onClick={() => navigate(`/workout/${todayDay.id}`)}
+                  className="w-full rounded-xl bg-accent-red py-4 text-base font-semibold text-white active:scale-[0.99]"
+                >
+                  Start Workout
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate("/library")}
+                  className="w-full rounded-xl border border-border bg-bg-input py-4 text-base text-text-secondary"
+                >
+                  Browse Exercise Library
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <h2 className="font-[var(--font-display)] text-[2.05rem] leading-[1.12] text-text-primary">Rest Day</h2>
+              <p className="text-base text-text-secondary">No training scheduled today.</p>
+            </>
           )}
         </div>
-      )}
+      </section>
 
-      {!todayDay && (
-        <div className="mt-10 mb-12">
-          <div className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-text-dim">
-            Today — {fullDayLabels[todayDow]}
-          </div>
-          <h2 className="font-[var(--font-display)] text-2xl font-bold uppercase tracking-wide text-text-primary">
-            Rest Day
-          </h2>
-          <p className="mt-1 text-sm text-text-muted">No workout scheduled</p>
-        </div>
-      )}
-
-      {/* Other training days */}
       {otherLiftDays.length > 0 && (
-        <div className="mb-12">
-          <div className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-text-dim">
-            Other Days
-          </div>
-          <div className="space-y-1">
-            {otherLiftDays.map(day => (
+        <section className="rounded-2xl border border-border-card bg-bg-card p-6">
+          <h3 className="text-base font-medium text-text-secondary">Upcoming Lift Days</h3>
+          <div className="mt-4 space-y-2.5">
+            {otherLiftDays.map((day) => (
               <button
                 key={day.id}
                 onClick={() => navigate(`/workout/${day.id}`)}
-                className="flex w-full items-center justify-between rounded-xl px-1 py-3.5 text-left transition-colors active:bg-bg-input"
+                className="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left active:bg-bg-input"
               >
-                <span className="text-sm text-text-secondary">
-                  {fullDayLabels[day.dayOfWeek]} — {day.focus}
+                <span>
+                  <span className="block text-base font-medium text-text-primary">{day.focus}</span>
+                  <span className="mt-1 block text-sm text-text-muted">{fullDayLabels[day.dayOfWeek]}</span>
                 </span>
-                <span className="text-text-dim">›</span>
+                <span className="text-lg text-text-dim">›</span>
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Clear All Data */}
-      <div className="mt-8 mb-4">
+      <section>
         {showClearConfirm ? (
-          <div className="rounded-[14px] border border-accent-red/30 bg-accent-red/5 p-4">
-            <p className="mb-3 text-sm text-text-secondary">
-              Are you sure? This will delete all workout history and settings.
+          <div className="rounded-2xl border border-accent-red/25 bg-accent-red/5 p-6">
+            <p className="text-base leading-relaxed text-text-secondary">
+              Delete all workout history and settings? This cannot be undone.
             </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleClearAll}
-                className="flex-1 rounded-xl bg-accent-red py-3 font-[var(--font-display)] text-sm font-semibold uppercase tracking-wider text-white"
-              >
-                Delete Everything
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button onClick={handleClearAll} className="rounded-xl bg-accent-red py-4 text-base font-semibold text-white">
+                Delete
               </button>
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 rounded-xl border border-border bg-bg-input py-3 font-[var(--font-display)] text-sm font-semibold uppercase tracking-wider text-text-muted"
+                className="rounded-xl border border-border bg-bg-input py-4 text-base text-text-secondary"
               >
                 Cancel
               </button>
@@ -142,12 +145,12 @@ export function Home() {
         ) : (
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="w-full rounded-xl border border-accent-red/20 py-3 font-[var(--font-display)] text-xs font-semibold uppercase tracking-wider text-accent-red/60 transition-colors active:bg-accent-red/5"
+            className="w-full rounded-xl border border-border-card bg-bg-card px-6 py-4 text-base text-text-muted"
           >
             Clear All Data
           </button>
         )}
-      </div>
+      </section>
     </PageLayout>
-  )
+  );
 }
