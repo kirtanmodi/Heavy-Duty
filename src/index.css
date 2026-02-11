@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #0a0a0a;
+  --color-bg-card: #111111;
+  --color-bg-input: #1a1a1a;
+  --color-accent-red: #FF3B30;
+  --color-accent-orange: #FF6B35;
+  --color-accent-yellow: #FFAA00;
+  --color-accent-green: #44DD44;
+  --color-accent-blue: #4488FF;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #CCCCCC;
+  --color-text-muted: #888888;
+  --color-text-dim: #666666;
+  --color-border: #333333;
+  --color-border-card: #1e1e1e;
+
+  --color-muscle-chest: #FF4444;
+  --color-muscle-lats: #4488FF;
+  --color-muscle-delts: #FFAA00;
+  --color-muscle-biceps: #44DD44;
+  --color-muscle-triceps: #DD44DD;
+  --color-muscle-quads: #FF8844;
+  --color-muscle-glutes: #FF6644;
+  --color-muscle-hamstrings: #FFCC44;
+  --color-muscle-calves: #DDAA44;
+  --color-muscle-traps: #88CCFF;
+  --color-muscle-forearms: #66BB66;
+  --color-muscle-core: #CCCC44;
+
+  --font-display: 'Oswald', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  font-family: var(--font-body);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
