@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 
 export function PageLayout({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto max-w-[480px] min-h-dvh px-5 pb-28 ${className}`}>{children}</div>;
+  return (
+    <div className="w-full min-h-dvh flex flex-col items-center">
+      <div className={`w-full mx-auto max-w-[480px] flex-1 px-8 pt-6 pb-28 ${className}`}>{children}</div>
+    </div>
+  );
 }
