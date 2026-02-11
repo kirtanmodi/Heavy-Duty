@@ -127,7 +127,7 @@ export function Workout() {
         </div>
       )}
 
-      <PageLayout withBottomNavPadding={false} className="space-y-7">
+      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-7">
         <header className="flex items-start justify-between gap-4 pt-1">
           <div>
             <p className="text-sm font-medium tracking-wide text-text-muted">{day.program.shortName}</p>
@@ -174,13 +174,13 @@ export function Workout() {
           const suggestion = getOverloadSuggestion(exercise, lastSets);
 
           return (
-            <section key={entry.id} className="space-y-3">
+            <section key={entry.id} className="flex flex-col gap-3">
               {firstInSuperset && (
                 <p className="px-1 text-sm font-medium tracking-wide text-accent-yellow">Superset block</p>
               )}
 
               <div className="rounded-2xl border border-border-card bg-bg-card p-6">
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4">
                   <button onClick={() => navigate(`/exercise/${entry.id}`)} className="text-left">
                     <h2 className="text-xl font-semibold leading-tight text-text-primary">{entry.name}</h2>
                     <p className="mt-2 text-sm text-text-muted">
@@ -190,7 +190,7 @@ export function Workout() {
 
                   <p className="rounded-xl bg-bg-input px-4 py-3 text-sm text-text-secondary">{suggestion.message}</p>
 
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                   <div className="grid grid-cols-[2rem_1fr_1fr_3.25rem_1.75rem] gap-2 text-xs text-text-muted">
                     <span>Set</span>
                     <span>Kg</span>

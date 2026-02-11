@@ -7,8 +7,8 @@ export function History() {
   const history = useWorkoutStore((s) => s.history);
 
   return (
-    <PageLayout className="space-y-8">
-      <header className="space-y-3 pt-2">
+    <PageLayout className="flex flex-col gap-8">
+      <header className="flex flex-col gap-3 pt-2">
         <h1 className="font-[var(--font-display)] text-4xl leading-none text-text-primary">Workout History</h1>
         <p className="text-base leading-relaxed text-text-secondary">
           {history.length} workout{history.length !== 1 ? "s" : ""} logged
@@ -27,7 +27,7 @@ export function History() {
           </button>
         </section>
       ) : (
-        <div className="space-y-5">
+        <div className="flex flex-col gap-5">
           {history.map((workout) => (
             <section key={workout.id} className="rounded-2xl border border-border-card bg-bg-card p-6">
               <div className="flex items-start justify-between gap-4">
@@ -47,10 +47,10 @@ export function History() {
                 </span>
               </div>
 
-              <div className="mt-6 space-y-4">
+              <div className="mt-6 flex flex-col gap-4">
                 {workout.exercises.map((exercise) => (
                   <div key={exercise.id} className="rounded-xl bg-bg-input p-4">
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-3">
                       <button
                         onClick={() => navigate(`/exercise/${exercise.id}`)}
                         className="text-base font-medium text-text-primary active:text-accent-red"

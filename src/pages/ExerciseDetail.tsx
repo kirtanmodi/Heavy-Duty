@@ -21,7 +21,7 @@ function ExerciseDetailContent({ exercise }: { exercise: Exercise }) {
   const pairedExercise = exercise.supersetWith ? getExercise(exercise.supersetWith) : null;
 
   return (
-    <PageLayout className="space-y-8">
+    <PageLayout className="flex flex-col gap-8">
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center rounded-full border border-border bg-bg-input px-4 py-2.5 text-sm text-text-secondary active:bg-bg-card"
@@ -29,7 +29,7 @@ function ExerciseDetailContent({ exercise }: { exercise: Exercise }) {
         Back
       </button>
 
-      <header className="space-y-3 pt-1">
+      <header className="flex flex-col gap-3 pt-1">
         <h1 className="font-[var(--font-display)] text-4xl leading-none text-text-primary">{exercise.name}</h1>
         <p className="text-base text-text-muted">
           {exercise.equipment} · {exercise.type}
@@ -37,7 +37,7 @@ function ExerciseDetailContent({ exercise }: { exercise: Exercise }) {
       </header>
 
       <section className="rounded-2xl border border-border-card bg-bg-card p-6">
-        <div className="space-y-5">
+        <div className="flex flex-col gap-5">
           <div className="flex justify-center">
             <MuscleMap primaryMuscles={exercise.primaryMuscles} secondaryMuscles={exercise.secondaryMuscles} size="large" />
           </div>
@@ -72,7 +72,7 @@ function ExerciseDetailContent({ exercise }: { exercise: Exercise }) {
       )}
 
       <section className="rounded-2xl border border-border-card bg-bg-card p-6">
-        <div className="space-y-5">
+        <div className="flex flex-col gap-5">
           <h2 className="text-base font-semibold text-text-secondary">Protocol</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl bg-bg-input p-4">
@@ -110,14 +110,14 @@ function ExerciseDetailContent({ exercise }: { exercise: Exercise }) {
             No previous sessions logged.
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             {exerciseHistory.map((workout) => {
               const entry = workout.exercises.find((e) => e.id === exercise.id);
               if (!entry) return null;
 
               return (
                 <div key={workout.id} className="rounded-2xl border border-border-card bg-bg-card p-6">
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     <p className="text-sm text-text-muted">
                       {new Date(workout.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </p>

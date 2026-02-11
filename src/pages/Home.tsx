@@ -44,7 +44,7 @@ export function Home() {
   if (!program) return null;
 
   return (
-    <PageLayout className="space-y-8">
+    <PageLayout className="flex flex-col gap-8">
       <header className="flex items-start justify-between gap-3 pt-2">
         <div>
           <p className="text-xs text-text-muted">Heavy Duty</p>
@@ -59,7 +59,7 @@ export function Home() {
       </header>
 
       <section className="rounded-2xl border border-border-card bg-bg-card p-6">
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <p className="text-sm font-medium text-text-muted">Today · {fullDayLabels[todayDow]}</p>
 
           {todayDay ? (
@@ -106,7 +106,7 @@ export function Home() {
       {otherLiftDays.length > 0 && (
         <section className="rounded-2xl border border-border-card bg-bg-card p-6">
           <h3 className="text-base font-medium text-text-secondary">Upcoming Lift Days</h3>
-          <div className="mt-4 space-y-2.5">
+          <div className="mt-4 flex flex-col gap-2.5">
             {otherLiftDays.map((day) => (
               <button
                 key={day.id}
