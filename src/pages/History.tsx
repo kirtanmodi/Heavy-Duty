@@ -2,12 +2,73 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
+import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
+
+function formatRelativeDate(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function calcStats(workout: WorkoutEntry) {
+  let totalSets = 0;
+  let totalVolume = 0;
+  for (const ex of workout.exercises) {
+    totalSets += ex.sets.length;
+    for (const s of ex.sets) totalVolume += s.weight * s.reps;
+  }
+  return { totalExercises: workout.exercises.length, totalSets, totalVolume };
+}
+
+function findPrevSession(workout: WorkoutEntry, history: WorkoutEntry[]): WorkoutEntry | null {
+  const idx = history.indexOf(workout);
+  for (let i = idx + 1; i < history.length; i++) {
+    if (history[i].dayId === workout.dayId) return history[i];
+  }
+  return null;
+}
+
+function calcProgress(current: WorkoutEntry, prev: WorkoutEntry | null) {
+  if (!prev) return null;
+  const curVol = calcStats(current).totalVolume;
+  const prevVol = calcStats(prev).totalVolume;
+  if (prevVol === 0) return null;
+  const delta = curVol - prevVol;
+  const pct = (delta / prevVol) * 100;
+  return {
+    volumePercent: pct,
+    type: delta > 0 ? "increase" : delta < 0 ? "decrease" : "same",
+  } as const;
+}
+
+function getPrevExerciseSets(exerciseId: string, prevSession: WorkoutEntry | null): SetEntry[] | null {
+  if (!prevSession) return null;
+  const ex = prevSession.exercises.find((e) => e.id === exerciseId);
+  return ex?.sets.length ? ex.sets : null;
+}
 
 export function History() {
   const navigate = useNavigate();
   const history = useWorkoutStore((s) => s.history);
   const clearWorkouts = useWorkoutStore((s) => s.clearAll);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+
+  const toggleSession = (id: string) => {
+    setExpandedSessions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <PageLayout className="flex flex-col gap-6">
@@ -33,85 +94,83 @@ export function History() {
         </section>
       ) : (
         <div className="flex flex-col gap-3">
-          {history.map((workout) => (
-            <section key={workout.id} className="overflow-hidden rounded-xl bg-bg-card">
-              <div className="flex items-center justify-between gap-4 px-5 py-4">
-                <div className="flex flex-col gap-0.5">
-                  <h2 className="text-base font-semibold text-text-primary">{workout.day}</h2>
-                  <p className="text-xs text-text-muted">
-                    {new Date(workout.date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-                <span className="rounded bg-bg-input px-2.5 py-1 text-xs text-text-muted">
-                  {workout.program}
-                </span>
-              </div>
+          {history.map((workout) => {
+            const expanded = expandedSessions.has(workout.id);
+            const stats = calcStats(workout);
+            const prev = findPrevSession(workout, history);
+            const progress = calcProgress(workout, prev);
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-bg-input/40 text-left">
-                      <th className="px-5 py-2 text-[10px] font-medium tracking-wider text-text-muted uppercase">Exercise</th>
-                      <th className="px-3 py-2 text-center text-[10px] font-medium tracking-wider text-text-muted uppercase">Set</th>
-                      <th className="px-3 py-2 text-center text-[10px] font-medium tracking-wider text-text-muted uppercase">Weight</th>
-                      <th className="px-3 py-2 text-center text-[10px] font-medium tracking-wider text-text-muted uppercase">Reps</th>
-                      <th className="px-5 py-2 text-center text-[10px] font-medium tracking-wider text-text-muted uppercase">Fail</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workout.exercises.map((exercise, exerciseIdx) =>
-                      exercise.sets.length > 0 ? (
-                        exercise.sets.map((set, setIdx) => (
-                          <tr
-                            key={`${exercise.id}-${setIdx}`}
-                            className={`${
-                              exerciseIdx < workout.exercises.length - 1 && setIdx === exercise.sets.length - 1
-                                ? "border-b border-border"
-                                : ""
-                            }`}
-                          >
-                            {setIdx === 0 && (
-                              <td rowSpan={exercise.sets.length} className="px-5 py-2.5 align-top">
-                                <span className="text-sm font-medium text-text-primary">
-                                  {exercise.name}
-                                </span>
-                              </td>
-                            )}
-                            <td className="px-3 py-2 text-center text-xs text-text-muted">{setIdx + 1}</td>
-                            <td className="px-3 py-2 text-center text-sm text-text-primary">{set.weight}kg</td>
-                            <td className="px-3 py-2 text-center text-sm text-text-primary">{set.reps}</td>
-                            <td className="px-5 py-2 text-center">
-                              {set.toFailure ? (
-                                <span className="inline-block rounded bg-accent-red/15 px-2 py-0.5 text-[10px] font-semibold text-accent-red">
-                                  Yes
-                                </span>
-                              ) : (
-                                <span className="text-xs text-text-dim">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr key={exercise.id} className={exerciseIdx < workout.exercises.length - 1 ? "border-b border-border" : ""}>
-                          <td className="px-5 py-2.5">
-                            <span className="text-sm font-medium text-text-primary">
-                              {exercise.name}
-                            </span>
-                          </td>
-                          <td colSpan={4} className="px-3 py-2.5 text-center text-xs text-text-muted">No sets logged</td>
-                        </tr>
-                      )
+            return (
+              <section key={workout.id} className="overflow-hidden rounded-xl bg-bg-card">
+                <button
+                  onClick={() => toggleSession(workout.id)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-center justify-between px-5 py-4">
+                    <div className="flex flex-col gap-0.5">
+                      <h2 className="text-base font-semibold text-text-primary">{workout.day}</h2>
+                      <p className="text-xs text-text-muted">{formatRelativeDate(workout.date)}</p>
+                    </div>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className={`h-4 w-4 text-text-muted transition-transform ${expanded ? "rotate-180" : ""}`}
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-border px-5 py-3">
+                    <div className="flex items-center gap-5 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-text-muted">Exercises</span>
+                        <span className="text-sm font-semibold text-text-primary">{stats.totalExercises}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-text-muted">Sets</span>
+                        <span className="text-sm font-semibold text-text-primary">{stats.totalSets}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-text-muted">Volume</span>
+                        <span className="text-sm font-semibold text-text-primary">{stats.totalVolume.toLocaleString()}kg</span>
+                      </div>
+                    </div>
+
+                    {progress && (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                          progress.type === "increase"
+                            ? "bg-accent-green/12 text-accent-green"
+                            : progress.type === "decrease"
+                              ? "bg-accent-red/12 text-accent-red"
+                              : "bg-bg-input text-text-muted"
+                        }`}
+                      >
+                        {progress.type === "increase" && "↑ "}
+                        {progress.type === "decrease" && "↓ "}
+                        {progress.type === "same" && "→ "}
+                        {Math.abs(progress.volumePercent).toFixed(0)}%
+                      </span>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ))}
+                  </div>
+                </button>
+
+                {expanded && (
+                  <div className="flex flex-col gap-2 border-t border-border px-4 py-3">
+                    {workout.exercises.map((exercise) => (
+                      <ExerciseCard
+                        key={exercise.id}
+                        exercise={exercise}
+                        prevSets={getPrevExerciseSets(exercise.id, prev)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
 
@@ -148,5 +207,55 @@ export function History() {
         </section>
       )}
     </PageLayout>
+  );
+}
+
+function ExerciseCard({ exercise, prevSets }: { exercise: ExerciseEntry; prevSets: SetEntry[] | null }) {
+  if (exercise.sets.length === 0) {
+    return (
+      <div className="rounded-lg bg-bg-input px-4 py-2.5">
+        <p className="text-xs text-text-muted">{exercise.name} — No sets logged</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg bg-bg-input px-4 py-3">
+      <h3 className="mb-2 text-sm font-semibold text-text-primary">{exercise.name}</h3>
+      <div className="flex flex-col gap-1.5">
+        {exercise.sets.map((set, idx) => {
+          const prevSet = prevSets?.[idx] ?? null;
+          const wDelta = prevSet ? set.weight - prevSet.weight : 0;
+          const rDelta = prevSet ? set.reps - prevSet.reps : 0;
+
+          return (
+            <div key={idx} className="flex items-center gap-2.5 text-sm">
+              <span className="w-5 shrink-0 text-xs text-text-dim">#{idx + 1}</span>
+              <span className="font-medium text-text-primary">{set.weight}kg</span>
+              {wDelta !== 0 && (
+                <span className={`text-[10px] font-semibold ${wDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
+                  {wDelta > 0 ? "+" : ""}{wDelta}
+                </span>
+              )}
+              <span className="text-text-dim">×</span>
+              <span className="font-medium text-text-primary">{set.reps}</span>
+              {rDelta !== 0 && (
+                <span className={`text-[10px] font-semibold ${rDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
+                  {rDelta > 0 ? "+" : ""}{rDelta}
+                </span>
+              )}
+              {set.toFailure && (
+                <span className="ml-auto rounded bg-accent-red/15 px-2 py-0.5 text-[10px] font-semibold text-accent-red">
+                  Failure
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {!prevSets && (
+        <p className="mt-2 text-[10px] text-text-dim">First session</p>
+      )}
+    </div>
   );
 }
