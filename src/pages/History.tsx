@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
+import { programs } from "../data/programs";
 import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
 
 function formatRelativeDate(iso: string): string {
@@ -60,6 +61,12 @@ export function History() {
   const clearWorkouts = useWorkoutStore((s) => s.clearAll);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+
+  const liftingDays = programs[0].days.filter((d) => d.type === "lift");
+  const filteredHistory = activeFilter === "all"
+    ? history
+    : history.filter((w) => w.dayId === activeFilter);
 
   const toggleSession = (id: string) => {
     setExpandedSessions((prev) => {
@@ -79,6 +86,34 @@ export function History() {
         </p>
       </header>
 
+      {history.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          <button
+            onClick={() => setActiveFilter("all")}
+            className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+              activeFilter === "all"
+                ? "bg-accent-red text-white"
+                : "bg-bg-card text-text-muted active:text-text-secondary"
+            }`}
+          >
+            All
+          </button>
+          {liftingDays.map((day) => (
+            <button
+              key={day.id}
+              onClick={() => setActiveFilter(day.id)}
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                activeFilter === day.id
+                  ? "bg-accent-red text-white"
+                  : "bg-bg-card text-text-muted active:text-text-secondary"
+              }`}
+            >
+              {day.focus}
+            </button>
+          ))}
+        </div>
+      )}
+
       {history.length === 0 ? (
         <section className="flex flex-col items-center gap-6 rounded-xl bg-bg-card p-8 text-center">
           <div className="flex flex-col gap-2">
@@ -94,7 +129,7 @@ export function History() {
         </section>
       ) : (
         <div className="flex flex-col gap-3">
-          {history.map((workout) => {
+          {filteredHistory.map((workout) => {
             const expanded = expandedSessions.has(workout.id);
             const stats = calcStats(workout);
             const prev = findPrevSession(workout, history);
@@ -222,31 +257,42 @@ function ExerciseCard({ exercise, prevSets }: { exercise: ExerciseEntry; prevSet
   return (
     <div className="rounded-lg bg-bg-input px-4 py-3">
       <h3 className="mb-2 text-sm font-semibold text-text-primary">{exercise.name}</h3>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         {exercise.sets.map((set, idx) => {
           const prevSet = prevSets?.[idx] ?? null;
           const wDelta = prevSet ? set.weight - prevSet.weight : 0;
           const rDelta = prevSet ? set.reps - prevSet.reps : 0;
 
           return (
-            <div key={idx} className="flex items-center gap-2.5 text-sm">
-              <span className="w-5 shrink-0 text-xs text-text-dim">#{idx + 1}</span>
-              <span className="font-medium text-text-primary">{set.weight}kg</span>
-              {wDelta !== 0 && (
-                <span className={`text-[10px] font-semibold ${wDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
-                  {wDelta > 0 ? "+" : ""}{wDelta}
-                </span>
-              )}
-              <span className="text-text-dim">×</span>
-              <span className="font-medium text-text-primary">{set.reps}</span>
-              {rDelta !== 0 && (
-                <span className={`text-[10px] font-semibold ${rDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
-                  {rDelta > 0 ? "+" : ""}{rDelta}
-                </span>
-              )}
-              {set.toFailure && (
-                <span className="ml-auto rounded bg-accent-red/15 px-2 py-0.5 text-[10px] font-semibold text-accent-red">
-                  Failure
+            <div key={idx} className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2.5 text-sm">
+                <span className="w-5 shrink-0 text-xs text-text-dim">#{idx + 1}</span>
+                <span className="font-medium text-text-primary">{set.weight}kg</span>
+                {wDelta !== 0 ? (
+                  <span className={`text-[10px] font-semibold ${wDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
+                    {wDelta > 0 ? "+" : ""}{wDelta}
+                  </span>
+                ) : prevSet ? (
+                  <span className="text-[10px] font-semibold text-text-muted">=</span>
+                ) : null}
+                <span className="text-text-dim">×</span>
+                <span className="font-medium text-text-primary">{set.reps}</span>
+                {rDelta !== 0 ? (
+                  <span className={`text-[10px] font-semibold ${rDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
+                    {rDelta > 0 ? "+" : ""}{rDelta}
+                  </span>
+                ) : prevSet ? (
+                  <span className="text-[10px] font-semibold text-text-muted">=</span>
+                ) : null}
+                {set.toFailure && (
+                  <span className="ml-auto rounded bg-accent-red/15 px-2 py-0.5 text-[10px] font-semibold text-accent-red">
+                    Failure
+                  </span>
+                )}
+              </div>
+              {prevSet && (
+                <span className="ml-7 text-[10px] text-text-dim">
+                  prev: {prevSet.weight}kg × {prevSet.reps}
                 </span>
               )}
             </div>
