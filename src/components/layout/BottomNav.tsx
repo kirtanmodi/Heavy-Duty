@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const tabs = [
   { path: "/", label: "Home", icon: "home" },
+  { path: "/exercises", label: "Exercises", icon: "exercises" },
   { path: "/history", label: "History", icon: "history" },
 ] as const;
 
@@ -17,6 +18,14 @@ function TabIcon({ icon, active }: { icon: (typeof tabs)[number]["icon"]; active
             <path d="M5.5 9.8V20h13V9.8" />
           </>
         )}
+      </svg>
+    );
+  }
+
+  if (icon === "exercises") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} className="h-6 w-6">
+        <path d="M6.5 6v12M17.5 6v12M6.5 12h11M4 8v8M20 8v8" strokeLinecap="round" />
       </svg>
     );
   }
@@ -37,7 +46,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-bg-primary/95 backdrop-blur-md pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      <div className="mx-auto grid w-full max-w-[460px] grid-cols-2">
+      <div className="mx-auto grid w-full max-w-[460px] grid-cols-3">
         {tabs.map((tab) => {
           const active = tab.path === "/" ? location.pathname === "/" : location.pathname.startsWith(tab.path);
           return (

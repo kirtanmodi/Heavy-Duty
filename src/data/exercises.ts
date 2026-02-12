@@ -1,4 +1,5 @@
 import type { Exercise, MuscleGroup } from '../types'
+import { useExerciseStore } from '../store/exerciseStore'
 
 export const exercises: Exercise[] = [
   // === CHEST ===
@@ -447,6 +448,39 @@ export function getExercisesByGroup(groupLabel: string): Exercise[] {
   const group = exerciseGroups.find(g => g.label === groupLabel)
   if (!group) return []
   return exercises.filter(e =>
+    e.primaryMuscles.some(m => (group.muscles as readonly string[]).includes(m))
+  )
+}
+
+function applyOverrides(base: Exercise): Exercise | null {
+  const { nameOverrides, removedIds } = useExerciseStore.getState()
+  if (removedIds.includes(base.id)) return null
+  if (nameOverrides[base.id]) return { ...base, name: nameOverrides[base.id] }
+  return base
+}
+
+export function getEffectiveExercise(id: string): Exercise | undefined {
+  const { customExercises, removedIds } = useExerciseStore.getState()
+  if (removedIds.includes(id)) return undefined
+  const custom = customExercises.find(e => e.id === id)
+  if (custom) return custom
+  const base = exerciseMap.get(id)
+  if (!base) return undefined
+  return applyOverrides(base) ?? undefined
+}
+
+export function getEffectiveExercises(): Exercise[] {
+  const { customExercises } = useExerciseStore.getState()
+  const base = exercises
+    .map(applyOverrides)
+    .filter((e): e is Exercise => e !== null)
+  return [...base, ...customExercises]
+}
+
+export function getEffectiveExercisesByGroup(groupLabel: string): Exercise[] {
+  const group = exerciseGroups.find(g => g.label === groupLabel)
+  if (!group) return []
+  return getEffectiveExercises().filter(e =>
     e.primaryMuscles.some(m => (group.muscles as readonly string[]).includes(m))
   )
 }

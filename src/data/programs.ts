@@ -73,7 +73,7 @@ export const programs: Program[] = [
         name: 'Day 3 — Legs, Abs',
         type: 'lift',
         dayOfWeek: 5,
-        focus: 'Legs',
+        focus: 'Legs & Abs',
         exercises: [
           'leg-extension',
           'leg-press',
@@ -81,6 +81,7 @@ export const programs: Program[] = [
           'leg-curl',
           'calf-raise',
           'hanging-leg-raise',
+          'cable-crunch',
         ],
         supersets: [
           ['leg-extension', 'leg-press'],

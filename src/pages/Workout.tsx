@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
-import { getExercise } from "../data/exercises";
+import { getEffectiveExercise } from "../data/exercises";
 import { programs } from "../data/programs";
 import { useTimer } from "../hooks/useTimer";
 import { getOverloadSuggestion } from "../lib/overload";
@@ -25,7 +25,7 @@ export function Workout() {
     if (activeWorkout) cancelWorkout();
 
     const exercises: ExerciseEntry[] = day.exercises.map((exerciseId) => {
-      const exercise = getExercise(exerciseId);
+      const exercise = getEffectiveExercise(exerciseId);
       if (!exercise) return { id: exerciseId, name: exerciseId, sets: [] };
 
       const lastSets = getLastSets(exerciseId, history);
@@ -80,7 +80,7 @@ export function Workout() {
   };
 
   const handleRest = (exerciseId: string) => {
-    const exercise = getExercise(exerciseId);
+    const exercise = getEffectiveExercise(exerciseId);
     if (!exercise) return;
     const seconds = exercise.restSeconds || 120;
     timer.start(seconds, isSecondInSuperset(exerciseId) ? "Rest after superset" : "Rest");
@@ -213,7 +213,7 @@ export function Workout() {
         )}
 
         {activeWorkout.exercises.map((entry, exerciseIndex) => {
-          const exercise = getExercise(entry.id);
+          const exercise = getEffectiveExercise(entry.id);
           if (!exercise) return null;
 
           const firstInSuperset = isFirstInSuperset(entry.id);
