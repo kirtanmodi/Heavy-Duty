@@ -14,9 +14,8 @@ When the user invokes `/deploy`, perform these steps in order:
 
 2. **Stage changes** — Run `git add -A` to stage all changes.
 
-3. **Commit** — Create a commit with a short, one-line message summarizing the changes. Use `git diff --cached --stat` to understand what changed. Format: lowercase, imperative mood, no period. Example: `update home page layout and simplify history view`
+3. **Commit** — Create and share a commit message with a short, one-line message summarizing the changes. Use `git diff --cached --stat` to understand what changed. Format: lowercase, imperative mood, no period. Example: `update home page layout and simplify history view` dont commit
 
-4. **Push** — Run `git push` to push to the remote.
 
 5. **Deploy** — Run `netlify deploy --prod` to deploy to production.
 
