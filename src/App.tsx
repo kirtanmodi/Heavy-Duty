@@ -3,8 +3,6 @@ import { BottomNav } from "./components/layout/BottomNav";
 import { Home } from "./pages/Home";
 import { Workout } from "./pages/Workout";
 import { History } from "./pages/History";
-import { ExerciseLibrary } from "./pages/ExerciseLibrary";
-import { ExerciseDetail } from "./pages/ExerciseDetail";
 
 function AppRoutes() {
   return (
@@ -14,8 +12,6 @@ function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/workout/:dayId" element={<Workout />} />
           <Route path="/history" element={<History />} />
-          <Route path="/library" element={<ExerciseLibrary />} />
-          <Route path="/exercise/:id" element={<ExerciseDetail />} />
         </Routes>
       </main>
       <BottomNav />

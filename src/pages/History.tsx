@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
@@ -5,6 +6,8 @@ import { useWorkoutStore } from "../store/workoutStore";
 export function History() {
   const navigate = useNavigate();
   const history = useWorkoutStore((s) => s.history);
+  const clearWorkouts = useWorkoutStore((s) => s.clearAll);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   return (
     <PageLayout className="flex flex-col gap-8">
@@ -74,12 +77,9 @@ export function History() {
                           >
                             {setIdx === 0 && (
                               <td rowSpan={exercise.sets.length} className="px-5 py-2.5 align-top">
-                                <button
-                                  onClick={() => navigate(`/exercise/${exercise.id}`)}
-                                  className="text-left text-base font-medium text-text-primary active:text-accent-red"
-                                >
+                                <span className="text-base font-medium text-text-primary">
                                   {exercise.name}
-                                </button>
+                                </span>
                               </td>
                             )}
                             <td className="px-3 py-2.5 text-center text-sm text-text-muted">{setIdx + 1}</td>
@@ -99,12 +99,9 @@ export function History() {
                       ) : (
                         <tr key={exercise.id} className={exerciseIdx < workout.exercises.length - 1 ? "border-b border-border" : ""}>
                           <td className="px-5 py-2.5">
-                            <button
-                              onClick={() => navigate(`/exercise/${exercise.id}`)}
-                              className="text-left text-base font-medium text-text-primary active:text-accent-red"
-                            >
+                            <span className="text-base font-medium text-text-primary">
                               {exercise.name}
-                            </button>
+                            </span>
                           </td>
                           <td colSpan={4} className="px-3 py-2.5 text-center text-sm text-text-muted">No sets logged</td>
                         </tr>
@@ -116,6 +113,39 @@ export function History() {
             </section>
           ))}
         </div>
+      )}
+
+      {history.length > 0 && (
+        <section>
+          {showClearConfirm ? (
+            <div className="flex flex-col gap-5 rounded-2xl border border-accent-red/25 bg-accent-red/5 p-6">
+              <p className="text-base leading-relaxed text-text-secondary">
+                Delete all workout history? This cannot be undone.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => { clearWorkouts(); setShowClearConfirm(false); }}
+                  className="rounded-xl bg-accent-red py-4 text-base font-semibold text-white"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="rounded-xl border border-border bg-bg-input py-4 text-base text-text-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="w-full rounded-xl border border-border-card bg-bg-card px-6 py-4 text-base text-text-muted"
+            >
+              Clear All Data
+            </button>
+          )}
+        </section>
       )}
     </PageLayout>
   );

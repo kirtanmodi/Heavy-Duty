@@ -20,7 +20,9 @@ export function Workout() {
   const day = program.days.find((d) => d.id === dayId);
 
   useEffect(() => {
-    if (!day || activeWorkout) return;
+    if (!day) return;
+    if (activeWorkout && activeWorkout.dayId === dayId) return;
+    if (activeWorkout) cancelWorkout();
 
     const exercises: ExerciseEntry[] = day.exercises.map((exerciseId) => {
       const exercise = getExercise(exerciseId);
@@ -39,7 +41,7 @@ export function Workout() {
     });
 
     startWorkout(day.id, day.name, program.name, exercises);
-  }, [activeWorkout, day, history, startWorkout, program.name]);
+  }, [activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name]);
 
   const supersets = day?.supersets ?? [];
   const isFirstInSuperset = (exerciseId: string) => supersets.some(([a]) => a === exerciseId);
@@ -176,12 +178,12 @@ export function Workout() {
 
               <div className="rounded-2xl border border-border-card bg-bg-card px-5 py-6">
                 <div className="flex flex-col gap-4">
-                  <button onClick={() => navigate(`/exercise/${entry.id}`)} className="flex flex-col gap-2 text-left">
+                  <div className="flex flex-col gap-2">
                     <h2 className="text-xl font-semibold leading-tight text-text-primary">{entry.name}</h2>
                     <p className="text-sm text-text-muted">
                       {exercise.equipment} · {exercise.repRange[0]}-{exercise.repRange[1]} reps
                     </p>
-                  </button>
+                  </div>
 
                   <p className="rounded-xl bg-bg-input px-4 py-3 text-sm text-text-secondary">{suggestion.message}</p>
 
