@@ -1,25 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #0c0f14;
-  --color-bg-card: #141a23;
-  --color-bg-input: #1b2431;
-  --color-accent-red: #FF3B30;
+  --color-bg-primary: #000000;
+  --color-bg-card: #181818;
+  --color-bg-card-hover: #232323;
+  --color-bg-input: #2b2b2b;
+  --color-accent-red: #E50914;
   --color-accent-orange: #FF6B35;
   --color-accent-yellow: #FFAA00;
-  --color-accent-green: #44DD44;
+  --color-accent-green: #46D369;
   --color-accent-blue: #4488FF;
   --color-text-primary: #FFFFFF;
-  --color-text-secondary: #CCCCCC;
-  --color-text-muted: #888888;
-  --color-text-dim: #666666;
-  --color-border: #333333;
-  --color-border-card: #1e1e1e;
+  --color-text-secondary: #B3B3B3;
+  --color-text-muted: #808080;
+  --color-text-dim: #555555;
+  --color-border: #2a2a2a;
+  --color-border-card: #2a2a2a;
 
   --color-muscle-chest: #FF4444;
   --color-muscle-lats: #4488FF;
   --color-muscle-delts: #FFAA00;
-  --color-muscle-biceps: #44DD44;
+  --color-muscle-biceps: #46D369;
   --color-muscle-triceps: #DD44DD;
   --color-muscle-quads: #FF8844;
   --color-muscle-glutes: #FF6644;
@@ -29,8 +30,8 @@
   --color-muscle-forearms: #66BB66;
   --color-muscle-core: #CCCC44;
 
-  --font-display: 'Oswald', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'Outfit', sans-serif;
 }
 
 @layer base {
@@ -57,7 +58,7 @@
     overscroll-behavior-y: none;
     overflow-x: hidden;
     background: var(--color-bg-primary);
-    line-height: 1.45;
+    line-height: 1.5;
   }
 
   #root {

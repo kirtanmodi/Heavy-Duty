@@ -97,19 +97,19 @@ export function Workout() {
   return (
     <>
       {timer.isRunning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-primary/95 px-5 backdrop-blur-sm">
-          <div className="flex w-full max-w-[380px] flex-col gap-6 rounded-2xl border border-border-card bg-bg-card p-6 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 px-5 backdrop-blur-sm">
+          <div className="flex w-full max-w-[380px] flex-col gap-6 rounded-xl bg-bg-card p-6 text-center">
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-medium tracking-wide text-text-muted">{timer.label}</p>
-              <p className="font-[var(--font-display)] text-6xl leading-none text-text-primary">{timer.formatTime(timer.secondsLeft)}</p>
+              <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{timer.label}</p>
+              <p className="font-[var(--font-display)] text-7xl leading-none text-text-primary">{timer.formatTime(timer.secondsLeft)}</p>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-2.5">
+            <div className="flex flex-wrap justify-center gap-2">
               {restPresets.map((seconds) => (
                 <button
                   key={seconds}
                   onClick={() => timer.start(seconds, timer.label)}
-                  className="rounded-full border border-border bg-bg-input px-3.5 py-2 text-sm text-text-secondary"
+                  className="rounded-md bg-bg-input px-3.5 py-2 text-sm text-text-secondary transition-colors active:bg-bg-card-hover"
                 >
                   {seconds >= 60 ? `${seconds / 60}m` : `${seconds}s`}
                 </button>
@@ -118,7 +118,7 @@ export function Workout() {
 
             <button
               onClick={timer.stop}
-              className="w-full rounded-xl border border-border bg-bg-input py-3.5 text-base font-medium text-text-secondary"
+              className="w-full rounded-md bg-bg-input py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
             >
               Skip Rest
             </button>
@@ -126,30 +126,30 @@ export function Workout() {
         </div>
       )}
 
-      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-7">
+      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
         <header className="flex items-start justify-between gap-4 pt-1">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium tracking-wide text-text-muted">{program.shortName}</p>
-            <h1 className="font-[var(--font-display)] text-4xl leading-[1.08] text-text-primary">{day.focus}</h1>
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{program.shortName}</p>
+            <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{day.focus}</h1>
           </div>
           <button
             onClick={() => setShowCancel(true)}
-            className="rounded-full border border-border bg-bg-input px-4 py-2.5 text-sm text-text-secondary"
+            className="rounded-md bg-bg-input px-4 py-2 text-sm text-text-secondary transition-colors active:bg-bg-card-hover"
           >
             Cancel
           </button>
         </header>
 
         {showCancel && (
-          <section className="flex flex-col gap-4 rounded-2xl border border-accent-red/30 bg-accent-red/5 p-6">
-            <p className="text-base text-text-secondary">Cancel this workout? Logged sets from this session will be lost.</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={handleCancel} className="rounded-xl bg-accent-red py-3.5 text-base font-semibold text-white">
+          <section className="flex flex-col gap-4 rounded-xl bg-accent-red/8 p-5">
+            <p className="text-sm text-text-secondary">Cancel this workout? Logged sets from this session will be lost.</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button onClick={handleCancel} className="rounded-md bg-accent-red py-3 text-sm font-semibold text-white">
                 Cancel Workout
               </button>
               <button
                 onClick={() => setShowCancel(false)}
-                className="rounded-xl border border-border bg-bg-input py-3.5 text-base font-medium text-text-secondary"
+                className="rounded-md bg-bg-input py-3 text-sm font-medium text-text-secondary"
               >
                 Keep Going
               </button>
@@ -158,7 +158,7 @@ export function Workout() {
         )}
 
         {activeWorkout.exercises.length === 0 && (
-          <section className="rounded-2xl border border-border-card bg-bg-card p-6 text-base text-text-secondary">
+          <section className="rounded-xl bg-bg-card p-6 text-sm text-text-secondary">
             No lifting exercises for this day.
           </section>
         )}
@@ -173,22 +173,22 @@ export function Workout() {
           const suggestion = getOverloadSuggestion(exercise, lastSets);
 
           return (
-            <section key={entry.id} className="flex flex-col gap-3">
-              {firstInSuperset && <p className="px-1 text-sm font-medium tracking-wide text-accent-yellow">Superset block</p>}
+            <section key={entry.id} className="flex flex-col gap-2.5">
+              {firstInSuperset && <p className="px-0.5 text-xs font-semibold tracking-widest text-accent-yellow uppercase">Superset</p>}
 
-              <div className="rounded-2xl border border-border-card bg-bg-card px-5 py-6">
+              <div className="rounded-xl bg-bg-card px-5 py-5">
                 <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <h2 className="text-xl font-semibold leading-tight text-text-primary">{entry.name}</h2>
-                    <p className="text-sm text-text-muted">
+                  <div className="flex flex-col gap-1.5">
+                    <h2 className="text-lg font-semibold text-text-primary">{entry.name}</h2>
+                    <p className="text-xs text-text-muted">
                       {exercise.equipment} · {exercise.repRange[0]}-{exercise.repRange[1]} reps
                     </p>
                   </div>
 
-                  <p className="rounded-xl bg-bg-input px-4 py-3 text-sm text-text-secondary">{suggestion.message}</p>
+                  <p className="rounded-lg bg-bg-input px-4 py-2.5 text-xs text-text-secondary">{suggestion.message}</p>
 
-                  <div className="flex flex-col gap-3">
-                    <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_1.75rem] items-center gap-1.5 text-xs text-text-muted">
+                  <div className="flex flex-col gap-2.5">
+                    <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_1.75rem] items-center gap-1.5 text-[10px] font-medium tracking-wider text-text-muted uppercase">
                       <span>Set</span>
                       <span>Kg</span>
                       <span>Reps</span>
@@ -198,14 +198,14 @@ export function Workout() {
 
                     {entry.sets.map((set, setIndex) => (
                       <div key={setIndex} className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_1.75rem] items-center gap-1.5">
-                        <span className="text-center text-base text-text-muted">{setIndex + 1}</span>
+                        <span className="text-center text-sm text-text-muted">{setIndex + 1}</span>
 
                         <input
                           type="number"
                           inputMode="decimal"
                           value={set.weight || ""}
                           onChange={(event) => handleSetChange(exerciseIndex, setIndex, "weight", parseFloat(event.target.value) || 0)}
-                          className="h-11 min-w-0 rounded-xl border border-border bg-bg-input px-2 text-center text-base text-text-primary outline-none focus:border-accent-red"
+                          className="h-11 min-w-0 rounded-lg bg-bg-input px-2 text-center text-sm text-text-primary outline-none focus:ring-1 focus:ring-accent-red"
                           placeholder="0"
                         />
 
@@ -214,14 +214,14 @@ export function Workout() {
                           inputMode="numeric"
                           value={set.reps || ""}
                           onChange={(event) => handleSetChange(exerciseIndex, setIndex, "reps", parseInt(event.target.value) || 0)}
-                          className="h-11 min-w-0 rounded-xl border border-border bg-bg-input px-2 text-center text-base text-text-primary outline-none focus:border-accent-red"
+                          className="h-11 min-w-0 rounded-lg bg-bg-input px-2 text-center text-sm text-text-primary outline-none focus:ring-1 focus:ring-accent-red"
                           placeholder="0"
                         />
 
                         <button
                           onClick={() => handleSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                          className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
-                            set.toFailure ? "border-accent-red bg-accent-red/12 text-accent-red" : "border-border bg-bg-input text-text-muted"
+                          className={`h-11 rounded-lg text-xs font-medium transition-colors ${
+                            set.toFailure ? "bg-accent-red/15 text-accent-red" : "bg-bg-input text-text-muted"
                           }`}
                         >
                           {set.toFailure ? "Yes" : "No"}
@@ -229,7 +229,7 @@ export function Workout() {
 
                         <button
                           onClick={() => handleRemoveSet(exerciseIndex, setIndex)}
-                          className={`h-11 text-xl text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
+                          className={`h-11 text-lg text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
                           aria-label={`Remove set ${setIndex + 1}`}
                         >
                           ×
@@ -238,10 +238,10 @@ export function Workout() {
                     ))}
                   </div>
 
-                  <div className="flex gap-2.5">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleAddSet(exerciseIndex)}
-                      className="flex-1 rounded-xl border border-border bg-bg-input py-3 text-base font-medium text-text-secondary"
+                      className="flex-1 rounded-lg bg-bg-input py-3 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
                     >
                       Add Set
                     </button>
@@ -249,7 +249,7 @@ export function Workout() {
                     {exercise.restSeconds > 0 && !firstInSuperset && (
                       <button
                         onClick={() => handleRest(entry.id)}
-                        className="rounded-xl border border-border bg-bg-input px-4 py-3 text-base font-medium text-text-secondary"
+                        className="rounded-lg bg-bg-input px-4 py-3 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
                       >
                         Rest {exercise.restSeconds}s
                       </button>
@@ -258,7 +258,7 @@ export function Workout() {
                     {secondInSuperset && (
                       <button
                         onClick={() => timer.start(120, "Rest after superset")}
-                        className="rounded-xl border border-border bg-bg-input px-4 py-3 text-base font-medium text-text-secondary"
+                        className="rounded-lg bg-bg-input px-4 py-3 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
                       >
                         Rest 2m
                       </button>
@@ -270,7 +270,7 @@ export function Workout() {
           );
         })}
 
-        <button onClick={handleFinish} className="w-full rounded-xl bg-accent-red py-4 text-base font-semibold text-white active:scale-[0.99]">
+        <button onClick={handleFinish} className="w-full rounded-lg bg-accent-red py-4 text-sm font-semibold tracking-wide text-white active:scale-[0.99]">
           Finish Workout
         </button>
       </PageLayout>

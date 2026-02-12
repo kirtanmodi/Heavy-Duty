@@ -14,8 +14,8 @@ export default defineConfig({
         name: 'Heavy Duty — HIT Workout Tracker',
         short_name: 'Heavy Duty',
         description: 'Mike Mentzer High-Intensity Training tracker',
-        theme_color: '#0a0a0a',
-        background_color: '#0a0a0a',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
