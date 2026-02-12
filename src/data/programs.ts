@@ -13,7 +13,7 @@ export const programs: Program[] = [
         name: 'Day 1 — Chest, Shoulders, Triceps',
         type: 'lift',
         dayOfWeek: 1,
-        focus: 'Chest, Shoulders, Triceps',
+        focus: 'Push',
         exercises: [
           'dumbbell-flyes',
           'incline-bench-press',
@@ -44,7 +44,7 @@ export const programs: Program[] = [
         name: 'Day 2 — Back, Traps, Biceps',
         type: 'lift',
         dayOfWeek: 3,
-        focus: 'Back, Traps, Biceps',
+        focus: 'Pull',
         exercises: [
           'dumbbell-pullover',
           'lat-pulldown',
@@ -73,7 +73,7 @@ export const programs: Program[] = [
         name: 'Day 3 — Legs, Abs',
         type: 'lift',
         dayOfWeek: 5,
-        focus: 'Legs, Abs',
+        focus: 'Legs',
         exercises: [
           'leg-extension',
           'leg-press',

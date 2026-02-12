@@ -8,7 +8,7 @@ export function getOverloadSuggestion(
 
   if (!lastSets || lastSets.length === 0) {
     return {
-      message: 'Testing week! Pick a weight you think you can do 10 times.',
+      message: `First time doing this exercise. Pick a weight you can handle for ${repMin}–${repMax} reps with good form.`,
       suggestedWeight: null,
       suggestedReps: repMin,
       type: 'testing',
@@ -16,6 +16,7 @@ export function getOverloadSuggestion(
   }
 
   const lastWeight = lastSets[0].weight
+  const lastRepsStr = lastSets.map((s, i) => `Set ${i + 1}: ${s.reps}`).join(', ')
   const allHitTop = lastSets.every(s => s.reps >= repMax)
   const anyBelowBottom = lastSets.some(s => s.reps < repMin)
   const lastMaxReps = Math.max(...lastSets.map(s => s.reps))
@@ -24,7 +25,7 @@ export function getOverloadSuggestion(
     const increment = exercise.weightIncrement
     const newWeight = lastWeight + increment
     return {
-      message: `Increase weight to ${newWeight}kg — you crushed all sets!`,
+      message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. All sets hit ${repMax}+ reps (top of ${repMin}–${repMax} range), so adding ${increment}kg. Start at ${repMin} reps and build back up.`,
       suggestedWeight: newWeight,
       suggestedReps: repMin,
       type: 'increase',
@@ -34,7 +35,7 @@ export function getOverloadSuggestion(
   if (anyBelowBottom) {
     const dropWeight = Math.max(0, lastWeight - exercise.weightIncrement)
     return {
-      message: `Weight may be too heavy. Consider dropping to ${dropWeight}kg and building back up.`,
+      message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. Some sets fell below ${repMin} reps (bottom of ${repMin}–${repMax} range). Dropping to ${dropWeight}kg to rebuild with proper form.`,
       suggestedWeight: dropWeight,
       suggestedReps: repMin,
       type: 'decrease',
@@ -43,7 +44,7 @@ export function getOverloadSuggestion(
 
   const targetReps = Math.min(lastMaxReps + 1, repMax)
   return {
-    message: `Same weight ${lastWeight}kg — aim for ${targetReps} reps (last: ${lastMaxReps})`,
+    message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. Best was ${lastMaxReps} reps (within ${repMin}–${repMax} range). Same weight, aim for ${targetReps} reps — one more than last time.`,
     suggestedWeight: lastWeight,
     suggestedReps: targetReps,
     type: 'maintain',

@@ -20,7 +20,7 @@ export function Workout() {
   const day = program.days.find((d) => d.id === dayId);
 
   useEffect(() => {
-    if (!day) return;
+    if (!day || day.type !== 'lift') return;
     if (activeWorkout && activeWorkout.dayId === dayId) return;
     if (activeWorkout) cancelWorkout();
 
@@ -86,7 +86,56 @@ export function Workout() {
     timer.start(seconds, isSecondInSuperset(exerciseId) ? "Rest after superset" : "Rest");
   };
 
-  if (!day || !activeWorkout) {
+  if (!day) {
+    return (
+      <PageLayout withBottomNavPadding={false}>
+        <div className="pt-20 text-center text-text-muted">Loading workout...</div>
+      </PageLayout>
+    );
+  }
+
+  if (day.type !== 'lift') {
+    return (
+      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
+        <header className="flex items-start justify-between gap-4 pt-1">
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{day.type}</p>
+            <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{day.focus}</h1>
+          </div>
+        </header>
+
+        <section className="flex flex-col gap-5 rounded-xl bg-bg-card p-6">
+          {day.description && (
+            <p className="text-sm leading-relaxed text-text-primary">{day.description}</p>
+          )}
+          {day.duration && (
+            <div className="flex items-center gap-3 rounded-lg bg-bg-input px-4 py-3">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 text-accent-yellow">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              <span className="text-sm font-medium text-text-secondary">{day.duration}</span>
+            </div>
+          )}
+          {day.tips && (
+            <div className="flex flex-col gap-1.5">
+              <h3 className="text-xs font-semibold tracking-widest text-text-secondary uppercase">Tips</h3>
+              <p className="text-sm leading-relaxed text-text-secondary">{day.tips}</p>
+            </div>
+          )}
+        </section>
+
+        <button
+          onClick={() => navigate("/")}
+          className="w-full rounded-lg bg-accent-red py-4 text-sm font-semibold tracking-wide text-white active:scale-[0.99]"
+        >
+          Done
+        </button>
+      </PageLayout>
+    );
+  }
+
+  if (!activeWorkout) {
     return (
       <PageLayout withBottomNavPadding={false}>
         <div className="pt-20 text-center text-text-muted">Loading workout...</div>
@@ -185,7 +234,21 @@ export function Workout() {
                     </p>
                   </div>
 
-                  <p className="rounded-lg bg-bg-input px-4 py-2.5 text-xs text-text-secondary">{suggestion.message}</p>
+                  <div className={`rounded-lg px-4 py-2.5 text-xs leading-relaxed ${
+                    suggestion.type === 'increase' ? 'bg-accent-green/10 text-accent-green' :
+                    suggestion.type === 'decrease' ? 'bg-accent-orange/10 text-accent-orange' :
+                    suggestion.type === 'testing' ? 'bg-accent-blue/10 text-accent-blue' :
+                    'bg-bg-input text-text-secondary'
+                  }`}>
+                    <span className="font-semibold uppercase tracking-wider">
+                      {suggestion.type === 'increase' ? 'Weight Up' :
+                       suggestion.type === 'decrease' ? 'Weight Down' :
+                       suggestion.type === 'testing' ? 'Testing' :
+                       'Building Reps'}
+                    </span>
+                    <span className="mx-1.5 opacity-40">·</span>
+                    {suggestion.message}
+                  </div>
 
                   <div className="flex flex-col gap-2.5">
                     <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_1.75rem] items-center gap-1.5 text-[10px] font-medium tracking-wider text-text-muted uppercase">
