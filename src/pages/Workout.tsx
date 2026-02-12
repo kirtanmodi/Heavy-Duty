@@ -16,18 +16,13 @@ export function Workout() {
   const [showCancel, setShowCancel] = useState(false);
   const restPresets = [60, 90, 120, 180, 300];
 
-  const day = (() => {
-    for (const program of programs) {
-      const found = program.days.find((d) => d.id === dayId);
-      if (found) return { day: found, program };
-    }
-    return null;
-  })();
+  const program = programs[0];
+  const day = program.days.find((d) => d.id === dayId);
 
   useEffect(() => {
     if (!day || activeWorkout) return;
 
-    const exercises: ExerciseEntry[] = day.day.exercises.map((exerciseId) => {
+    const exercises: ExerciseEntry[] = day.exercises.map((exerciseId) => {
       const exercise = getExercise(exerciseId);
       if (!exercise) return { id: exerciseId, name: exerciseId, sets: [] };
 
@@ -43,10 +38,10 @@ export function Workout() {
       return { id: exerciseId, name: exercise.name, sets };
     });
 
-    startWorkout(day.day.id, day.day.name, day.program.name, exercises);
-  }, [activeWorkout, day, history, startWorkout]);
+    startWorkout(day.id, day.name, program.name, exercises);
+  }, [activeWorkout, day, history, startWorkout, program.name]);
 
-  const supersets = day?.day.supersets ?? [];
+  const supersets = day?.supersets ?? [];
   const isFirstInSuperset = (exerciseId: string) => supersets.some(([a]) => a === exerciseId);
   const isSecondInSuperset = (exerciseId: string) => supersets.some(([, b]) => b === exerciseId);
 
@@ -132,8 +127,8 @@ export function Workout() {
       <PageLayout withBottomNavPadding={false} className="flex flex-col gap-7">
         <header className="flex items-start justify-between gap-4 pt-1">
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium tracking-wide text-text-muted">{day.program.shortName}</p>
-            <h1 className="font-[var(--font-display)] text-4xl leading-[1.08] text-text-primary">{day.day.focus}</h1>
+            <p className="text-sm font-medium tracking-wide text-text-muted">{program.shortName}</p>
+            <h1 className="font-[var(--font-display)] text-4xl leading-[1.08] text-text-primary">{day.focus}</h1>
           </div>
           <button
             onClick={() => setShowCancel(true)}

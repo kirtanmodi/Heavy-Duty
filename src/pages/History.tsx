@@ -29,12 +29,12 @@ export function History() {
           </button>
         </section>
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
           {history.map((workout) => (
-            <section key={workout.id} className="rounded-2xl border border-border-card bg-bg-card p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex flex-col gap-2">
-                  <h2 className="font-[var(--font-display)] text-2xl leading-tight text-text-primary">{workout.day}</h2>
+            <section key={workout.id} className="overflow-hidden rounded-2xl border border-border-card bg-bg-card">
+              <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-lg font-semibold text-text-primary">{workout.day}</h2>
                   <p className="text-sm text-text-muted">
                     {new Date(workout.date).toLocaleDateString("en-US", {
                       weekday: "short",
@@ -49,27 +49,69 @@ export function History() {
                 </span>
               </div>
 
-              <div className="mt-6 flex flex-col gap-4">
-                {workout.exercises.map((exercise) => (
-                  <div key={exercise.id} className="rounded-xl bg-bg-input p-4">
-                    <div className="flex flex-col gap-3">
-                      <button
-                        onClick={() => navigate(`/exercise/${exercise.id}`)}
-                        className="text-base font-medium text-text-primary active:text-accent-red"
-                      >
-                        {exercise.name}
-                      </button>
-                      <div className="flex flex-wrap gap-2.5">
-                        {exercise.sets.map((set, i) => (
-                          <span key={i} className="rounded-full border border-border-card bg-bg-card px-3 py-1.5 text-sm text-text-secondary">
-                            {set.weight}kg x {set.reps}
-                            {set.toFailure ? " fail" : ""}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border bg-bg-input/50 text-left">
+                      <th className="px-5 py-2.5 text-sm font-medium text-text-muted">Exercise</th>
+                      <th className="px-3 py-2.5 text-center text-sm font-medium text-text-muted">Set</th>
+                      <th className="px-3 py-2.5 text-center text-sm font-medium text-text-muted">Weight</th>
+                      <th className="px-3 py-2.5 text-center text-sm font-medium text-text-muted">Reps</th>
+                      <th className="px-5 py-2.5 text-center text-sm font-medium text-text-muted">Fail</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workout.exercises.map((exercise, exerciseIdx) =>
+                      exercise.sets.length > 0 ? (
+                        exercise.sets.map((set, setIdx) => (
+                          <tr
+                            key={`${exercise.id}-${setIdx}`}
+                            className={`${
+                              exerciseIdx < workout.exercises.length - 1 && setIdx === exercise.sets.length - 1
+                                ? "border-b border-border"
+                                : ""
+                            }`}
+                          >
+                            {setIdx === 0 && (
+                              <td rowSpan={exercise.sets.length} className="px-5 py-2.5 align-top">
+                                <button
+                                  onClick={() => navigate(`/exercise/${exercise.id}`)}
+                                  className="text-left text-base font-medium text-text-primary active:text-accent-red"
+                                >
+                                  {exercise.name}
+                                </button>
+                              </td>
+                            )}
+                            <td className="px-3 py-2.5 text-center text-sm text-text-muted">{setIdx + 1}</td>
+                            <td className="px-3 py-2.5 text-center text-base text-text-primary">{set.weight}kg</td>
+                            <td className="px-3 py-2.5 text-center text-base text-text-primary">{set.reps}</td>
+                            <td className="px-5 py-2.5 text-center">
+                              {set.toFailure ? (
+                                <span className="inline-block rounded-full bg-accent-red/12 px-2.5 py-1 text-xs font-medium text-accent-red">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="text-sm text-text-muted">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr key={exercise.id} className={exerciseIdx < workout.exercises.length - 1 ? "border-b border-border" : ""}>
+                          <td className="px-5 py-2.5">
+                            <button
+                              onClick={() => navigate(`/exercise/${exercise.id}`)}
+                              className="text-left text-base font-medium text-text-primary active:text-accent-red"
+                            >
+                              {exercise.name}
+                            </button>
+                          </td>
+                          <td colSpan={4} className="px-3 py-2.5 text-center text-sm text-text-muted">No sets logged</td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
               </div>
             </section>
           ))}

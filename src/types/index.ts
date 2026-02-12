@@ -81,7 +81,7 @@ export interface Program {
   recommended?: boolean
 }
 
-export type ProgramId = 'heavy-duty-complete' | 'hit-classic' | 'consolidated'
+export type ProgramId = 'heavy-duty-complete'
 
 export interface OverloadSuggestion {
   message: string

@@ -3,9 +3,8 @@ import { persist } from 'zustand/middleware'
 import type { ProgramId } from '../types'
 
 interface SettingsState {
-  activeProgram: ProgramId | null
+  activeProgram: ProgramId
   restTimerSeconds: number
-  setActiveProgram: (id: ProgramId) => void
   setRestTimerSeconds: (seconds: number) => void
   clearAll: () => void
 }
@@ -13,11 +12,10 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      activeProgram: null,
+      activeProgram: 'heavy-duty-complete' as const,
       restTimerSeconds: 120,
-      setActiveProgram: (id) => set({ activeProgram: id }),
       setRestTimerSeconds: (seconds) => set({ restTimerSeconds: seconds }),
-      clearAll: () => set({ activeProgram: null, restTimerSeconds: 120 }),
+      clearAll: () => set({ activeProgram: 'heavy-duty-complete', restTimerSeconds: 120 }),
     }),
     { name: 'hd_settings' }
   )
