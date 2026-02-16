@@ -33,22 +33,22 @@ src/
 ├── types/index.ts       # All shared TypeScript types
 ├── store/
 │   ├── workoutStore.ts  # Zustand: workout history + active workout (key: hd_workouts)
+│   ├── exerciseStore.ts # Zustand: custom exercises, name overrides, weight mode (key: hd_exercises)
 │   └── settingsStore.ts # Zustand: program selection + rest timer (key: hd_settings)
 ├── data/
 │   ├── exercises.ts     # Static exercise catalog (30+ exercises) + lookup helpers
 │   ├── programs.ts      # Program definitions (days, supersets, cardio/rest days)
 │   └── quotes.ts        # Mike Mentzer quotes
 ├── lib/
-│   └── overload.ts      # Progressive overload algorithm (pure function)
+│   └── overload.ts      # Progressive overload algorithm (pure function, bodyweight-aware)
 ├── hooks/
 │   ├── useTimer.ts      # Countdown timer (rest between sets)
 │   └── useOverload.ts   # Connects overload logic to workout history
 ├── pages/
 │   ├── Home.tsx         # Weekly schedule, sorted by today's day-of-week
 │   ├── Workout.tsx      # Active workout logging (sets/reps/weight/failure)
-│   ├── History.tsx       # Past workout table view
-│   ├── ExerciseLibrary.tsx  # Browse exercises by muscle group
-│   └── ExerciseDetail.tsx   # Exercise info, muscle map, overload suggestion, history
+│   ├── History.tsx      # Past workouts with inline edit mode
+│   └── Exercises.tsx    # Exercise management (rename, add, remove)
 └── components/
     ├── layout/
     │   ├── PageLayout.tsx   # Safe-area-aware page wrapper
@@ -61,8 +61,12 @@ src/
 
 - **No backend/API** — all data is client-side. Workout history persists in localStorage via Zustand `persist` middleware.
 - **Static exercise/program data** — defined in `src/data/`, looked up via `Map` helpers (`exerciseMap`, `programMap`). Currently only one program: `heavy-duty-complete`.
-- **Progressive overload** — `lib/overload.ts` is a pure function: given an exercise definition and last session's sets, returns a suggestion (increase/maintain/decrease weight). Used by `useOverload` hook and directly in `Workout.tsx`.
-- **Superset system** — exercises have `supersetWith` field linking pairs. Programs define `supersets: [string, string][]` arrays. Workout page shows superset blocks and adjusts rest timer behavior (no rest between superset exercises, rest after the pair).
+- **Progressive overload** — `lib/overload.ts` is a pure function: given an exercise definition and last session's sets, returns a suggestion (increase/maintain/decrease weight). Bodyweight exercises (`equipment: 'bodyweight+'`) get rep-focused messages instead of weight-focused.
+- **Superset system** — programs define `supersets: [string, string][]` arrays. Workout page groups superset pairs visually (yellow left border). Users can split supersets per-session via `activeWorkout.splitSupersets`. Rest timer: no rest between superset exercises, 2min rest after the pair.
+- **Bodyweight exercise mode** — exercises with `equipment: 'bodyweight+'` default to reps-only (no Kg column). Users toggle "+ Add Weight" / "BW Only" per exercise. Preference persists in `exerciseStore.weightMode`.
+- **Exercise swap** — during an active workout, any exercise can be swapped for an alternative filtered by matching primary muscle group. Uses a full-screen modal (`SwapModal` in `Workout.tsx`).
+- **Exercise reorder** — up/down arrows per exercise group during active workout. Superset pairs move as a unit.
+- **History editing** — past workouts can be edited inline (modify sets/reps/weight, remove exercises, delete entire workout) via `updateHistoryEntry` / `deleteHistoryEntry` store actions.
 - **Mobile-first PWA** — max-width 460px, safe-area insets, portrait orientation, standalone display. Bottom nav hides on workout route.
 
 ### Design System
@@ -78,6 +82,5 @@ Defined in `src/index.css` `@theme` block (Tailwind v4 syntax):
 |------|-----------|-------|
 | `/` | Home | Weekly schedule |
 | `/workout/:dayId` | Workout | Active session (bottom nav hidden) |
-| `/history` | History | Past workouts |
-| `/library` | ExerciseLibrary | Browse by group |
-| `/exercise/:id` | ExerciseDetail | Exercise info + history |
+| `/exercises` | Exercises | Exercise management |
+| `/history` | History | Past workouts with edit mode |

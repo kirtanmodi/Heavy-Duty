@@ -6,11 +6,13 @@ interface ExerciseState {
   customExercises: Exercise[]
   nameOverrides: Record<string, string>
   removedIds: string[]
+  weightMode: Record<string, 'bodyweight' | 'weighted'>
 
   renameExercise: (id: string, name: string) => void
   addExercise: (exercise: Exercise) => void
   removeExercise: (id: string) => void
   undoRemove: (id: string) => void
+  setWeightMode: (id: string, mode: 'bodyweight' | 'weighted') => void
 }
 
 export const useExerciseStore = create<ExerciseState>()(
@@ -19,6 +21,7 @@ export const useExerciseStore = create<ExerciseState>()(
       customExercises: [],
       nameOverrides: {},
       removedIds: [],
+      weightMode: {},
 
       renameExercise: (id, name) =>
         set((state) => ({
@@ -42,6 +45,11 @@ export const useExerciseStore = create<ExerciseState>()(
       undoRemove: (id) =>
         set((state) => ({
           removedIds: state.removedIds.filter((rid) => rid !== id),
+        })),
+
+      setWeightMode: (id, mode) =>
+        set((state) => ({
+          weightMode: { ...state.weightMode, [id]: mode },
         })),
     }),
     { name: 'hd_exercises' }

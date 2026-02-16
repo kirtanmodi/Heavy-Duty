@@ -10,12 +10,17 @@ interface WorkoutState {
     program: string
     exercises: ExerciseEntry[]
     startedAt: string
+    splitSupersets: string[]
   } | null
 
   startWorkout: (dayId: string, dayName: string, program: string, exercises: ExerciseEntry[]) => void
   updateExercise: (exerciseIndex: number, exercise: ExerciseEntry) => void
+  reorderExercises: (exercises: ExerciseEntry[]) => void
+  splitSuperset: (firstExerciseId: string) => void
   finishWorkout: () => void
   cancelWorkout: () => void
+  updateHistoryEntry: (workoutId: string, exercises: ExerciseEntry[]) => void
+  deleteHistoryEntry: (workoutId: string) => void
   clearAll: () => void
 }
 
@@ -33,6 +38,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             program,
             exercises,
             startedAt: new Date().toISOString(),
+            splitSupersets: [],
           },
         }),
 
@@ -44,6 +50,23 @@ export const useWorkoutStore = create<WorkoutState>()(
         set({ activeWorkout: { ...active, exercises } })
       },
 
+      reorderExercises: (exercises) => {
+        const active = get().activeWorkout
+        if (!active) return
+        set({ activeWorkout: { ...active, exercises } })
+      },
+
+      splitSuperset: (firstExerciseId) => {
+        const active = get().activeWorkout
+        if (!active) return
+        set({
+          activeWorkout: {
+            ...active,
+            splitSupersets: [...(active.splitSupersets ?? []), firstExerciseId],
+          },
+        })
+      },
+
       finishWorkout: () => {
         const active = get().activeWorkout
         if (!active) return
@@ -53,7 +76,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           program: active.program,
           day: active.dayName,
           dayId: active.dayId,
-          exercises: active.exercises.filter(e => e.sets.some(s => s.weight > 0 || s.reps > 0)),
+          exercises: active.exercises.filter(e => e.sets.some(s => s.reps > 0)),
         }
         set(state => ({
           history: [entry, ...state.history],
@@ -62,6 +85,20 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       cancelWorkout: () => set({ activeWorkout: null }),
+
+      updateHistoryEntry: (workoutId, exercises) => {
+        set(state => ({
+          history: state.history.map(w =>
+            w.id === workoutId ? { ...w, exercises } : w
+          ),
+        }))
+      },
+
+      deleteHistoryEntry: (workoutId) => {
+        set(state => ({
+          history: state.history.filter(w => w.id !== workoutId),
+        }))
+      },
 
       clearAll: () => set({ history: [], activeWorkout: null }),
     }),
