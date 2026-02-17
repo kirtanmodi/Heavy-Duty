@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
 import { programs } from "../data/programs";
-import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
+import type { Exercise, WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
 
 function formatRelativeDate(iso: string): string {
   const date = new Date(iso);
@@ -67,6 +68,8 @@ export function History() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editExercises, setEditExercises] = useState<ExerciseEntry[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [historySwapTarget, setHistorySwapTarget] = useState<number | null>(null);
+  const [showHistoryAddExercise, setShowHistoryAddExercise] = useState(false);
 
   const liftingDays = programs[0].days.filter((d) => d.type === "lift");
   const filteredHistory = activeFilter === "all" ? history : history.filter((w) => w.dayId === activeFilter);
@@ -145,6 +148,22 @@ export function History() {
       next.delete(workoutId);
       return next;
     });
+  };
+
+  const handleHistorySwap = (exercise: Exercise) => {
+    if (historySwapTarget === null) return;
+    setEditExercises((prev) =>
+      prev.map((e, i) => (i === historySwapTarget ? { ...e, id: exercise.id, name: exercise.name } : e)),
+    );
+    setHistorySwapTarget(null);
+  };
+
+  const handleHistoryAddExercise = (exercise: Exercise) => {
+    setEditExercises((prev) => [
+      ...prev,
+      { id: exercise.id, name: exercise.name, sets: [{ weight: 0, reps: 0, toFailure: false, tempo: "4-1-4" }, { weight: 0, reps: 0, toFailure: false, tempo: "4-1-4" }] },
+    ]);
+    setShowHistoryAddExercise(false);
   };
 
   return (
@@ -273,12 +292,20 @@ export function History() {
                       <div key={exercise.id} className="rounded-lg bg-bg-input px-4 py-3">
                         <div className="mb-3 flex items-center justify-between">
                           <h3 className="text-sm font-semibold text-text-primary">{exercise.name}</h3>
-                          <button
-                            onClick={() => handleEditRemoveExercise(exIdx)}
-                            className="rounded-md px-2 py-1 text-xs text-accent-red transition-colors active:bg-accent-red/10"
-                          >
-                            Remove
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setHistorySwapTarget(exIdx)}
+                              className="rounded-md px-2 py-1 text-xs text-accent-blue transition-colors active:bg-accent-blue/10"
+                            >
+                              Swap
+                            </button>
+                            <button
+                              onClick={() => handleEditRemoveExercise(exIdx)}
+                              className="rounded-md px-2 py-1 text-xs text-accent-red transition-colors active:bg-accent-red/10"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
 
                         <div className="flex flex-col gap-2">
@@ -336,6 +363,13 @@ export function History() {
                       </div>
                     ))}
 
+                    <button
+                      onClick={() => setShowHistoryAddExercise(true)}
+                      className="w-full rounded-lg border border-dashed border-border py-3 text-xs font-medium text-text-secondary transition-colors active:bg-bg-card"
+                    >
+                      + Add Exercise
+                    </button>
+
                     <div className="grid grid-cols-2 gap-2">
                       <button onClick={cancelEdit} className="rounded-lg bg-bg-input py-3 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover">
                         Cancel
@@ -344,6 +378,25 @@ export function History() {
                         Save
                       </button>
                     </div>
+
+                    {historySwapTarget !== null && (
+                      <ExercisePickerModal
+                        mode="swap"
+                        currentExerciseId={editExercises[historySwapTarget]?.id ?? ""}
+                        activeExerciseIds={editExercises.map((e) => e.id)}
+                        onSelect={handleHistorySwap}
+                        onClose={() => setHistorySwapTarget(null)}
+                      />
+                    )}
+
+                    {showHistoryAddExercise && (
+                      <ExercisePickerModal
+                        mode="add"
+                        activeExerciseIds={editExercises.map((e) => e.id)}
+                        onSelect={handleHistoryAddExercise}
+                        onClose={() => setShowHistoryAddExercise(false)}
+                      />
+                    )}
 
                     {deleteConfirmId === workout.id ? (
                       <div className="flex flex-col gap-3 rounded-lg bg-accent-red/8 p-4">

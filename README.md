@@ -9,10 +9,10 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Weekly program** — 7-day Heavy Duty schedule with push/pull/legs, cardio, and rest days
 - **Progressive overload** — automatic suggestions to increase weight, add reps, or deload based on prior session performance
 - **Superset support** — visual grouping of pre-exhaust superset pairs with option to split per-session
-- **Exercise swap** — replace any exercise mid-workout with an alternative from the same muscle group
+- **Exercise management** — swap, add, or remove exercises during an active workout or when editing past sessions
 - **Exercise reorder** — move exercises up/down during an active workout (superset pairs move together)
 - **Bodyweight mode** — exercises like hanging leg raises default to reps-only tracking, with a toggle to add external weight
-- **History editing** — edit sets/reps/weight on past workouts, remove exercises, or delete entire sessions
+- **History editing** — full editing of past workouts: swap/add/remove exercises, modify sets/reps/weight, or delete entire sessions
 - **Rest timer** — configurable countdown timer with preset durations
 - **Offline-ready PWA** — installable, works without internet, data persists in localStorage
 

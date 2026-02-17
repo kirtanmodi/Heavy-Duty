@@ -19,6 +19,8 @@ interface WorkoutState {
   splitSuperset: (firstExerciseId: string) => void
   finishWorkout: () => void
   cancelWorkout: () => void
+  addExerciseToWorkout: (exercise: ExerciseEntry) => void
+  removeExerciseFromWorkout: (exerciseIndex: number) => void
   updateHistoryEntry: (workoutId: string, exercises: ExerciseEntry[]) => void
   deleteHistoryEntry: (workoutId: string) => void
   clearAll: () => void
@@ -85,6 +87,18 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       cancelWorkout: () => set({ activeWorkout: null }),
+
+      addExerciseToWorkout: (exercise) => {
+        const active = get().activeWorkout
+        if (!active) return
+        set({ activeWorkout: { ...active, exercises: [...active.exercises, exercise] } })
+      },
+
+      removeExerciseFromWorkout: (exerciseIndex) => {
+        const active = get().activeWorkout
+        if (!active) return
+        set({ activeWorkout: { ...active, exercises: active.exercises.filter((_, i) => i !== exerciseIndex) } })
+      },
 
       updateHistoryEntry: (workoutId, exercises) => {
         set(state => ({

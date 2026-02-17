@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
-import { getEffectiveExercise, getEffectiveExercises, exerciseGroups } from "../data/exercises";
+import { ExercisePickerModal } from "../components/ExercisePickerModal";
+import { getEffectiveExercise } from "../data/exercises";
 import { programs } from "../data/programs";
 import { useTimer } from "../hooks/useTimer";
 import { getOverloadSuggestion } from "../lib/overload";
@@ -22,6 +23,8 @@ export function Workout() {
     updateExercise,
     reorderExercises,
     splitSuperset,
+    addExerciseToWorkout,
+    removeExerciseFromWorkout,
     finishWorkout,
     cancelWorkout,
     history,
@@ -30,6 +33,8 @@ export function Workout() {
   const [showCancel, setShowCancel] = useState(false);
   const [weightOverrides, setWeightOverrides] = useState<Record<string, boolean>>({});
   const [swapTarget, setSwapTarget] = useState<number | null>(null);
+  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
   const { weightMode, setWeightMode } = useExerciseStore();
   const restPresets = [60, 90, 120, 180, 300];
 
@@ -199,6 +204,24 @@ export function Workout() {
     setSwapTarget(null);
   };
 
+  const handleAddExercise = (exercise: Exercise) => {
+    const lastSets = getLastSets(exercise.id, history);
+    const suggestion = getOverloadSuggestion(exercise, lastSets);
+    const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
+      weight: suggestion.suggestedWeight ?? 0,
+      reps: suggestion.suggestedReps,
+      toFailure: false,
+      tempo: "4-1-4",
+    }));
+    addExerciseToWorkout({ id: exercise.id, name: exercise.name, sets });
+    setShowAddExercise(false);
+  };
+
+  const handleRemoveExercise = (exerciseIndex: number) => {
+    removeExerciseFromWorkout(exerciseIndex);
+    setRemoveConfirmIndex(null);
+  };
+
   if (!day) {
     return (
       <PageLayout withBottomNavPadding={false}>
@@ -290,15 +313,26 @@ export function Workout() {
                 )}
               </div>
             </div>
-            <button
-              onClick={() => setSwapTarget(exerciseIndex)}
-              className="shrink-0 rounded-md bg-bg-input p-2 text-text-muted transition-colors active:bg-bg-card-hover"
-              aria-label="Swap exercise"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
-              </svg>
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                onClick={() => setSwapTarget(exerciseIndex)}
+                className="rounded-md bg-bg-input p-2 text-text-muted transition-colors active:bg-bg-card-hover"
+                aria-label="Swap exercise"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                  <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setRemoveConfirmIndex(removeConfirmIndex === exerciseIndex ? null : exerciseIndex)}
+                className="rounded-md bg-bg-input p-2 text-text-muted transition-colors active:bg-bg-card-hover"
+                aria-label="Remove exercise"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div
@@ -400,6 +434,20 @@ export function Workout() {
             )}
           </div>
 
+          {removeConfirmIndex === exerciseIndex && (
+            <div className="flex flex-col gap-3 rounded-lg bg-accent-red/8 p-4">
+              <p className="text-xs text-text-secondary">Remove this exercise? Logged sets will be lost.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => handleRemoveExercise(exerciseIndex)} className="rounded-md bg-accent-red py-2.5 text-xs font-semibold text-white">
+                  Remove
+                </button>
+                <button onClick={() => setRemoveConfirmIndex(null)} className="rounded-md bg-bg-input py-2.5 text-xs text-text-secondary">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button
               onClick={() => handleAddSet(exerciseIndex)}
@@ -461,11 +509,22 @@ export function Workout() {
 
       {/* Swap Exercise Modal */}
       {swapTarget !== null && (
-        <SwapModal
+        <ExercisePickerModal
+          mode="swap"
           currentExerciseId={activeWorkout.exercises[swapTarget]?.id ?? ""}
           activeExerciseIds={activeWorkout.exercises.map((e) => e.id)}
           onSelect={handleSwap}
           onClose={() => setSwapTarget(null)}
+        />
+      )}
+
+      {/* Add Exercise Modal */}
+      {showAddExercise && (
+        <ExercisePickerModal
+          mode="add"
+          activeExerciseIds={activeWorkout.exercises.map((e) => e.id)}
+          onSelect={handleAddExercise}
+          onClose={() => setShowAddExercise(false)}
         />
       )}
 
@@ -581,76 +640,17 @@ export function Workout() {
           );
         })}
 
+        <button
+          onClick={() => setShowAddExercise(true)}
+          className="w-full rounded-lg border border-dashed border-border py-4 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card"
+        >
+          + Add Exercise
+        </button>
+
         <button onClick={handleFinish} className="w-full rounded-lg bg-accent-red py-4 text-sm font-semibold tracking-wide text-white active:scale-[0.99]">
           Finish Workout
         </button>
       </PageLayout>
     </>
-  );
-}
-
-// Swap Exercise Modal
-function SwapModal({
-  currentExerciseId,
-  activeExerciseIds,
-  onSelect,
-  onClose,
-}: {
-  currentExerciseId: string;
-  activeExerciseIds: string[];
-  onSelect: (exercise: Exercise) => void;
-  onClose: () => void;
-}) {
-  const allExercises = getEffectiveExercises();
-
-  // All exercises except the current one and ones already in the workout
-  const candidates = allExercises.filter((e) => {
-    if (e.id === currentExerciseId) return false;
-    if (activeExerciseIds.includes(e.id)) return false;
-    return true;
-  });
-
-  // Group by muscle group
-  const grouped: { label: string; exercises: Exercise[] }[] = [];
-  for (const group of exerciseGroups) {
-    const matches = candidates.filter((e) => e.primaryMuscles.some((m) => (group.muscles as readonly string[]).includes(m)));
-    if (matches.length > 0) grouped.push({ label: group.label, exercises: matches });
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-sm">
-      <div className="flex items-center justify-between px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
-        <h2 className="font-[var(--font-display)] text-2xl text-text-primary">Swap Exercise</h2>
-        <button onClick={onClose} className="rounded-md bg-bg-input px-4 py-2 text-sm text-text-secondary">
-          Cancel
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 pb-8">
-        {candidates.length === 0 ? (
-          <p className="pt-8 text-center text-sm text-text-muted">No alternative exercises available.</p>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {grouped.map(({ label, exercises }) => (
-              <div key={label} className="flex flex-col gap-1.5">
-                <p className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">{label}</p>
-                {exercises.map((e) => (
-                  <button
-                    key={e.id}
-                    onClick={() => onSelect(e)}
-                    className="flex flex-col gap-0.5 rounded-lg bg-bg-card px-4 py-3 text-left transition-colors active:bg-bg-card-hover"
-                  >
-                    <span className="text-sm font-medium text-text-primary">{e.name}</span>
-                    <span className="text-xs text-text-muted">
-                      {e.equipment === "bodyweight+" ? "bodyweight" : e.equipment} · {e.repRange[0]}-{e.repRange[1]} reps
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
   );
 }
