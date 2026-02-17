@@ -5,7 +5,7 @@ import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { getEffectiveExercise } from "../data/exercises";
 import { cardioActivities, programs } from "../data/programs";
-import { useElapsedTimer } from "../hooks/useElapsedTimer";
+
 import { useTimer } from "../hooks/useTimer";
 import { getOverloadSuggestion } from "../lib/overload";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
@@ -43,7 +43,7 @@ export function Workout() {
     history,
   } = useWorkoutStore();
   const timer = useTimer();
-  const { formatted: elapsedFormatted } = useElapsedTimer(activeWorkout?.startedAt ?? null);
+
   const [showCancel, setShowCancel] = useState(false);
   const [swapTarget, setSwapTarget] = useState<number | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -58,7 +58,12 @@ export function Workout() {
     if (activeWorkout && activeWorkout.dayId === dayId) return;
     if (activeWorkout) cancelWorkout();
 
-    const exercises: ExerciseEntry[] = day.exercises.map((exerciseId) => {
+    const lastWorkoutForDay = history.find((w) => w.dayId === dayId);
+    const exerciseIds = lastWorkoutForDay
+      ? lastWorkoutForDay.exercises.map((e) => e.id)
+      : day.exercises;
+
+    const exercises: ExerciseEntry[] = exerciseIds.map((exerciseId) => {
       const exercise = getEffectiveExercise(exerciseId);
       if (!exercise) return { id: exerciseId, name: exerciseId, sets: [] };
 
@@ -428,11 +433,6 @@ export function Workout() {
               </h1>
             </div>
             <div className="flex items-center gap-2">
-              {/* Elapsed timer badge */}
-              <div className="flex items-center gap-1.5 rounded-xl bg-white/[0.04] px-3 py-2">
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: themeColor }} />
-                <span className="font-[var(--font-display)] text-[15px] tabular-nums text-text-primary">{elapsedFormatted}</span>
-              </div>
               <button
                 onClick={() => setShowCancel(true)}
                 className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-text-dim transition-colors active:bg-white/[0.06]"
@@ -607,15 +607,9 @@ export function Workout() {
         }}
       >
         <div className="mx-auto flex max-w-[460px] items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: themeColor }} />
-              <span className="font-[var(--font-display)] text-lg tabular-nums text-text-primary">{elapsedFormatted}</span>
-            </div>
-            <span className="text-[11px] tabular-nums text-text-dim">
-              {completedSets}/{totalSets} sets
-            </span>
-          </div>
+          <span className="text-[13px] font-medium tabular-nums text-text-secondary">
+            {completedSets}/{totalSets} sets
+          </span>
           <button
             onClick={handleFinish}
             className="rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-[0.97]"
