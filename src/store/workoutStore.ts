@@ -12,6 +12,7 @@ interface WorkoutState {
     startedAt: string
     splitSupersets: string[]
   } | null
+  lastCompletedWorkout: WorkoutEntry | null
 
   startWorkout: (dayId: string, dayName: string, program: string, exercises: ExerciseEntry[]) => void
   updateExercise: (exerciseIndex: number, exercise: ExerciseEntry) => void
@@ -31,6 +32,7 @@ export const useWorkoutStore = create<WorkoutState>()(
     (set, get) => ({
       history: [],
       activeWorkout: null,
+      lastCompletedWorkout: null,
 
       startWorkout: (dayId, dayName, program, exercises) =>
         set({
@@ -78,11 +80,13 @@ export const useWorkoutStore = create<WorkoutState>()(
           program: active.program,
           day: active.dayName,
           dayId: active.dayId,
+          startedAt: active.startedAt,
           exercises: active.exercises.filter(e => e.sets.some(s => s.reps > 0)),
         }
         set(state => ({
           history: [entry, ...state.history],
           activeWorkout: null,
+          lastCompletedWorkout: entry,
         }))
       },
 
@@ -114,7 +118,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         }))
       },
 
-      clearAll: () => set({ history: [], activeWorkout: null }),
+      clearAll: () => set({ history: [], activeWorkout: null, lastCompletedWorkout: null }),
     }),
     { name: 'hd_workouts' }
   )

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageLayout } from "../components/layout/PageLayout";
-import { exerciseGroups, getEffectiveExercisesByGroup } from "../data/exercises";
+import { exerciseGroups, getEffectiveExercises, getEffectiveExercisesByGroup } from "../data/exercises";
 import { useExerciseStore } from "../store/exerciseStore";
 import type { Exercise, Equipment, MuscleGroup } from "../types";
 
@@ -27,6 +27,14 @@ function ExerciseRow({ exercise }: { exercise: Exercise }) {
   const { renameExercise, removeExercise } = useExerciseStore();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(exercise.name);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+
+  // Auto-reset confirm after 2s
+  useEffect(() => {
+    if (!confirmRemove) return;
+    const id = setTimeout(() => setConfirmRemove(false), 2000);
+    return () => clearTimeout(id);
+  }, [confirmRemove]);
 
   const handleSave = () => {
     const trimmed = name.trim();
@@ -36,6 +44,14 @@ function ExerciseRow({ exercise }: { exercise: Exercise }) {
       setName(exercise.name);
     }
     setEditing(false);
+  };
+
+  const handleRemove = () => {
+    if (confirmRemove) {
+      removeExercise(exercise.id);
+    } else {
+      setConfirmRemove(true);
+    }
   };
 
   return (
@@ -61,7 +77,7 @@ function ExerciseRow({ exercise }: { exercise: Exercise }) {
 
       <button
         onClick={() => setEditing(true)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-transparent text-text-muted transition-colors active:border-border-card active:bg-bg-input"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] border border-transparent text-text-muted transition-colors active:border-border-card active:bg-bg-input"
         aria-label="Rename exercise"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
@@ -70,9 +86,13 @@ function ExerciseRow({ exercise }: { exercise: Exercise }) {
       </button>
 
       <button
-        onClick={() => removeExercise(exercise.id)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-transparent text-text-muted transition-colors active:border-border-card active:bg-bg-input"
-        aria-label="Remove exercise"
+        onClick={handleRemove}
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] border transition-colors ${
+          confirmRemove
+            ? "border-accent-red/30 bg-accent-red/10 text-accent-red"
+            : "border-transparent text-text-muted active:border-border-card active:bg-bg-input"
+        }`}
+        aria-label={confirmRemove ? "Confirm remove exercise" : "Remove exercise"}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
           <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -171,7 +191,13 @@ function AddExerciseForm({ onClose }: { onClose: () => void }) {
 
 export function Exercises() {
   const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState("");
   useExerciseStore();
+
+  const allExercises = getEffectiveExercises();
+  const filteredExercises = search
+    ? allExercises.filter((e) => e.name.toLowerCase().includes(search.toLowerCase()))
+    : null;
 
   return (
     <PageLayout className="flex flex-col gap-6">
@@ -187,21 +213,61 @@ export function Exercises() {
 
       {showAdd && <AddExerciseForm onClose={() => setShowAdd(false)} />}
 
-      {exerciseGroups.map((group) => {
-        const groupExercises = getEffectiveExercisesByGroup(group.label);
-        if (groupExercises.length === 0) return null;
+      {/* Search */}
+      <div className="relative">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted">
+          <circle cx="11" cy="11" r="8" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+        <input
+          type="text"
+          inputMode="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search exercises..."
+          className="w-full rounded-[10px] border border-border-card bg-bg-input py-2.5 pl-10 pr-9 text-sm text-text-primary placeholder:text-text-dim outline-none input-focus"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
 
-        return (
-          <section key={group.label} className="flex flex-col gap-2">
-            <h3 className="px-0.5 text-xs font-semibold tracking-widest text-text-muted uppercase">{group.label}</h3>
-            <div className="flex flex-col gap-1.5">
-              {groupExercises.map((exercise) => (
-                <ExerciseRow key={exercise.id} exercise={exercise} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {/* Filtered flat list */}
+      {filteredExercises ? (
+        filteredExercises.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            {filteredExercises.map((exercise) => (
+              <ExerciseRow key={exercise.id} exercise={exercise} />
+            ))}
+          </div>
+        ) : (
+          <p className="py-8 text-center text-sm text-text-muted">No exercises match "{search}"</p>
+        )
+      ) : (
+        /* Grouped list (no search) */
+        exerciseGroups.map((group) => {
+          const groupExercises = getEffectiveExercisesByGroup(group.label);
+          if (groupExercises.length === 0) return null;
+
+          return (
+            <section key={group.label} className="flex flex-col gap-2">
+              <h3 className="px-0.5 text-xs font-semibold tracking-widest text-text-muted uppercase">{group.label}</h3>
+              <div className="flex flex-col gap-1.5">
+                {groupExercises.map((exercise) => (
+                  <ExerciseRow key={exercise.id} exercise={exercise} />
+                ))}
+              </div>
+            </section>
+          );
+        })
+      )}
     </PageLayout>
   );
 }

@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
 
 const tabs = [
   { path: "/", label: "Home", icon: "home" },
@@ -42,7 +43,8 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  if (location.pathname.startsWith("/workout/") || /^\/history\/.+\/edit/.test(location.pathname)) return null;
+  if (location.pathname.startsWith("/workout")) return null;
+  if (/^\/history\/.+\/edit/.test(location.pathname)) return null;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 glass pb-[max(0.5rem,env(safe-area-inset-bottom))]">
@@ -53,12 +55,19 @@ export function BottomNav() {
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
+              className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
                 active ? "text-text-primary" : "text-text-muted active:text-text-secondary"
               }`}
             >
               <TabIcon icon={tab.icon} active={active} />
               <span className="text-[10px] font-medium">{tab.label}</span>
+              {active && (
+                <motion.div
+                  layoutId="nav-indicator"
+                  className="absolute -bottom-0.5 h-[3px] w-5 rounded-full bg-accent-red"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
             </button>
           );
         })}

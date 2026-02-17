@@ -54,6 +54,7 @@ export interface WorkoutEntry {
   program: string
   day: string
   dayId: string
+  startedAt?: string
   exercises: ExerciseEntry[]
 }
 

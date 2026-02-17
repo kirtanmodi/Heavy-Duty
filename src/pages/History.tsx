@@ -111,11 +111,11 @@ export function History() {
       {history.length === 0 ? (
         <section className="flex flex-col items-center gap-6 rounded-[14px] bg-bg-card card-surface p-8 text-center">
           <div className="flex flex-col gap-2">
-            <p className="text-base font-medium text-text-primary">No workouts yet</p>
-            <p className="text-sm text-text-muted">Complete your first workout and it will show up here.</p>
+            <p className="font-[var(--font-display)] text-xl tracking-wide text-text-primary">No workouts yet</p>
+            <p className="text-sm leading-relaxed text-text-muted">Complete your first workout and it will show up here.</p>
           </div>
           <button onClick={() => navigate("/")} className="rounded-[10px] btn-primary px-8 py-3 text-sm font-semibold text-white">
-            Start Training
+            Start Today's Workout
           </button>
         </section>
       ) : (

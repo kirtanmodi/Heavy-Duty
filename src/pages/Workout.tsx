@@ -5,6 +5,7 @@ import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { getEffectiveExercise } from "../data/exercises";
 import { programs } from "../data/programs";
+import { useElapsedTimer } from "../hooks/useElapsedTimer";
 import { useTimer } from "../hooks/useTimer";
 import { getOverloadSuggestion } from "../lib/overload";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
@@ -13,6 +14,12 @@ import type { Exercise, ExerciseEntry, SetEntry } from "../types";
 type ExerciseGroup =
   | { type: "single"; index: number }
   | { type: "superset"; indices: [number, number] };
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `${m}:00`;
+}
 
 export function Workout() {
   const { dayId } = useParams<{ dayId: string }>();
@@ -30,6 +37,7 @@ export function Workout() {
     history,
   } = useWorkoutStore();
   const timer = useTimer();
+  const { formatted: elapsedFormatted } = useElapsedTimer(activeWorkout?.startedAt ?? null);
   const [showCancel, setShowCancel] = useState(false);
   const [swapTarget, setSwapTarget] = useState<number | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -131,7 +139,7 @@ export function Workout() {
 
   const handleFinish = () => {
     finishWorkout();
-    navigate("/");
+    navigate("/workout-summary");
   };
 
   const handleCancel = () => {
@@ -261,10 +269,10 @@ export function Workout() {
 
     const restBtns: { label: string; onClick: () => void }[] = [];
     if (showRest && exercise && (exercise.restSeconds > 0 || wasSplitFirst(entry.id))) {
-      restBtns.push({ label: `Rest ${exercise.restSeconds || 60}s`, onClick: () => handleRest(entry.id) });
+      restBtns.push({ label: `Rest ${formatDuration(exercise.restSeconds || 60)}`, onClick: () => handleRest(entry.id) });
     }
     if (entry && isSecondInSuperset(entry.id)) {
-      restBtns.push({ label: "Rest 2m", onClick: () => timer.start(120, "Rest after superset") });
+      restBtns.push({ label: "Rest 2:00", onClick: () => timer.start(120, "Rest after superset") });
     }
 
     return {
@@ -278,6 +286,7 @@ export function Workout() {
       showOverloadBanner: true,
       overloadSuggestion: suggestion,
       restButtons: restBtns.length > 0 ? restBtns : undefined,
+      previousSets: lastSets ?? undefined,
     };
   };
 
@@ -298,7 +307,7 @@ export function Workout() {
                   onClick={() => timer.start(seconds, timer.label)}
                   className="rounded-[8px] border border-border-card bg-bg-input px-3.5 py-2 text-sm text-text-secondary transition-colors active:bg-bg-card-hover"
                 >
-                  {seconds >= 60 ? `${seconds / 60}m` : `${seconds}s`}
+                  {formatDuration(seconds)}
                 </button>
               ))}
             </div>
@@ -330,7 +339,7 @@ export function Workout() {
         />
       )}
 
-      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
+      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6 pb-24">
         <header className="flex items-start justify-between gap-4 pt-1">
           <div className="flex flex-col gap-1">
             <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{program.shortName}</p>
@@ -348,11 +357,11 @@ export function Workout() {
           <section className="flex flex-col gap-4 rounded-[14px] border border-accent-red/15 bg-accent-red/8 p-5">
             <p className="text-sm text-text-secondary">Cancel this workout? Logged sets from this session will be lost.</p>
             <div className="grid grid-cols-2 gap-2.5">
-              <button onClick={handleCancel} className="rounded-[10px] btn-primary py-3 text-sm font-semibold text-white">
-                Cancel Workout
-              </button>
-              <button onClick={() => setShowCancel(false)} className="rounded-[10px] btn-ghost py-3 text-sm font-medium">
+              <button onClick={() => setShowCancel(false)} className="rounded-[10px] btn-primary py-3 text-sm font-semibold text-white">
                 Keep Going
+              </button>
+              <button onClick={handleCancel} className="rounded-[10px] btn-ghost py-3 text-sm font-medium text-accent-red">
+                Cancel Workout
               </button>
             </div>
           </section>
@@ -385,7 +394,7 @@ export function Workout() {
                     </button>
                     <button
                       onClick={() => handleMoveGroup(groupIndex, "up")}
-                      className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                      className={`rounded-md p-2.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
                       aria-label="Move up"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -394,7 +403,7 @@ export function Workout() {
                     </button>
                     <button
                       onClick={() => handleMoveGroup(groupIndex, "down")}
-                      className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                      className={`rounded-md p-2.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
                       aria-label="Move down"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -419,7 +428,7 @@ export function Workout() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleMoveGroup(groupIndex, "up")}
-                    className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                    className={`rounded-md p-2.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
                     aria-label="Move up"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -428,7 +437,7 @@ export function Workout() {
                   </button>
                   <button
                     onClick={() => handleMoveGroup(groupIndex, "down")}
-                    className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                    className={`rounded-md p-2.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
                     aria-label="Move down"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -448,11 +457,23 @@ export function Workout() {
         >
           + Add Exercise
         </button>
-
-        <button onClick={handleFinish} className="w-full rounded-[14px] btn-primary py-4 text-sm font-semibold tracking-wide text-white">
-          Finish Workout
-        </button>
       </PageLayout>
+
+      {/* Sticky Finish Bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 glass" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+        <div className="mx-auto flex max-w-[460px] items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-text-muted">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <span className="font-[var(--font-display)] text-lg tabular-nums text-text-primary">{elapsedFormatted}</span>
+          </div>
+          <button onClick={handleFinish} className="rounded-[10px] btn-primary px-6 py-2.5 text-sm font-semibold text-white">
+            Finish
+          </button>
+        </div>
+      </div>
     </>
   );
 }

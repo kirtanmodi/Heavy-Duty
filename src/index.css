@@ -2,8 +2,8 @@
 
 @theme {
   --color-bg-primary: #0A0A0C;
-  --color-bg-card: #141417;
-  --color-bg-card-hover: #1C1C20;
+  --color-bg-card: #18181C;
+  --color-bg-card-hover: #222228;
   --color-bg-input: #1E1F24;
   --color-accent-red: #E50914;
   --color-accent-orange: #FF6B35;
@@ -15,20 +15,7 @@
   --color-text-muted: #5A5B63;
   --color-text-dim: #3A3B42;
   --color-border: rgba(255,255,255,0.06);
-  --color-border-card: rgba(255,255,255,0.06);
-
-  --color-muscle-chest: #FF4444;
-  --color-muscle-lats: #4488FF;
-  --color-muscle-delts: #FFAA00;
-  --color-muscle-biceps: #46D369;
-  --color-muscle-triceps: #DD44DD;
-  --color-muscle-quads: #FF8844;
-  --color-muscle-glutes: #FF6644;
-  --color-muscle-hamstrings: #FFCC44;
-  --color-muscle-calves: #DDAA44;
-  --color-muscle-traps: #88CCFF;
-  --color-muscle-forearms: #66BB66;
-  --color-muscle-core: #CCCC44;
+  --color-border-card: rgba(255,255,255,0.08);
 
   --font-display: 'Bebas Neue', sans-serif;
   --font-body: 'Outfit', sans-serif;

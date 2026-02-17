@@ -52,11 +52,9 @@ src/
 └── components/
     ├── ExerciseCard.tsx         # Shared exercise card (used by Workout + History edit)
     ├── ExercisePickerModal.tsx  # Shared full-screen exercise picker (swap/add modes)
-    ├── layout/
-    │   ├── PageLayout.tsx   # Safe-area-aware page wrapper
-    │   └── BottomNav.tsx    # Tab bar (hidden during active workout)
-    └── anatomy/
-        └── MuscleMap.tsx    # SVG front/back body diagram with muscle highlighting
+    └── layout/
+        ├── PageLayout.tsx   # Safe-area-aware page wrapper
+        └── BottomNav.tsx    # Tab bar (hidden during active workout)
 ```
 
 ### Key Patterns
@@ -77,7 +75,7 @@ src/
 
 Defined in `src/index.css` `@theme` block (Tailwind v4 syntax):
 - **Fonts**: Oswald (display/headings via `--font-display`), DM Sans (body via `--font-body`)
-- **Colors**: Dark theme only. Semantic tokens: `bg-primary`, `bg-card`, `bg-input`, `text-primary/secondary/muted/dim`, `border`, `border-card`. Accent colors: `accent-red` (primary CTA), `accent-orange/yellow/green/blue`. Per-muscle-group colors for the anatomy SVG.
+- **Colors**: Dark theme only. Semantic tokens: `bg-primary`, `bg-card`, `bg-input`, `text-primary/secondary/muted/dim`, `border`, `border-card`. Accent colors: `accent-red` (primary CTA), `accent-orange/yellow/green/blue`.
 - Use Tailwind utility classes with these custom tokens (e.g., `bg-bg-card`, `text-text-muted`, `border-accent-red/30`).
 
 ### Routes
