@@ -4,7 +4,7 @@ import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { getEffectiveExercise } from "../data/exercises";
-import { programs } from "../data/programs";
+import { cardioActivities, programs } from "../data/programs";
 import { useElapsedTimer } from "../hooks/useElapsedTimer";
 import { useTimer } from "../hooks/useTimer";
 import { getOverloadSuggestion } from "../lib/overload";
@@ -14,6 +14,12 @@ import type { Exercise, ExerciseEntry, SetEntry } from "../types";
 type ExerciseGroup =
   | { type: "single"; index: number }
   | { type: "superset"; indices: [number, number] };
+
+const focusColors: Record<string, string> = {
+  Push: "#E50914",
+  Pull: "#4488FF",
+  "Legs & Abs": "#FF8844",
+};
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -45,6 +51,7 @@ export function Workout() {
 
   const program = programs[0];
   const day = program.days.find((d) => d.id === dayId);
+  const themeColor = focusColors[day?.focus ?? ""] ?? "#FFAA00";
 
   useEffect(() => {
     if (!day || day.type !== "lift") return;
@@ -115,6 +122,14 @@ export function Workout() {
 
   const groups = buildGroups();
 
+  // Progress calculation
+  const totalSets = activeWorkout?.exercises.reduce((sum, e) => sum + e.sets.length, 0) ?? 0;
+  const completedSets = activeWorkout?.exercises.reduce(
+    (sum, e) => sum + e.sets.filter((s) => s.weight > 0 || s.reps > 0).length,
+    0,
+  ) ?? 0;
+  const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
+
   const handleSetChange = (exerciseIndex: number, setIndex: number, field: keyof SetEntry, value: number | boolean) => {
     const exercise = { ...activeWorkout!.exercises[exerciseIndex] };
     const sets = [...exercise.sets];
@@ -154,15 +169,12 @@ export function Workout() {
     timer.start(seconds, isSecondInSuperset(exerciseId) ? "Rest after superset" : "Rest");
   };
 
-  // Reorder: move a group up or down
   const handleMoveGroup = (groupIndex: number, direction: "up" | "down") => {
     if (!activeWorkout) return;
     const targetGroupIndex = direction === "up" ? groupIndex - 1 : groupIndex + 1;
     if (targetGroupIndex < 0 || targetGroupIndex >= groups.length) return;
 
     const exercises = [...activeWorkout.exercises];
-
-    // Build new order
     const allGroupIndices = groups.map((g) => (g.type === "superset" ? [...g.indices] : [g.index]));
     const temp = allGroupIndices[groupIndex];
     allGroupIndices[groupIndex] = allGroupIndices[targetGroupIndex];
@@ -177,7 +189,6 @@ export function Workout() {
     reorderExercises(newExercises);
   };
 
-  // Swap: replace exercise at index with a new one
   const handleSwap = (exercise: Exercise) => {
     if (swapTarget === null) return;
     const lastSets = getLastSets(exercise.id, history);
@@ -214,20 +225,28 @@ export function Workout() {
   }
 
   if (day.type !== "lift") {
+    const activities = cardioActivities[day.id] ?? [];
+
     return (
       <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
         <header className="flex items-start justify-between gap-4 pt-1">
           <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{day.type}</p>
+            <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{day.type}</p>
             <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{day.focus}</h1>
           </div>
         </header>
 
-        <section className="flex flex-col gap-5 rounded-[14px] bg-bg-card card-surface p-6">
-          {day.description && <p className="text-sm leading-relaxed text-text-primary">{day.description}</p>}
+        <section
+          className="flex flex-col gap-5 overflow-hidden rounded-2xl p-6"
+          style={{
+            background: `linear-gradient(135deg, ${themeColor}08 0%, transparent 60%)`,
+            border: `1px solid ${themeColor}15`,
+          }}
+        >
+          {day.description && <p className="text-sm leading-relaxed text-text-secondary">{day.description}</p>}
           {day.duration && (
-            <div className="flex items-center gap-3 rounded-lg bg-bg-input px-4 py-3">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 text-accent-yellow">
+            <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-4 py-3">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" style={{ color: themeColor }}>
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 6v6l4 2" />
               </svg>
@@ -236,15 +255,45 @@ export function Workout() {
           )}
           {day.tips && (
             <div className="flex flex-col gap-1.5">
-              <h3 className="text-xs font-semibold tracking-widest text-text-secondary uppercase">Tips</h3>
+              <h3 className="text-[10px] font-bold tracking-widest uppercase" style={{ color: themeColor }}>Tips</h3>
               <p className="text-sm leading-relaxed text-text-secondary">{day.tips}</p>
             </div>
           )}
         </section>
 
+        {/* Activity suggestions */}
+        {activities.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-[10px] font-bold tracking-widest text-text-muted uppercase">Pick an Activity</h2>
+            <div className="flex flex-col gap-1.5">
+              {activities.map((activity, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 rounded-xl bg-bg-card px-4 py-3 card-surface"
+                >
+                  <span
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold tabular-nums"
+                    style={{ background: `${themeColor}15`, color: themeColor }}
+                  >
+                    {idx + 1}
+                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-text-primary">{activity.name}</span>
+                    <span className="text-xs leading-snug text-text-muted">{activity.note}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <button
           onClick={() => navigate("/")}
-          className="w-full rounded-[14px] btn-primary py-4 text-sm font-semibold tracking-wide text-white"
+          className="w-full rounded-2xl py-4 text-sm font-bold tracking-wide text-white transition-all active:scale-[0.98]"
+          style={{
+            background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
+            boxShadow: `0 4px 16px ${themeColor}30`,
+          }}
         >
           Done
         </button>
@@ -260,7 +309,6 @@ export function Workout() {
     );
   }
 
-  // Build props for shared ExerciseCard component
   const buildCardProps = (exerciseIndex: number, showRest: boolean) => {
     const entry = activeWorkout.exercises[exerciseIndex];
     const exercise = entry ? getEffectiveExercise(entry.id) : null;
@@ -294,24 +342,54 @@ export function Workout() {
     <>
       {/* Rest Timer Modal */}
       {timer.isRunning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-5 animate-fade-in" style={{ background: 'rgba(10,10,12,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
-          <div className="flex w-full max-w-[380px] flex-col gap-6 rounded-[16px] bg-bg-card card-surface p-6 text-center animate-slide-up">
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{timer.label}</p>
-              <p className="font-[var(--font-display)] text-7xl leading-none text-text-primary tabular-nums">{timer.formatTime(timer.secondsLeft)}</p>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-5 animate-fade-in"
+          style={{ background: "rgba(10,10,12,0.94)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
+        >
+          <div className="flex w-full max-w-[380px] flex-col items-center gap-8 animate-slide-up">
+            {/* Timer ring */}
+            <div className="relative flex h-52 w-52 items-center justify-center">
+              <svg className="absolute inset-0 -rotate-90" viewBox="0 0 208 208">
+                <circle cx="104" cy="104" r="96" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
+                <circle
+                  cx="104"
+                  cy="104"
+                  r="96"
+                  fill="none"
+                  stroke={themeColor}
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 96}
+                  strokeDashoffset={2 * Math.PI * 96 * (1 - (timer.secondsLeft / (restPresets.find((p) => p >= timer.secondsLeft) ?? timer.secondsLeft + 1)))}
+                  style={{ transition: "stroke-dashoffset 1s linear" }}
+                  opacity="0.8"
+                />
+              </svg>
+              <div className="flex flex-col items-center gap-1">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-text-dim">{timer.label}</p>
+                <p className="font-[var(--font-display)] text-6xl leading-none text-text-primary tabular-nums">
+                  {timer.formatTime(timer.secondsLeft)}
+                </p>
+              </div>
             </div>
+
+            {/* Presets */}
             <div className="flex flex-wrap justify-center gap-2">
               {restPresets.map((seconds) => (
                 <button
                   key={seconds}
                   onClick={() => timer.start(seconds, timer.label)}
-                  className="rounded-[8px] border border-border-card bg-bg-input px-3.5 py-2 text-sm text-text-secondary transition-colors active:bg-bg-card-hover"
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm tabular-nums text-text-secondary transition-colors active:bg-white/[0.08]"
                 >
                   {formatDuration(seconds)}
                 </button>
               ))}
             </div>
-            <button onClick={timer.stop} className="w-full rounded-[10px] btn-ghost py-3.5 text-sm font-medium transition-colors">
+
+            <button
+              onClick={timer.stop}
+              className="w-full max-w-[260px] rounded-2xl border border-white/[0.1] bg-transparent py-3.5 text-sm font-semibold text-text-secondary transition-colors active:bg-white/[0.04]"
+            >
               Skip Rest
             </button>
           </div>
@@ -339,28 +417,69 @@ export function Workout() {
         />
       )}
 
-      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6 pb-24">
-        <header className="flex items-start justify-between gap-4 pt-1">
-          <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{program.shortName}</p>
-            <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{day.focus}</h1>
+      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-5 pb-28">
+        {/* Header */}
+        <header className="flex flex-col gap-3 pt-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{program.shortName}</p>
+              <h1 className="font-[var(--font-display)] text-[2.25rem] leading-none tracking-wider text-text-primary">
+                {day.focus}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Elapsed timer badge */}
+              <div className="flex items-center gap-1.5 rounded-xl bg-white/[0.04] px-3 py-2">
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: themeColor }} />
+                <span className="font-[var(--font-display)] text-[15px] tabular-nums text-text-primary">{elapsedFormatted}</span>
+              </div>
+              <button
+                onClick={() => setShowCancel(true)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-text-dim transition-colors active:bg-white/[0.06]"
+                aria-label="Cancel workout"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setShowCancel(true)}
-            className="rounded-[8px] btn-ghost px-4 py-2 text-sm transition-colors"
-          >
-            Cancel
-          </button>
+
+          {/* Progress bar */}
+          <div className="flex items-center gap-3">
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${progressPct}%`, background: themeColor }}
+              />
+            </div>
+            <span className="text-[11px] font-semibold tabular-nums text-text-dim">
+              {completedSets}/{totalSets}
+            </span>
+          </div>
         </header>
 
+        {/* Cancel confirmation */}
         {showCancel && (
-          <section className="flex flex-col gap-4 rounded-[14px] border border-accent-red/15 bg-accent-red/8 p-5">
-            <p className="text-sm text-text-secondary">Cancel this workout? Logged sets from this session will be lost.</p>
+          <section
+            className="flex flex-col gap-4 rounded-2xl p-5 animate-slide-up"
+            style={{ background: "rgba(229,9,20,0.06)", border: "1px solid rgba(229,9,20,0.12)" }}
+          >
+            <p className="text-sm text-text-secondary">Cancel this workout? Your logged sets will be lost.</p>
             <div className="grid grid-cols-2 gap-2.5">
-              <button onClick={() => setShowCancel(false)} className="rounded-[10px] btn-primary py-3 text-sm font-semibold text-white">
+              <button
+                onClick={() => setShowCancel(false)}
+                className="rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97]"
+                style={{
+                  background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
+                }}
+              >
                 Keep Going
               </button>
-              <button onClick={handleCancel} className="rounded-[10px] btn-ghost py-3 text-sm font-medium text-accent-red">
+              <button
+                onClick={handleCancel}
+                className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-accent-red transition-colors active:bg-white/[0.04]"
+              >
                 Cancel Workout
               </button>
             </div>
@@ -368,9 +487,12 @@ export function Workout() {
         )}
 
         {activeWorkout.exercises.length === 0 && (
-          <section className="rounded-[14px] bg-bg-card card-surface p-6 text-sm text-text-secondary">No lifting exercises for this day.</section>
+          <section className="rounded-2xl bg-white/[0.03] p-6 text-sm text-text-secondary" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            No lifting exercises for this day.
+          </section>
         )}
 
+        {/* Exercise groups */}
         {groups.map((group, groupIndex) => {
           const isFirst = groupIndex === 0;
           const isLast = groupIndex === groups.length - 1;
@@ -380,40 +502,50 @@ export function Workout() {
             const firstEntry = activeWorkout.exercises[firstIdx];
             return (
               <section key={`ss-${firstIdx}`} className="flex flex-col gap-2">
-                {/* Reorder arrows */}
                 <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold tracking-widest text-accent-yellow uppercase">Superset</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-5 items-center gap-1 rounded-md bg-accent-yellow/12 px-2">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 text-accent-yellow">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span className="text-[10px] font-bold tracking-widest text-accent-yellow uppercase">Superset</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5">
                     <button
                       onClick={() => splitSuperset(firstEntry.id)}
-                      className="rounded-md px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors active:bg-bg-input"
+                      className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-text-dim transition-colors active:bg-white/[0.06]"
                     >
                       Split
                     </button>
                     <button
                       onClick={() => handleMoveGroup(groupIndex, "up")}
-                      className={`rounded-md p-2.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                      className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
                       aria-label="Move up"
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
                         <path d="M18 15l-6-6-6 6" />
                       </svg>
                     </button>
                     <button
                       onClick={() => handleMoveGroup(groupIndex, "down")}
-                      className={`rounded-md p-2.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                      className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isLast ? "pointer-events-none opacity-20" : ""}`}
                       aria-label="Move down"
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
                         <path d="M6 9l6 6 6-6" />
                       </svg>
                     </button>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2.5 rounded-[16px] border-l-[3px] border-accent-yellow/40 pl-2.5">
+                <div
+                  className="flex flex-col gap-2.5 rounded-2xl pl-3"
+                  style={{
+                    borderLeft: "3px solid rgba(255, 170, 0, 0.3)",
+                    background: "rgba(255, 170, 0, 0.02)",
+                  }}
+                >
                   <ExerciseCard {...buildCardProps(firstIdx, false)} />
                   <ExerciseCard {...buildCardProps(secondIdx, true)} />
                 </div>
@@ -425,22 +557,22 @@ export function Workout() {
           return (
             <section key={`s-${group.index}`} className="flex flex-col gap-2">
               <div className="flex justify-end px-1">
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   <button
                     onClick={() => handleMoveGroup(groupIndex, "up")}
-                    className={`rounded-md p-2.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                    className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
                     aria-label="Move up"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
                       <path d="M18 15l-6-6-6 6" />
                     </svg>
                   </button>
                   <button
                     onClick={() => handleMoveGroup(groupIndex, "down")}
-                    className={`rounded-md p-2.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                    className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isLast ? "pointer-events-none opacity-20" : ""}`}
                     aria-label="Move down"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
                       <path d="M6 9l6 6 6-6" />
                     </svg>
                   </button>
@@ -451,25 +583,47 @@ export function Workout() {
           );
         })}
 
+        {/* Add exercise button */}
         <button
           onClick={() => setShowAddExercise(true)}
-          className="w-full rounded-[14px] border border-dashed border-border py-4 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/[0.08] py-4 text-sm font-medium text-text-dim transition-colors active:bg-white/[0.03]"
         >
-          + Add Exercise
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+            <path d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Add Exercise
         </button>
       </PageLayout>
 
       {/* Sticky Finish Bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 glass" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+      <div
+        className="fixed inset-x-0 bottom-0 z-40"
+        style={{
+          background: "rgba(14,14,18,0.88)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+        }}
+      >
         <div className="mx-auto flex max-w-[460px] items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-text-muted">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
-            </svg>
-            <span className="font-[var(--font-display)] text-lg tabular-nums text-text-primary">{elapsedFormatted}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: themeColor }} />
+              <span className="font-[var(--font-display)] text-lg tabular-nums text-text-primary">{elapsedFormatted}</span>
+            </div>
+            <span className="text-[11px] tabular-nums text-text-dim">
+              {completedSets}/{totalSets} sets
+            </span>
           </div>
-          <button onClick={handleFinish} className="rounded-[10px] btn-primary px-6 py-2.5 text-sm font-semibold text-white">
+          <button
+            onClick={handleFinish}
+            className="rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-[0.97]"
+            style={{
+              background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
+              boxShadow: `0 4px 16px ${themeColor}25`,
+            }}
+          >
             Finish
           </button>
         </div>

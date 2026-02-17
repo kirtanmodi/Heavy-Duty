@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { getEffectiveExercise } from "../data/exercises";
+import { getEffectiveExercise, muscleColors } from "../data/exercises";
 import { checkPR, hasPR, getPRLabel } from "../lib/records";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import { useExerciseStore } from "../store/exerciseStore";
@@ -48,7 +48,6 @@ export function ExerciseCard({
 
   const exercise = getEffectiveExercise(entry.id);
 
-  // Close menu on outside click
   useEffect(() => {
     if (!showMenu) return;
     const handleClick = (e: MouseEvent) => {
@@ -62,6 +61,7 @@ export function ExerciseCard({
 
   if (!exercise) return null;
 
+  const color = muscleColors[exercise.primaryMuscles[0]] || "#888";
   const isBwExercise = exercise.equipment === "bodyweight+";
 
   const bwMode = (() => {
@@ -95,61 +95,116 @@ export function ExerciseCard({
 
   const isSetComplete = (set: SetEntry, setIndex: number): boolean => {
     if (completedSets.has(setIndex)) return true;
-    // Auto-complete when both weight (or BW mode) and reps are filled
     if (bwMode) return set.reps > 0;
     return set.weight > 0 && set.reps > 0;
   };
 
+  const completedCount = entry.sets.filter((s, i) => isSetComplete(s, i)).length;
+  const totalSets = entry.sets.length;
+
   const selectAllOnFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select();
 
   const getSetPR = (set: SetEntry, setIndex: number) => {
-    if (!showOverloadBanner) return null; // Only check PR during active workout
+    if (!showOverloadBanner) return null;
     if (!isSetComplete(set, setIndex)) return null;
     if (set.reps === 0) return null;
     const pr = checkPR(entry.id, set, history);
     return hasPR(pr) ? getPRLabel(pr) : null;
   };
 
+  const overloadColor =
+    overloadSuggestion?.type === "increase"
+      ? "#46D369"
+      : overloadSuggestion?.type === "decrease"
+        ? "#FF6B35"
+        : overloadSuggestion?.type === "testing"
+          ? "#4488FF"
+          : "#5A5B63";
+
   return (
-    <div className="rounded-[14px] bg-bg-card card-surface px-5 py-5">
-      <div className="flex flex-col gap-4">
+    <div
+      className="relative overflow-hidden rounded-2xl"
+      style={{
+        background: `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
+        border: `1px solid ${color}15`,
+      }}
+    >
+      {/* Color accent bar */}
+      <div
+        className="absolute left-0 top-0 h-full w-[3px]"
+        style={{ background: `linear-gradient(180deg, ${color}, ${color}30)` }}
+      />
+
+      <div className="flex flex-col gap-3.5 pl-5 pr-4 py-4">
+        {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col gap-1.5">
-            <h2 className="text-lg font-semibold text-text-primary">{entry.name}</h2>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-text-muted">
-                {exercise.equipment === "bodyweight+" ? "bodyweight" : exercise.equipment} · {exercise.repRange[0]}-{exercise.repRange[1]} reps
-              </p>
+              <h2 className="text-[16px] font-bold text-text-primary leading-tight">{entry.name}</h2>
+              {exercise.type === "compound" && (
+                <span
+                  className="rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-widest"
+                  style={{ color, background: `${color}15` }}
+                >
+                  C
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                {exercise.equipment === "bodyweight+" ? "BW+" : exercise.equipment}
+              </span>
+              <span className="text-[11px] text-text-dim">
+                {exercise.repRange[0]}–{exercise.repRange[1]} reps
+              </span>
+              {showOverloadBanner && totalSets > 0 && (
+                <>
+                  <span className="text-[11px] text-text-dim">·</span>
+                  <span className="text-[11px] tabular-nums" style={{ color: completedCount === totalSets ? "#46D369" : "var(--color-text-dim)" }}>
+                    {completedCount}/{totalSets}
+                  </span>
+                </>
+              )}
               {isBwExercise && (
                 <button
                   onClick={toggleWeightMode}
-                  className={`rounded-full border border-border-card px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                    bwMode ? "bg-bg-input text-text-muted" : "bg-accent-blue/12 text-accent-blue"
+                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                    bwMode
+                      ? "border-white/[0.08] bg-white/[0.04] text-text-muted"
+                      : "border-accent-blue/20 bg-accent-blue/10 text-accent-blue"
                   }`}
                 >
-                  {bwMode ? "+ Add Weight" : "BW Only"}
+                  {bwMode ? "+ Weight" : "BW Only"}
                 </button>
               )}
             </div>
           </div>
-          {/* Context menu (replaces separate swap/remove buttons) */}
+
+          {/* Context menu */}
           <div className="relative shrink-0" ref={menuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="flex h-10 w-10 items-center justify-center rounded-[8px] border border-border-card bg-bg-input text-text-muted transition-colors active:bg-bg-card-hover"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06]"
               aria-label="Exercise options"
             >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                 <circle cx="12" cy="6" r="1.5" />
                 <circle cx="12" cy="12" r="1.5" />
                 <circle cx="12" cy="18" r="1.5" />
               </svg>
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-[10px] bg-bg-card card-surface py-1 animate-fade-in">
+              <div
+                className="absolute right-0 top-full z-10 mt-1 w-48 overflow-hidden rounded-2xl py-1 animate-fade-in"
+                style={{
+                  background: "rgba(30,31,36,0.98)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                }}
+              >
                 <button
                   onClick={() => { onSwap(exerciseIndex); setShowMenu(false); }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-text-primary active:bg-bg-input"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-text-primary transition-colors active:bg-white/[0.06]"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-text-muted">
                     <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
@@ -158,49 +213,50 @@ export function ExerciseCard({
                 </button>
                 <button
                   onClick={() => { setRemoveConfirm(true); setShowMenu(false); }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-accent-red active:bg-bg-input"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-red transition-colors active:bg-white/[0.06]"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
                     <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  Remove Exercise
+                  Remove
                 </button>
               </div>
             )}
           </div>
         </div>
 
+        {/* Overload banner */}
         {showOverloadBanner && overloadSuggestion && (
           <div
-            className={`rounded-[10px] px-4 py-2.5 text-xs leading-relaxed ${
-              overloadSuggestion.type === "increase"
-                ? "bg-accent-green/10 text-accent-green"
-                : overloadSuggestion.type === "decrease"
-                  ? "bg-accent-orange/10 text-accent-orange"
-                  : overloadSuggestion.type === "testing"
-                    ? "bg-accent-blue/10 text-accent-blue"
-                    : "bg-bg-input text-text-secondary"
-            }`}
+            className="rounded-xl px-3.5 py-2.5 text-xs leading-relaxed"
+            style={{ background: `${overloadColor}10`, border: `1px solid ${overloadColor}15` }}
           >
-            <span className="font-semibold uppercase tracking-wider">
-              {overloadSuggestion.type === "increase" ? (bwMode ? "Reps Maxed" : "Weight Up") : overloadSuggestion.type === "decrease" ? "Weight Down" : overloadSuggestion.type === "testing" ? "Testing" : "Building Reps"}
+            <span className="font-bold uppercase tracking-wider" style={{ color: overloadColor }}>
+              {overloadSuggestion.type === "increase"
+                ? bwMode ? "Reps Maxed" : "Weight Up"
+                : overloadSuggestion.type === "decrease"
+                  ? "Weight Down"
+                  : overloadSuggestion.type === "testing"
+                    ? "Testing"
+                    : "Building Reps"}
             </span>
-            <span className="mx-1.5 opacity-40">·</span>
-            {overloadSuggestion.message}
+            <span className="mx-1.5 opacity-30">·</span>
+            <span style={{ color: `${overloadColor}CC` }}>{overloadSuggestion.message}</span>
           </div>
         )}
 
-        <div className="flex flex-col gap-2.5">
+        {/* Set inputs */}
+        <div className="flex flex-col gap-2">
           {bwMode ? (
-            <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_3rem_2.75rem] items-center gap-1.5 text-[10px] font-medium tracking-wider text-text-muted uppercase">
-              <span className="text-center">Set</span>
+            <div className="grid grid-cols-[2rem_minmax(0,1fr)_3rem_2.5rem] items-center gap-1.5 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
+              <span className="text-center">#</span>
               <span>Reps</span>
               <span className="text-center">Fail</span>
               <span />
             </div>
           ) : (
-            <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_3rem_2.75rem] items-center gap-1.5 text-[10px] font-medium tracking-wider text-text-muted uppercase">
-              <span className="text-center">Set</span>
+            <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_2.5rem] items-center gap-1.5 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
+              <span className="text-center">#</span>
               <span>Kg</span>
               <span>Reps</span>
               <span className="text-center">Fail</span>
@@ -215,176 +271,209 @@ export function ExerciseCard({
 
             return bwMode ? (
               <div key={setIndex} className="flex flex-col gap-1">
-              <div className={`grid grid-cols-[2.25rem_minmax(0,1fr)_3rem_2.75rem] items-center gap-1.5 rounded-lg transition-colors ${completed ? "bg-accent-green/5" : ""}`}>
-                <button
-                  onClick={() => toggleSetComplete(setIndex)}
-                  className="mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors"
-                  aria-label={completed ? `Set ${setIndex + 1} complete` : `Mark set ${setIndex + 1} complete`}
+                <div
+                  className="grid grid-cols-[2rem_minmax(0,1fr)_3rem_2.5rem] items-center gap-1.5 rounded-xl transition-all"
+                  style={completed ? { background: `${color}08` } : {}}
                 >
-                  {completed ? (
-                    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                      <circle cx="12" cy="12" r="10" fill="var(--color-accent-green)" opacity="0.2" />
-                      <path d="M8 12l3 3 5-5" stroke="var(--color-accent-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    <span className="text-sm text-text-muted">{setIndex + 1}</span>
-                  )}
-                </button>
-                <div className="relative">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={set.reps || ""}
-                    onChange={(e) => onSetChange(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || 0)}
-                    onFocus={selectAllOnFocus}
-                    className="h-12 w-full min-w-0 rounded-[10px] border border-border-card bg-bg-input px-2 text-center text-base tabular-nums text-text-primary outline-none input-focus"
-                    placeholder="0"
-                  />
-                  {prevSet && (
-                    <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
-                      prev: {prevSet.reps}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                  className={`h-12 rounded-[10px] text-xs font-medium transition-colors ${set.toFailure ? "bg-accent-red/15 text-accent-red" : "bg-bg-input text-text-muted"}`}
-                >
-                  {set.toFailure ? "Yes" : "No"}
-                </button>
-                <button
-                  onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-                  className={`flex h-11 w-11 items-center justify-center text-lg text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
-                  aria-label={`Remove set ${setIndex + 1}`}
-                >
-                  ×
-                </button>
-              </div>
-              <AnimatePresence>
-                {prLabel && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 600, damping: 20 }}
-                    className="ml-9 inline-block self-start rounded-full bg-accent-yellow/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-yellow"
+                  <button
+                    onClick={() => toggleSetComplete(setIndex)}
+                    className="mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-all"
                   >
-                    {prLabel}
-                  </motion.span>
-                )}
-              </AnimatePresence>
+                    {completed ? (
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
+                        <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                          <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
+                    )}
+                  </button>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={set.reps || ""}
+                      onChange={(e) => onSetChange(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || 0)}
+                      onFocus={selectAllOnFocus}
+                      className="h-11 w-full min-w-0 rounded-xl border border-white/[0.06] bg-white/[0.04] px-2 text-center text-[15px] tabular-nums text-text-primary outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
+                      placeholder="0"
+                    />
+                    {prevSet && (
+                      <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
+                        prev: {prevSet.reps}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
+                    className={`h-11 rounded-xl text-[11px] font-semibold transition-all ${
+                      set.toFailure
+                        ? "bg-accent-red/15 text-accent-red"
+                        : "bg-white/[0.04] text-text-dim border border-white/[0.04]"
+                    }`}
+                  >
+                    {set.toFailure ? "F" : "—"}
+                  </button>
+                  <button
+                    onClick={() => onRemoveSet(exerciseIndex, setIndex)}
+                    className={`flex h-11 w-full items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06] ${
+                      entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""
+                    }`}
+                    aria-label={`Remove set ${setIndex + 1}`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <AnimatePresence>
+                  {prLabel && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 600, damping: 20 }}
+                      className="ml-8 inline-block self-start rounded-full bg-accent-yellow/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-yellow"
+                    >
+                      {prLabel}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <div key={setIndex} className="flex flex-col gap-1">
-              <div className={`grid grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_3rem_2.75rem] items-center gap-1.5 rounded-lg transition-colors ${completed ? "bg-accent-green/5" : ""}`}>
-                <button
-                  onClick={() => toggleSetComplete(setIndex)}
-                  className="mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-colors"
-                  aria-label={completed ? `Set ${setIndex + 1} complete` : `Mark set ${setIndex + 1} complete`}
+                <div
+                  className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_2.5rem] items-center gap-1.5 rounded-xl transition-all"
+                  style={completed ? { background: `${color}08` } : {}}
                 >
-                  {completed ? (
-                    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                      <circle cx="12" cy="12" r="10" fill="var(--color-accent-green)" opacity="0.2" />
-                      <path d="M8 12l3 3 5-5" stroke="var(--color-accent-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    <span className="text-sm text-text-muted">{setIndex + 1}</span>
-                  )}
-                </button>
-                <div className="relative">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={set.weight || ""}
-                    onChange={(e) => onSetChange(exerciseIndex, setIndex, "weight", parseFloat(e.target.value) || 0)}
-                    onFocus={selectAllOnFocus}
-                    className="h-12 w-full min-w-0 rounded-[10px] border border-border-card bg-bg-input px-2 text-center text-base tabular-nums text-text-primary outline-none input-focus"
-                    placeholder="0"
-                  />
-                  {prevSet && (
-                    <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
-                      prev: {prevSet.weight}kg
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={set.reps || ""}
-                    onChange={(e) => onSetChange(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || 0)}
-                    onFocus={selectAllOnFocus}
-                    className="h-12 w-full min-w-0 rounded-[10px] border border-border-card bg-bg-input px-2 text-center text-base tabular-nums text-text-primary outline-none input-focus"
-                    placeholder="0"
-                  />
-                  {prevSet && (
-                    <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
-                      prev: {prevSet.reps}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                  className={`h-12 rounded-[10px] text-xs font-medium transition-colors ${set.toFailure ? "bg-accent-red/15 text-accent-red" : "bg-bg-input text-text-muted"}`}
-                >
-                  {set.toFailure ? "Yes" : "No"}
-                </button>
-                <button
-                  onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-                  className={`flex h-11 w-11 items-center justify-center text-lg text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
-                  aria-label={`Remove set ${setIndex + 1}`}
-                >
-                  ×
-                </button>
-              </div>
-              <AnimatePresence>
-                {prLabel && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 600, damping: 20 }}
-                    className="ml-9 inline-block self-start rounded-full bg-accent-yellow/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-yellow"
+                  <button
+                    onClick={() => toggleSetComplete(setIndex)}
+                    className="mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-all"
                   >
-                    {prLabel}
-                  </motion.span>
-                )}
-              </AnimatePresence>
+                    {completed ? (
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
+                        <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                          <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
+                    )}
+                  </button>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={set.weight || ""}
+                      onChange={(e) => onSetChange(exerciseIndex, setIndex, "weight", parseFloat(e.target.value) || 0)}
+                      onFocus={selectAllOnFocus}
+                      className="h-11 w-full min-w-0 rounded-xl border border-white/[0.06] bg-white/[0.04] px-2 text-center text-[15px] tabular-nums text-text-primary outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
+                      placeholder="0"
+                    />
+                    {prevSet && (
+                      <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
+                        prev: {prevSet.weight}kg
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={set.reps || ""}
+                      onChange={(e) => onSetChange(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || 0)}
+                      onFocus={selectAllOnFocus}
+                      className="h-11 w-full min-w-0 rounded-xl border border-white/[0.06] bg-white/[0.04] px-2 text-center text-[15px] tabular-nums text-text-primary outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
+                      placeholder="0"
+                    />
+                    {prevSet && (
+                      <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
+                        prev: {prevSet.reps}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
+                    className={`h-11 rounded-xl text-[11px] font-semibold transition-all ${
+                      set.toFailure
+                        ? "bg-accent-red/15 text-accent-red"
+                        : "bg-white/[0.04] text-text-dim border border-white/[0.04]"
+                    }`}
+                  >
+                    {set.toFailure ? "F" : "—"}
+                  </button>
+                  <button
+                    onClick={() => onRemoveSet(exerciseIndex, setIndex)}
+                    className={`flex h-11 w-full items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06] ${
+                      entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""
+                    }`}
+                    aria-label={`Remove set ${setIndex + 1}`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <AnimatePresence>
+                  {prLabel && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 600, damping: 20 }}
+                      className="ml-8 inline-block self-start rounded-full bg-accent-yellow/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-yellow"
+                    >
+                      {prLabel}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}
         </div>
 
-        {/* Add spacing when previous values are shown */}
-        {previousSets && previousSets.length > 0 && <div className="h-1" />}
+        {/* Spacing for prev values */}
+        {previousSets && previousSets.length > 0 && <div className="h-0.5" />}
 
+        {/* Remove confirm */}
         {removeConfirm && (
-          <div className="flex flex-col gap-3 rounded-[10px] border border-accent-red/15 bg-accent-red/8 p-4">
-            <p className="text-xs text-text-secondary">Remove this exercise? Logged sets will be lost.</p>
+          <div
+            className="flex flex-col gap-3 rounded-xl p-4"
+            style={{ background: "rgba(229,9,20,0.06)", border: "1px solid rgba(229,9,20,0.12)" }}
+          >
+            <p className="text-xs text-text-secondary">Remove this exercise?</p>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={handleRemoveConfirmed} className="rounded-md bg-accent-red py-2.5 text-xs font-semibold text-white">
+              <button
+                onClick={handleRemoveConfirmed}
+                className="rounded-xl bg-accent-red py-2.5 text-xs font-bold text-white transition-all active:scale-[0.97]"
+              >
                 Remove
               </button>
-              <button onClick={() => setRemoveConfirm(false)} className="rounded-md bg-bg-input py-2.5 text-xs text-text-secondary">
+              <button
+                onClick={() => setRemoveConfirm(false)}
+                className="rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-xs text-text-secondary transition-colors active:bg-white/[0.04]"
+              >
                 Cancel
               </button>
             </div>
           </div>
         )}
 
+        {/* Action buttons */}
         <div className="flex gap-2">
           <button
             onClick={() => onAddSet(exerciseIndex)}
-            className="flex-1 rounded-[10px] btn-ghost py-3 text-sm font-medium transition-colors"
+            className="flex-1 rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-[13px] font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
           >
-            Add Set
+            + Set
           </button>
 
           {restButtons?.map((btn, i) => (
             <button
               key={i}
               onClick={btn.onClick}
-              className="rounded-[10px] btn-ghost px-4 py-3 text-sm font-medium transition-colors"
+              className="rounded-xl border border-white/[0.08] bg-transparent px-4 py-2.5 text-[13px] font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
             >
               {btn.label}
             </button>

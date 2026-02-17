@@ -116,6 +116,47 @@ export const programs: Program[] = [
 
 export const programMap = new Map(programs.map(p => [p.id, p]))
 
+export interface CardioActivity {
+  name: string
+  note: string
+}
+
+export const cardioActivities: Record<string, CardioActivity[]> = {
+  'hd-tuesday': [
+    { name: 'Incline treadmill walk', note: '10-15% grade, 2.5-3.5 mph' },
+    { name: 'Stationary bike', note: '70-90 RPM, moderate resistance' },
+    { name: 'Rowing machine (steady)', note: '2:00-2:30 /500m pace' },
+    { name: 'Elliptical', note: 'Incline 6-8, resistance 5-7' },
+    { name: 'Brisk walk / light jog', note: '3.5-4.5 mph outdoors' },
+    { name: 'Stair climber (slow)', note: '50-65 steps/min' },
+    { name: 'Swimming (easy laps)', note: 'Continuous freestyle, low effort' },
+    { name: 'Outdoor cycling (flat)', note: '12-15 mph, no surges' },
+  ],
+  'hd-thursday': [
+    { name: 'Assault / air bike sprints', note: 'Arms + legs, max effort' },
+    { name: 'Rowing machine intervals', note: '30s at 1:30-1:45 /500m pace' },
+    { name: 'SkiErg sprints', note: 'Upper back, lats, core' },
+    { name: 'Stationary bike sprints', note: '110+ RPM, high resistance' },
+    { name: 'Treadmill sprints', note: '8-12 mph for 30s, walk 3 mph rest' },
+    { name: 'Battle rope slams', note: 'Alternating waves or double slams' },
+    { name: 'Jump rope sprints', note: 'Max-speed singles or double-unders' },
+    { name: 'Burpee intervals', note: '6-10 per 30s round, no equipment' },
+    { name: 'Kettlebell swings', note: 'Heavy two-hand, hip hinge' },
+  ],
+  'hd-saturday': [
+    { name: 'Foam rolling (full body)', note: '30-60s per muscle group' },
+    { name: 'Slow walking', note: '2.0-3.0 mph flat, 15-20 min' },
+    { name: 'Hip 90/90 stretching', note: '60-90s per side, internal/external rotation' },
+    { name: 'Cat-cow + thoracic rotations', note: '10 each + 10 thread-the-needle per side' },
+    { name: 'Dead hang', note: '20-30s × 3-4 sets, decompresses spine' },
+    { name: 'Light yoga (sun salutations)', note: '5-8 rounds at breath pace' },
+    { name: 'Couch stretch', note: 'Kneel against wall, 2-3 min per side' },
+    { name: 'Easy stationary bike', note: '15-20 min, minimal resistance, HR <100' },
+    { name: 'Banded pull-aparts', note: '3×20 light band, scapular health' },
+    { name: 'Deep squat hold', note: '60-90s bodyweight, ankle/hip mobility' },
+  ],
+}
+
 export function getProgram(id: string): Program | undefined {
   return programMap.get(id)
 }
