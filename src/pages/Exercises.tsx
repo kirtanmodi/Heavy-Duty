@@ -39,7 +39,7 @@ function ExerciseRow({ exercise }: { exercise: Exercise }) {
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-bg-card px-4 py-3">
+    <div className="flex items-center gap-3 rounded-[10px] bg-bg-card card-surface px-4 py-3">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {editing ? (
           <input
@@ -51,7 +51,7 @@ function ExerciseRow({ exercise }: { exercise: Exercise }) {
               if (e.key === "Enter") handleSave();
               if (e.key === "Escape") { setName(exercise.name); setEditing(false); }
             }}
-            className="rounded bg-bg-input px-2 py-1 text-sm text-text-primary outline-none focus:ring-1 focus:ring-accent-red"
+            className="rounded-[8px] border border-border-card bg-bg-input px-2 py-1 text-sm text-text-primary outline-none input-focus"
           />
         ) : (
           <span className="truncate text-sm font-medium text-text-primary">{exercise.name}</span>
@@ -61,7 +61,7 @@ function ExerciseRow({ exercise }: { exercise: Exercise }) {
 
       <button
         onClick={() => setEditing(true)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors active:bg-bg-input"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-transparent text-text-muted transition-colors active:border-border-card active:bg-bg-input"
         aria-label="Rename exercise"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
@@ -71,7 +71,7 @@ function ExerciseRow({ exercise }: { exercise: Exercise }) {
 
       <button
         onClick={() => removeExercise(exercise.id)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors active:bg-bg-input"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-transparent text-text-muted transition-colors active:border-border-card active:bg-bg-input"
         aria-label="Remove exercise"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
@@ -111,7 +111,7 @@ function AddExerciseForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl bg-bg-card p-5">
+    <div className="flex flex-col gap-3 rounded-[14px] bg-bg-card card-surface p-5 animate-slide-up">
       <h3 className="text-sm font-semibold text-text-secondary">New Exercise</h3>
 
       <input
@@ -119,7 +119,7 @@ function AddExerciseForm({ onClose }: { onClose: () => void }) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Exercise name"
-        className="rounded-lg bg-bg-input px-3 py-2.5 text-sm text-text-primary placeholder:text-text-dim outline-none focus:ring-1 focus:ring-accent-red"
+        className="rounded-[10px] border border-border-card bg-bg-input px-3 py-2.5 text-sm text-text-primary placeholder:text-text-dim outline-none input-focus"
       />
 
       <div className="grid grid-cols-2 gap-2">
@@ -128,7 +128,7 @@ function AddExerciseForm({ onClose }: { onClose: () => void }) {
           <select
             value={muscle}
             onChange={(e) => setMuscle(e.target.value as MuscleGroup)}
-            className="rounded-lg bg-bg-input px-3 py-2.5 text-sm text-text-primary outline-none"
+            className="rounded-[10px] border border-border-card bg-bg-input px-3 py-2.5 text-sm text-text-primary outline-none"
           >
             {muscleOptions.map((m) => (
               <option key={m.value} value={m.value}>{m.label}</option>
@@ -141,7 +141,7 @@ function AddExerciseForm({ onClose }: { onClose: () => void }) {
           <select
             value={equipment}
             onChange={(e) => setEquipment(e.target.value as Equipment)}
-            className="rounded-lg bg-bg-input px-3 py-2.5 text-sm text-text-primary outline-none"
+            className="rounded-[10px] border border-border-card bg-bg-input px-3 py-2.5 text-sm text-text-primary outline-none"
           >
             {equipmentOptions.map((eq) => (
               <option key={eq} value={eq}>{eq}</option>
@@ -153,14 +153,14 @@ function AddExerciseForm({ onClose }: { onClose: () => void }) {
       <div className="grid grid-cols-2 gap-2 pt-1">
         <button
           onClick={onClose}
-          className="rounded-lg bg-bg-input py-2.5 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
+          className="rounded-[10px] btn-ghost py-2.5 text-sm font-medium transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleAdd}
           disabled={!name.trim()}
-          className="rounded-lg bg-accent-red py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-40 active:bg-accent-red/80"
+          className="rounded-[10px] btn-primary py-2.5 text-sm font-semibold text-white disabled:opacity-40"
         >
           Add
         </button>
@@ -176,10 +176,10 @@ export function Exercises() {
   return (
     <PageLayout className="flex flex-col gap-6">
       <header className="flex items-center justify-between pt-1">
-        <h1 className="font-[var(--font-display)] text-2xl tracking-widest text-text-primary">EXERCISES</h1>
+        <h1 className="font-[var(--font-display)] text-[1.75rem] tracking-widest text-text-primary">EXERCISES</h1>
         <button
           onClick={() => setShowAdd(!showAdd)}
-          className="rounded-lg bg-accent-red px-4 py-2 text-sm font-semibold text-white transition-colors active:bg-accent-red/80"
+          className="rounded-[10px] btn-primary px-4 py-2.5 text-sm font-semibold text-white"
         >
           {showAdd ? "Close" : "+ Add"}
         </button>

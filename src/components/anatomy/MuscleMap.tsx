@@ -27,7 +27,7 @@ const MUSCLE_COLORS: Record<string, string> = {
   'core': '#CCCC44',
 }
 
-const INACTIVE_COLOR = '#1a1a1a'
+const INACTIVE_COLOR = '#141417'
 
 function getMuscleStyle(
   muscleId: string,
@@ -107,7 +107,7 @@ function MuscleMapInner({
           x="0"
           y="-10"
           textAnchor="middle"
-          fill="#555555"
+          fill="#3A3B42"
           fontSize="7"
           fontFamily="system-ui, sans-serif"
           fontWeight="600"
@@ -117,10 +117,10 @@ function MuscleMapInner({
         </text>
 
         {/* Head */}
-        <ellipse cx="0" cy="10" rx="12" ry="14" fill="#111" stroke="#333" strokeWidth="0.8" />
+        <ellipse cx="0" cy="10" rx="12" ry="14" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.8" />
 
         {/* Neck */}
-        <rect x="-5" y="23" width="10" height="8" rx="2" fill="#111" stroke="#333" strokeWidth="0.5" />
+        <rect x="-5" y="23" width="10" height="8" rx="2" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.5" />
 
         {/* === FRONT TRAPS (visible from front as neck-to-shoulder slope) === */}
         <MusclePath
@@ -234,14 +234,14 @@ function MuscleMapInner({
         {/* Body side outline (obliques area — not a targetable muscle, just structure) */}
         <path
           d="M -22,54 Q -18,58 -14,58 L -9,56 Q -10,68 -10,80 Q -10,92 -8,98 L -14,100 Q -18,96 -18,88 Q -18,74 -20,62 Z"
-          fill="#111"
-          stroke="#333"
+          fill="#0F0F12"
+          stroke="#1A1A1E"
           strokeWidth="0.4"
         />
         <path
           d="M 22,54 Q 18,58 14,58 L 9,56 Q 10,68 10,80 Q 10,92 8,98 L 14,100 Q 18,96 18,88 Q 18,74 20,62 Z"
-          fill="#111"
-          stroke="#333"
+          fill="#0F0F12"
+          stroke="#1A1A1E"
           strokeWidth="0.4"
         />
 
@@ -264,8 +264,8 @@ function MuscleMapInner({
         />
 
         {/* Knee area */}
-        <ellipse cx="-10" cy="170" rx="6" ry="4" fill="#111" stroke="#333" strokeWidth="0.4" />
-        <ellipse cx="10" cy="170" rx="6" ry="4" fill="#111" stroke="#333" strokeWidth="0.4" />
+        <ellipse cx="-10" cy="170" rx="6" ry="4" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.4" />
+        <ellipse cx="10" cy="170" rx="6" ry="4" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.4" />
 
         {/* === CALVES (front — tibialis anterior) === */}
         <MusclePath
@@ -286,12 +286,12 @@ function MuscleMapInner({
         />
 
         {/* Feet */}
-        <path d="M -13,244 Q -10,242 -6,244 L -5,252 Q -8,254 -14,254 Q -15,250 -13,244 Z" fill="#111" stroke="#333" strokeWidth="0.4" />
-        <path d="M 13,244 Q 10,242 6,244 L 5,252 Q 8,254 14,254 Q 15,250 13,244 Z" fill="#111" stroke="#333" strokeWidth="0.4" />
+        <path d="M -13,244 Q -10,242 -6,244 L -5,252 Q -8,254 -14,254 Q -15,250 -13,244 Z" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.4" />
+        <path d="M 13,244 Q 10,242 6,244 L 5,252 Q 8,254 14,254 Q 15,250 13,244 Z" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.4" />
 
         {/* Hands */}
-        <path d="M -23,112 Q -21,116 -22,120 Q -24,124 -26,122 Q -27,118 -25,114 Z" fill="#111" stroke="#333" strokeWidth="0.3" />
-        <path d="M 23,112 Q 21,116 22,120 Q 24,124 26,122 Q 27,118 25,114 Z" fill="#111" stroke="#333" strokeWidth="0.3" />
+        <path d="M -23,112 Q -21,116 -22,120 Q -24,124 -26,122 Q -27,118 -25,114 Z" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.3" />
+        <path d="M 23,112 Q 21,116 22,120 Q 24,124 26,122 Q 27,118 25,114 Z" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.3" />
       </g>
 
       {/* ==================== BACK VIEW ==================== */}
@@ -301,7 +301,7 @@ function MuscleMapInner({
           x="0"
           y="-10"
           textAnchor="middle"
-          fill="#555555"
+          fill="#3A3B42"
           fontSize="7"
           fontFamily="system-ui, sans-serif"
           fontWeight="600"
@@ -311,10 +311,10 @@ function MuscleMapInner({
         </text>
 
         {/* Head */}
-        <ellipse cx="0" cy="10" rx="12" ry="14" fill="#111" stroke="#333" strokeWidth="0.8" />
+        <ellipse cx="0" cy="10" rx="12" ry="14" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.8" />
 
         {/* Neck */}
-        <rect x="-5" y="23" width="10" height="8" rx="2" fill="#111" stroke="#333" strokeWidth="0.5" />
+        <rect x="-5" y="23" width="10" height="8" rx="2" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.5" />
 
         {/* === TRAPS (upper trapezius — large diamond from neck to mid-back) === */}
         <MusclePath
@@ -422,14 +422,14 @@ function MuscleMapInner({
         {/* Side body fill */}
         <path
           d="M -22,54 Q -18,58 -14,58 L -10,56 Q -10,68 -10,80 Q -10,92 -10,98 L -14,100 Q -18,96 -18,88 Q -18,74 -20,62 Z"
-          fill="#111"
-          stroke="#333"
+          fill="#0F0F12"
+          stroke="#1A1A1E"
           strokeWidth="0.4"
         />
         <path
           d="M 22,54 Q 18,58 14,58 L 10,56 Q 10,68 10,80 Q 10,92 10,98 L 14,100 Q 18,96 18,88 Q 18,74 20,62 Z"
-          fill="#111"
-          stroke="#333"
+          fill="#0F0F12"
+          stroke="#1A1A1E"
           strokeWidth="0.4"
         />
 
@@ -468,8 +468,8 @@ function MuscleMapInner({
         />
 
         {/* Knee area */}
-        <ellipse cx="-10" cy="170" rx="6" ry="4" fill="#111" stroke="#333" strokeWidth="0.4" />
-        <ellipse cx="10" cy="170" rx="6" ry="4" fill="#111" stroke="#333" strokeWidth="0.4" />
+        <ellipse cx="-10" cy="170" rx="6" ry="4" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.4" />
+        <ellipse cx="10" cy="170" rx="6" ry="4" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.4" />
 
         {/* === CALVES (back — gastrocnemius) === */}
         <MusclePath
@@ -490,12 +490,12 @@ function MuscleMapInner({
         />
 
         {/* Feet */}
-        <path d="M -13,244 Q -10,242 -6,244 L -5,252 Q -8,254 -14,254 Q -15,250 -13,244 Z" fill="#111" stroke="#333" strokeWidth="0.4" />
-        <path d="M 13,244 Q 10,242 6,244 L 5,252 Q 8,254 14,254 Q 15,250 13,244 Z" fill="#111" stroke="#333" strokeWidth="0.4" />
+        <path d="M -13,244 Q -10,242 -6,244 L -5,252 Q -8,254 -14,254 Q -15,250 -13,244 Z" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.4" />
+        <path d="M 13,244 Q 10,242 6,244 L 5,252 Q 8,254 14,254 Q 15,250 13,244 Z" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.4" />
 
         {/* Hands */}
-        <path d="M -23,112 Q -21,116 -22,120 Q -24,124 -26,122 Q -27,118 -25,114 Z" fill="#111" stroke="#333" strokeWidth="0.3" />
-        <path d="M 23,112 Q 21,116 22,120 Q 24,124 26,122 Q 27,118 25,114 Z" fill="#111" stroke="#333" strokeWidth="0.3" />
+        <path d="M -23,112 Q -21,116 -22,120 Q -24,124 -26,122 Q -27,118 -25,114 Z" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.3" />
+        <path d="M 23,112 Q 21,116 22,120 Q 24,124 26,122 Q 27,118 25,114 Z" fill="#0F0F12" stroke="#1A1A1E" strokeWidth="0.3" />
       </g>
     </svg>
   )

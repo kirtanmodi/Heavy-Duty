@@ -9,8 +9,8 @@ interface PageLayoutProps {
 export function PageLayout({ children, className = "", withBottomNavPadding = true }: PageLayoutProps) {
   const style: CSSProperties = {
     paddingTop: "max(1.75rem, env(safe-area-inset-top))",
-    paddingLeft: "max(1.5rem, calc(env(safe-area-inset-left) + 1rem))",
-    paddingRight: "max(1.5rem, calc(env(safe-area-inset-right) + 1rem))",
+    paddingLeft: "max(1.75rem, calc(env(safe-area-inset-left) + 1.25rem))",
+    paddingRight: "max(1.75rem, calc(env(safe-area-inset-right) + 1.25rem))",
     paddingBottom: withBottomNavPadding
       ? "calc(7.5rem + env(safe-area-inset-bottom))"
       : "max(2rem, env(safe-area-inset-bottom))",

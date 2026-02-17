@@ -42,10 +42,10 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  if (location.pathname.startsWith("/workout/")) return null;
+  if (location.pathname.startsWith("/workout/") || /^\/history\/.+\/edit/.test(location.pathname)) return null;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-bg-primary/95 backdrop-blur-md pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+    <nav className="fixed inset-x-0 bottom-0 z-50 glass pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       <div className="mx-auto grid w-full max-w-[460px] grid-cols-3">
         {tabs.map((tab) => {
           const active = tab.path === "/" ? location.pathname === "/" : location.pathname.startsWith(tab.path);

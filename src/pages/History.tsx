@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ExerciseCard } from "../components/ExerciseCard";
-import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
 import { programs } from "../data/programs";
-import type { Exercise, WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
+import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
 
 function formatRelativeDate(iso: string): string {
   const date = new Date(iso);
@@ -61,110 +59,20 @@ export function History() {
   const navigate = useNavigate();
   const history = useWorkoutStore((s) => s.history);
   const clearWorkouts = useWorkoutStore((s) => s.clearAll);
-  const updateHistoryEntry = useWorkoutStore((s) => s.updateHistoryEntry);
-  const deleteHistoryEntry = useWorkoutStore((s) => s.deleteHistoryEntry);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<string>("all");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editExercises, setEditExercises] = useState<ExerciseEntry[]>([]);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [historySwapTarget, setHistorySwapTarget] = useState<number | null>(null);
-  const [showHistoryAddExercise, setShowHistoryAddExercise] = useState(false);
 
   const liftingDays = programs[0].days.filter((d) => d.type === "lift");
   const filteredHistory = activeFilter === "all" ? history : history.filter((w) => w.dayId === activeFilter);
 
   const toggleSession = (id: string) => {
-    if (editingId === id) return;
     setExpandedSessions((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
-
-  const startEdit = (workout: WorkoutEntry) => {
-    setEditingId(workout.id);
-    setEditExercises(workout.exercises.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s })) })));
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditExercises([]);
-  };
-
-  const saveEdit = () => {
-    if (!editingId) return;
-    const cleaned = editExercises.filter((e) => e.sets.some((s) => s.reps > 0));
-    updateHistoryEntry(editingId, cleaned);
-    setEditingId(null);
-    setEditExercises([]);
-  };
-
-  const handleEditSetChange = (exIdx: number, setIdx: number, field: keyof SetEntry, value: number | boolean) => {
-    setEditExercises((prev) => {
-      const next = prev.map((e, i) => {
-        if (i !== exIdx) return e;
-        const sets = e.sets.map((s, j) => (j === setIdx ? { ...s, [field]: value } : s));
-        return { ...e, sets };
-      });
-      return next;
-    });
-  };
-
-  const handleEditAddSet = (exIdx: number) => {
-    setEditExercises((prev) =>
-      prev.map((e, i) => {
-        if (i !== exIdx) return e;
-        const lastSet = e.sets[e.sets.length - 1];
-        return {
-          ...e,
-          sets: [...e.sets, { weight: lastSet?.weight ?? 0, reps: lastSet?.reps ?? 0, toFailure: false, tempo: "4-1-4" }],
-        };
-      }),
-    );
-  };
-
-  const handleEditRemoveSet = (exIdx: number, setIdx: number) => {
-    setEditExercises((prev) =>
-      prev.map((e, i) => {
-        if (i !== exIdx || e.sets.length <= 1) return e;
-        return { ...e, sets: e.sets.filter((_, j) => j !== setIdx) };
-      }),
-    );
-  };
-
-  const handleEditRemoveExercise = (exIdx: number) => {
-    setEditExercises((prev) => prev.filter((_, i) => i !== exIdx));
-  };
-
-  const handleDeleteWorkout = (workoutId: string) => {
-    deleteHistoryEntry(workoutId);
-    setDeleteConfirmId(null);
-    setEditingId(null);
-    setExpandedSessions((prev) => {
-      const next = new Set(prev);
-      next.delete(workoutId);
-      return next;
-    });
-  };
-
-  const handleHistorySwap = (exercise: Exercise) => {
-    if (historySwapTarget === null) return;
-    setEditExercises((prev) =>
-      prev.map((e, i) => (i === historySwapTarget ? { ...e, id: exercise.id, name: exercise.name } : e)),
-    );
-    setHistorySwapTarget(null);
-  };
-
-  const handleHistoryAddExercise = (exercise: Exercise) => {
-    setEditExercises((prev) => [
-      ...prev,
-      { id: exercise.id, name: exercise.name, sets: [{ weight: 0, reps: 0, toFailure: false, tempo: "4-1-4" }, { weight: 0, reps: 0, toFailure: false, tempo: "4-1-4" }] },
-    ]);
-    setShowHistoryAddExercise(false);
   };
 
   return (
@@ -181,7 +89,7 @@ export function History() {
           <button
             onClick={() => setActiveFilter("all")}
             className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-              activeFilter === "all" ? "bg-accent-red text-white" : "bg-bg-card text-text-muted active:text-text-secondary"
+              activeFilter === "all" ? "btn-primary text-white" : "border border-border-card bg-bg-card text-text-muted active:text-text-secondary"
             }`}
           >
             All
@@ -191,7 +99,7 @@ export function History() {
               key={day.id}
               onClick={() => setActiveFilter(day.id)}
               className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-                activeFilter === day.id ? "bg-accent-red text-white" : "bg-bg-card text-text-muted active:text-text-secondary"
+                activeFilter === day.id ? "btn-primary text-white" : "border border-border-card bg-bg-card text-text-muted active:text-text-secondary"
               }`}
             >
               {day.focus}
@@ -201,26 +109,25 @@ export function History() {
       )}
 
       {history.length === 0 ? (
-        <section className="flex flex-col items-center gap-6 rounded-xl bg-bg-card p-8 text-center">
+        <section className="flex flex-col items-center gap-6 rounded-[14px] bg-bg-card card-surface p-8 text-center">
           <div className="flex flex-col gap-2">
             <p className="text-base font-medium text-text-primary">No workouts yet</p>
             <p className="text-sm text-text-muted">Complete your first workout and it will show up here.</p>
           </div>
-          <button onClick={() => navigate("/")} className="rounded-md bg-accent-red px-8 py-3 text-sm font-semibold text-white active:scale-[0.99]">
+          <button onClick={() => navigate("/")} className="rounded-[10px] btn-primary px-8 py-3 text-sm font-semibold text-white">
             Start Training
           </button>
         </section>
       ) : (
         <div className="flex flex-col gap-3">
-          {filteredHistory.map((workout) => {
+          {filteredHistory.map((workout, index) => {
             const expanded = expandedSessions.has(workout.id);
             const stats = calcStats(workout);
             const prev = findPrevSession(workout, history);
             const progress = calcProgress(workout, prev);
-            const isEditing = editingId === workout.id;
 
             return (
-              <section key={workout.id} className="overflow-hidden rounded-xl bg-bg-card">
+              <section key={workout.id} className="overflow-hidden rounded-[14px] bg-bg-card card-surface animate-fade-up" style={{ animationDelay: `${index * 50}ms` }}>
                 <button onClick={() => toggleSession(workout.id)} className="w-full text-left">
                   <div className="flex items-center justify-between px-5 py-4">
                     <div className="flex flex-col gap-0.5">
@@ -242,26 +149,26 @@ export function History() {
                     <div className="flex items-center gap-5 text-xs">
                       <div className="flex flex-col">
                         <span className="text-text-muted">Exercises</span>
-                        <span className="text-sm font-semibold text-text-primary">{stats.totalExercises}</span>
+                        <span className="text-sm font-semibold tabular-nums text-text-primary">{stats.totalExercises}</span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-text-muted">Sets</span>
-                        <span className="text-sm font-semibold text-text-primary">{stats.totalSets}</span>
+                        <span className="text-sm font-semibold tabular-nums text-text-primary">{stats.totalSets}</span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-text-muted">Volume</span>
-                        <span className="text-sm font-semibold text-text-primary">{stats.totalVolume.toLocaleString()}kg</span>
+                        <span className="text-sm font-semibold tabular-nums text-text-primary">{stats.totalVolume.toLocaleString()}kg</span>
                       </div>
                     </div>
 
                     {progress && (
                       <span
-                        className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-semibold tabular-nums ${
                           progress.type === "increase"
-                            ? "bg-accent-green/12 text-accent-green"
+                            ? "border border-accent-green/15 bg-accent-green/12 text-accent-green"
                             : progress.type === "decrease"
-                              ? "bg-accent-red/12 text-accent-red"
-                              : "bg-bg-input text-text-muted"
+                              ? "border border-accent-red/15 bg-accent-red/12 text-accent-red"
+                              : "border border-border-card bg-bg-input text-text-muted"
                         }`}
                       >
                         {progress.type === "increase" && "↑ "}
@@ -273,96 +180,17 @@ export function History() {
                   </div>
                 </button>
 
-                {expanded && !isEditing && (
+                {expanded && (
                   <div className="flex flex-col gap-2 border-t border-border px-4 py-3">
                     {workout.exercises.map((exercise) => (
                       <ExerciseHistoryCard key={exercise.id} exercise={exercise} prevSets={getPrevExerciseSets(exercise.id, prev)} />
                     ))}
                     <button
-                      onClick={() => startEdit(workout)}
-                      className="mt-1 w-full rounded-lg bg-bg-input py-3 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
+                      onClick={() => navigate(`/history/${workout.id}/edit`)}
+                      className="mt-1 w-full rounded-[10px] btn-ghost py-3 text-sm font-medium transition-colors"
                     >
                       Edit Workout
                     </button>
-                  </div>
-                )}
-
-                {isEditing && (
-                  <div className="flex flex-col gap-3 border-t border-border px-4 py-3">
-                    {editExercises.map((exercise, exIdx) => (
-                      <ExerciseCard
-                        key={`${exercise.id}-${exIdx}`}
-                        entry={exercise}
-                        exerciseIndex={exIdx}
-                        onSetChange={handleEditSetChange}
-                        onAddSet={handleEditAddSet}
-                        onRemoveSet={handleEditRemoveSet}
-                        onSwap={(idx) => setHistorySwapTarget(idx)}
-                        onRemove={handleEditRemoveExercise}
-                      />
-                    ))}
-
-                    <button
-                      onClick={() => setShowHistoryAddExercise(true)}
-                      className="w-full rounded-lg border border-dashed border-border py-4 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card"
-                    >
-                      + Add Exercise
-                    </button>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button onClick={cancelEdit} className="rounded-lg bg-bg-input py-3 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover">
-                        Cancel
-                      </button>
-                      <button onClick={saveEdit} className="rounded-lg bg-accent-red py-3 text-sm font-semibold text-white active:scale-[0.99]">
-                        Save
-                      </button>
-                    </div>
-
-                    {historySwapTarget !== null && (
-                      <ExercisePickerModal
-                        mode="swap"
-                        currentExerciseId={editExercises[historySwapTarget]?.id ?? ""}
-                        activeExerciseIds={editExercises.map((e) => e.id)}
-                        onSelect={handleHistorySwap}
-                        onClose={() => setHistorySwapTarget(null)}
-                      />
-                    )}
-
-                    {showHistoryAddExercise && (
-                      <ExercisePickerModal
-                        mode="add"
-                        activeExerciseIds={editExercises.map((e) => e.id)}
-                        onSelect={handleHistoryAddExercise}
-                        onClose={() => setShowHistoryAddExercise(false)}
-                      />
-                    )}
-
-                    {deleteConfirmId === workout.id ? (
-                      <div className="flex flex-col gap-3 rounded-lg bg-accent-red/8 p-4">
-                        <p className="text-xs text-text-secondary">Delete this workout permanently?</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => handleDeleteWorkout(workout.id)}
-                            className="rounded-md bg-accent-red py-2.5 text-xs font-semibold text-white"
-                          >
-                            Delete
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmId(null)}
-                            className="rounded-md bg-bg-input py-2.5 text-xs text-text-secondary"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setDeleteConfirmId(workout.id)}
-                        className="w-full rounded-lg py-2.5 text-xs text-text-muted transition-colors active:text-accent-red"
-                      >
-                        Delete Workout
-                      </button>
-                    )}
                   </div>
                 )}
               </section>
@@ -374,7 +202,7 @@ export function History() {
       {history.length > 0 && (
         <section>
           {showClearConfirm ? (
-            <div className="flex flex-col gap-4 rounded-xl bg-accent-red/8 p-5">
+            <div className="flex flex-col gap-4 rounded-[14px] border border-accent-red/15 bg-accent-red/8 p-5">
               <p className="text-sm text-text-secondary">Delete all workout history? This cannot be undone.</p>
               <div className="grid grid-cols-2 gap-2.5">
                 <button
@@ -382,11 +210,11 @@ export function History() {
                     clearWorkouts();
                     setShowClearConfirm(false);
                   }}
-                  className="rounded-md bg-accent-red py-3 text-sm font-semibold text-white"
+                  className="rounded-[10px] btn-primary py-3 text-sm font-semibold text-white"
                 >
                   Delete
                 </button>
-                <button onClick={() => setShowClearConfirm(false)} className="rounded-md bg-bg-input py-3 text-sm text-text-secondary">
+                <button onClick={() => setShowClearConfirm(false)} className="rounded-[10px] btn-ghost py-3 text-sm">
                   Cancel
                 </button>
               </div>
@@ -394,7 +222,7 @@ export function History() {
           ) : (
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="w-full rounded-lg bg-bg-card py-4 text-sm text-text-muted transition-colors active:bg-bg-card-hover"
+              className="w-full rounded-[14px] bg-bg-card card-surface py-4 text-sm text-text-muted transition-colors active:bg-bg-card-hover"
             >
               Clear All Data
             </button>
@@ -408,14 +236,14 @@ export function History() {
 function ExerciseHistoryCard({ exercise, prevSets }: { exercise: ExerciseEntry; prevSets: SetEntry[] | null }) {
   if (exercise.sets.length === 0) {
     return (
-      <div className="rounded-lg bg-bg-input px-4 py-2.5">
+      <div className="rounded-[10px] border border-border-card bg-bg-input px-4 py-2.5">
         <p className="text-xs text-text-muted">{exercise.name} — No sets logged</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg bg-bg-input px-4 py-3">
+    <div className="rounded-[10px] border border-border-card bg-bg-input px-4 py-3">
       <h3 className="mb-2 text-sm font-semibold text-text-primary">{exercise.name}</h3>
       <div className="flex flex-col gap-2">
         {exercise.sets.map((set, idx) => {
@@ -427,9 +255,9 @@ function ExerciseHistoryCard({ exercise, prevSets }: { exercise: ExerciseEntry; 
             <div key={idx} className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2.5 text-sm">
                 <span className="w-5 shrink-0 text-xs text-text-dim">#{idx + 1}</span>
-                <span className="font-medium text-text-primary">{set.weight > 0 ? `${set.weight}kg` : "BW"}</span>
+                <span className="font-medium tabular-nums text-text-primary">{set.weight > 0 ? `${set.weight}kg` : "BW"}</span>
                 {wDelta !== 0 ? (
-                  <span className={`text-[10px] font-semibold ${wDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
+                  <span className={`text-[10px] font-semibold tabular-nums ${wDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
                     {wDelta > 0 ? "+" : ""}
                     {wDelta}
                   </span>
@@ -437,9 +265,9 @@ function ExerciseHistoryCard({ exercise, prevSets }: { exercise: ExerciseEntry; 
                   <span className="text-[10px] font-semibold text-text-muted">=</span>
                 ) : null}
                 <span className="text-text-dim">×</span>
-                <span className="font-medium text-text-primary">{set.reps}</span>
+                <span className="font-medium tabular-nums text-text-primary">{set.reps}</span>
                 {rDelta !== 0 ? (
-                  <span className={`text-[10px] font-semibold ${rDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
+                  <span className={`text-[10px] font-semibold tabular-nums ${rDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
                     {rDelta > 0 ? "+" : ""}
                     {rDelta}
                   </span>
@@ -451,7 +279,7 @@ function ExerciseHistoryCard({ exercise, prevSets }: { exercise: ExerciseEntry; 
                 )}
               </div>
               {prevSet && (
-                <span className="ml-7 text-[10px] text-text-dim">
+                <span className="ml-7 text-[10px] tabular-nums text-text-dim">
                   prev: {prevSet.weight > 0 ? `${prevSet.weight}kg` : "BW"} × {prevSet.reps}
                 </span>
               )}

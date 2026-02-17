@@ -215,7 +215,7 @@ export function Workout() {
           </div>
         </header>
 
-        <section className="flex flex-col gap-5 rounded-xl bg-bg-card p-6">
+        <section className="flex flex-col gap-5 rounded-[14px] bg-bg-card card-surface p-6">
           {day.description && <p className="text-sm leading-relaxed text-text-primary">{day.description}</p>}
           {day.duration && (
             <div className="flex items-center gap-3 rounded-lg bg-bg-input px-4 py-3">
@@ -236,7 +236,7 @@ export function Workout() {
 
         <button
           onClick={() => navigate("/")}
-          className="w-full rounded-lg bg-accent-red py-4 text-sm font-semibold tracking-wide text-white active:scale-[0.99]"
+          className="w-full rounded-[14px] btn-primary py-4 text-sm font-semibold tracking-wide text-white"
         >
           Done
         </button>
@@ -285,24 +285,24 @@ export function Workout() {
     <>
       {/* Rest Timer Modal */}
       {timer.isRunning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 px-5 backdrop-blur-sm">
-          <div className="flex w-full max-w-[380px] flex-col gap-6 rounded-xl bg-bg-card p-6 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-5 animate-fade-in" style={{ background: 'rgba(10,10,12,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+          <div className="flex w-full max-w-[380px] flex-col gap-6 rounded-[16px] bg-bg-card card-surface p-6 text-center animate-slide-up">
             <div className="flex flex-col gap-3">
               <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{timer.label}</p>
-              <p className="font-[var(--font-display)] text-7xl leading-none text-text-primary">{timer.formatTime(timer.secondsLeft)}</p>
+              <p className="font-[var(--font-display)] text-7xl leading-none text-text-primary tabular-nums">{timer.formatTime(timer.secondsLeft)}</p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
               {restPresets.map((seconds) => (
                 <button
                   key={seconds}
                   onClick={() => timer.start(seconds, timer.label)}
-                  className="rounded-md bg-bg-input px-3.5 py-2 text-sm text-text-secondary transition-colors active:bg-bg-card-hover"
+                  className="rounded-[8px] border border-border-card bg-bg-input px-3.5 py-2 text-sm text-text-secondary transition-colors active:bg-bg-card-hover"
                 >
                   {seconds >= 60 ? `${seconds / 60}m` : `${seconds}s`}
                 </button>
               ))}
             </div>
-            <button onClick={timer.stop} className="w-full rounded-md bg-bg-input py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover">
+            <button onClick={timer.stop} className="w-full rounded-[10px] btn-ghost py-3.5 text-sm font-medium transition-colors">
               Skip Rest
             </button>
           </div>
@@ -338,20 +338,20 @@ export function Workout() {
           </div>
           <button
             onClick={() => setShowCancel(true)}
-            className="rounded-md bg-bg-input px-4 py-2 text-sm text-text-secondary transition-colors active:bg-bg-card-hover"
+            className="rounded-[8px] btn-ghost px-4 py-2 text-sm transition-colors"
           >
             Cancel
           </button>
         </header>
 
         {showCancel && (
-          <section className="flex flex-col gap-4 rounded-xl bg-accent-red/8 p-5">
+          <section className="flex flex-col gap-4 rounded-[14px] border border-accent-red/15 bg-accent-red/8 p-5">
             <p className="text-sm text-text-secondary">Cancel this workout? Logged sets from this session will be lost.</p>
             <div className="grid grid-cols-2 gap-2.5">
-              <button onClick={handleCancel} className="rounded-md bg-accent-red py-3 text-sm font-semibold text-white">
+              <button onClick={handleCancel} className="rounded-[10px] btn-primary py-3 text-sm font-semibold text-white">
                 Cancel Workout
               </button>
-              <button onClick={() => setShowCancel(false)} className="rounded-md bg-bg-input py-3 text-sm font-medium text-text-secondary">
+              <button onClick={() => setShowCancel(false)} className="rounded-[10px] btn-ghost py-3 text-sm font-medium">
                 Keep Going
               </button>
             </div>
@@ -359,7 +359,7 @@ export function Workout() {
         )}
 
         {activeWorkout.exercises.length === 0 && (
-          <section className="rounded-xl bg-bg-card p-6 text-sm text-text-secondary">No lifting exercises for this day.</section>
+          <section className="rounded-[14px] bg-bg-card card-surface p-6 text-sm text-text-secondary">No lifting exercises for this day.</section>
         )}
 
         {groups.map((group, groupIndex) => {
@@ -404,7 +404,7 @@ export function Workout() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2.5 rounded-2xl border-l-[3px] border-accent-yellow/40 pl-2.5">
+                <div className="flex flex-col gap-2.5 rounded-[16px] border-l-[3px] border-accent-yellow/40 pl-2.5">
                   <ExerciseCard {...buildCardProps(firstIdx, false)} />
                   <ExerciseCard {...buildCardProps(secondIdx, true)} />
                 </div>
@@ -444,12 +444,12 @@ export function Workout() {
 
         <button
           onClick={() => setShowAddExercise(true)}
-          className="w-full rounded-lg border border-dashed border-border py-4 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card"
+          className="w-full rounded-[14px] border border-dashed border-border py-4 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card"
         >
           + Add Exercise
         </button>
 
-        <button onClick={handleFinish} className="w-full rounded-lg bg-accent-red py-4 text-sm font-semibold tracking-wide text-white active:scale-[0.99]">
+        <button onClick={handleFinish} className="w-full rounded-[14px] btn-primary py-4 text-sm font-semibold tracking-wide text-white">
           Finish Workout
         </button>
       </PageLayout>

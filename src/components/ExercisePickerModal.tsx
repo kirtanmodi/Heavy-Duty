@@ -28,10 +28,10 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
   const emptyMessage = mode === "swap" ? "No alternative exercises available." : "No exercises available to add.";
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-sm">
-      <div className="flex items-center justify-between px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
+    <div className="fixed inset-0 z-50 flex flex-col animate-fade-in" style={{ background: 'rgba(10,10,12,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+      <div className="flex items-center justify-between border-b border-border px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <h2 className="font-[var(--font-display)] text-2xl text-text-primary">{title}</h2>
-        <button onClick={onClose} className="rounded-md bg-bg-input px-4 py-2 text-sm text-text-secondary">
+        <button onClick={onClose} className="rounded-[8px] btn-ghost px-4 py-2 text-sm">
           Cancel
         </button>
       </div>
@@ -40,7 +40,7 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
         {candidates.length === 0 ? (
           <p className="pt-8 text-center text-sm text-text-muted">{emptyMessage}</p>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 pt-4">
             {grouped.map(({ label, exercises }) => (
               <div key={label} className="flex flex-col gap-1.5">
                 <p className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">{label}</p>
@@ -48,7 +48,7 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
                   <button
                     key={e.id}
                     onClick={() => onSelect(e)}
-                    className="flex flex-col gap-0.5 rounded-lg bg-bg-card px-4 py-3 text-left transition-colors active:bg-bg-card-hover"
+                    className="flex flex-col gap-0.5 rounded-[10px] bg-bg-card card-surface px-4 py-3 text-left transition-colors active:bg-bg-card-hover"
                   >
                     <span className="text-sm font-medium text-text-primary">{e.name}</span>
                     <span className="text-xs text-text-muted">

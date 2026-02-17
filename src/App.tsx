@@ -3,6 +3,7 @@ import { BottomNav } from "./components/layout/BottomNav";
 import { Home } from "./pages/Home";
 import { Workout } from "./pages/Workout";
 import { History } from "./pages/History";
+import { HistoryEdit } from "./pages/HistoryEdit";
 import { Exercises } from "./pages/Exercises";
 
 function AppRoutes() {
@@ -14,6 +15,7 @@ function AppRoutes() {
           <Route path="/workout/:dayId" element={<Workout />} />
           <Route path="/exercises" element={<Exercises />} />
           <Route path="/history" element={<History />} />
+          <Route path="/history/:workoutId/edit" element={<HistoryEdit />} />
         </Routes>
       </main>
       <BottomNav />

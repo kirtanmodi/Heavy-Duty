@@ -65,7 +65,7 @@ export function ExerciseCard({
   };
 
   return (
-    <div className="rounded-xl bg-bg-card px-5 py-5">
+    <div className="rounded-[14px] bg-bg-card card-surface px-5 py-5">
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col gap-1.5">
@@ -77,7 +77,7 @@ export function ExerciseCard({
               {isBwExercise && (
                 <button
                   onClick={toggleWeightMode}
-                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  className={`rounded-full border border-border-card px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                     bwMode ? "bg-bg-input text-text-muted" : "bg-accent-blue/12 text-accent-blue"
                   }`}
                 >
@@ -89,7 +89,7 @@ export function ExerciseCard({
           <div className="flex shrink-0 items-center gap-1.5">
             <button
               onClick={() => onSwap(exerciseIndex)}
-              className="rounded-md bg-bg-input p-2 text-text-muted transition-colors active:bg-bg-card-hover"
+              className="rounded-[8px] border border-border-card bg-bg-input p-2 text-text-muted transition-colors active:bg-bg-card-hover"
               aria-label="Swap exercise"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -98,7 +98,7 @@ export function ExerciseCard({
             </button>
             <button
               onClick={() => setRemoveConfirm(!removeConfirm)}
-              className="rounded-md bg-bg-input p-2 text-text-muted transition-colors active:bg-bg-card-hover"
+              className="rounded-[8px] border border-border-card bg-bg-input p-2 text-text-muted transition-colors active:bg-bg-card-hover"
               aria-label="Remove exercise"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -110,7 +110,7 @@ export function ExerciseCard({
 
         {showOverloadBanner && overloadSuggestion && (
           <div
-            className={`rounded-lg px-4 py-2.5 text-xs leading-relaxed ${
+            className={`rounded-[10px] px-4 py-2.5 text-xs leading-relaxed ${
               overloadSuggestion.type === "increase"
                 ? "bg-accent-green/10 text-accent-green"
                 : overloadSuggestion.type === "decrease"
@@ -155,18 +155,18 @@ export function ExerciseCard({
                   inputMode="numeric"
                   value={set.reps || ""}
                   onChange={(e) => onSetChange(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || 0)}
-                  className="h-11 min-w-0 rounded-lg bg-bg-input px-2 text-center text-sm text-text-primary outline-none focus:ring-1 focus:ring-accent-red"
+                  className="h-12 min-w-0 rounded-[10px] border border-border-card bg-bg-input px-2 text-center text-base tabular-nums text-text-primary outline-none input-focus"
                   placeholder="0"
                 />
                 <button
                   onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                  className={`h-11 rounded-lg text-xs font-medium transition-colors ${set.toFailure ? "bg-accent-red/15 text-accent-red" : "bg-bg-input text-text-muted"}`}
+                  className={`h-12 rounded-[10px] text-xs font-medium transition-colors ${set.toFailure ? "bg-accent-red/15 text-accent-red" : "bg-bg-input text-text-muted"}`}
                 >
                   {set.toFailure ? "Yes" : "No"}
                 </button>
                 <button
                   onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-                  className={`h-11 text-lg text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
+                  className={`h-12 text-lg text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
                   aria-label={`Remove set ${setIndex + 1}`}
                 >
                   ×
@@ -180,7 +180,7 @@ export function ExerciseCard({
                   inputMode="decimal"
                   value={set.weight || ""}
                   onChange={(e) => onSetChange(exerciseIndex, setIndex, "weight", parseFloat(e.target.value) || 0)}
-                  className="h-11 min-w-0 rounded-lg bg-bg-input px-2 text-center text-sm text-text-primary outline-none focus:ring-1 focus:ring-accent-red"
+                  className="h-12 min-w-0 rounded-[10px] border border-border-card bg-bg-input px-2 text-center text-base tabular-nums text-text-primary outline-none input-focus"
                   placeholder="0"
                 />
                 <input
@@ -188,18 +188,18 @@ export function ExerciseCard({
                   inputMode="numeric"
                   value={set.reps || ""}
                   onChange={(e) => onSetChange(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || 0)}
-                  className="h-11 min-w-0 rounded-lg bg-bg-input px-2 text-center text-sm text-text-primary outline-none focus:ring-1 focus:ring-accent-red"
+                  className="h-12 min-w-0 rounded-[10px] border border-border-card bg-bg-input px-2 text-center text-base tabular-nums text-text-primary outline-none input-focus"
                   placeholder="0"
                 />
                 <button
                   onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                  className={`h-11 rounded-lg text-xs font-medium transition-colors ${set.toFailure ? "bg-accent-red/15 text-accent-red" : "bg-bg-input text-text-muted"}`}
+                  className={`h-12 rounded-[10px] text-xs font-medium transition-colors ${set.toFailure ? "bg-accent-red/15 text-accent-red" : "bg-bg-input text-text-muted"}`}
                 >
                   {set.toFailure ? "Yes" : "No"}
                 </button>
                 <button
                   onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-                  className={`h-11 text-lg text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
+                  className={`h-12 text-lg text-text-dim ${entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
                   aria-label={`Remove set ${setIndex + 1}`}
                 >
                   ×
@@ -210,7 +210,7 @@ export function ExerciseCard({
         </div>
 
         {removeConfirm && (
-          <div className="flex flex-col gap-3 rounded-lg bg-accent-red/8 p-4">
+          <div className="flex flex-col gap-3 rounded-[10px] border border-accent-red/15 bg-accent-red/8 p-4">
             <p className="text-xs text-text-secondary">Remove this exercise? Logged sets will be lost.</p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={handleRemoveConfirmed} className="rounded-md bg-accent-red py-2.5 text-xs font-semibold text-white">
@@ -226,7 +226,7 @@ export function ExerciseCard({
         <div className="flex gap-2">
           <button
             onClick={() => onAddSet(exerciseIndex)}
-            className="flex-1 rounded-lg bg-bg-input py-3 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
+            className="flex-1 rounded-[10px] btn-ghost py-3 text-sm font-medium transition-colors"
           >
             Add Set
           </button>
@@ -235,7 +235,7 @@ export function ExerciseCard({
             <button
               key={i}
               onClick={btn.onClick}
-              className="rounded-lg bg-bg-input px-4 py-3 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
+              className="rounded-[10px] btn-ghost px-4 py-3 text-sm font-medium transition-colors"
             >
               {btn.label}
             </button>
