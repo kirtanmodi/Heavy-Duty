@@ -12,7 +12,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Exercise management** — swap, add, or remove exercises during an active workout or when editing past sessions
 - **Exercise reorder** — move exercises up/down during an active workout (superset pairs move together)
 - **Bodyweight mode** — exercises like hanging leg raises default to reps-only tracking, with a toggle to add external weight
-- **History editing** — full editing of past workouts: swap/add/remove exercises, modify sets/reps/weight, or delete entire sessions
+- **History editing** — full editing of past workouts with the same card UI as active workouts: swap/add/remove exercises, modify sets/reps/weight, or delete entire sessions
 - **Rest timer** — configurable countdown timer with preset durations
 - **Offline-ready PWA** — installable, works without internet, data persists in localStorage
 

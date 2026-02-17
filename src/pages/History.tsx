@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
@@ -275,7 +276,7 @@ export function History() {
                 {expanded && !isEditing && (
                   <div className="flex flex-col gap-2 border-t border-border px-4 py-3">
                     {workout.exercises.map((exercise) => (
-                      <ExerciseCard key={exercise.id} exercise={exercise} prevSets={getPrevExerciseSets(exercise.id, prev)} />
+                      <ExerciseHistoryCard key={exercise.id} exercise={exercise} prevSets={getPrevExerciseSets(exercise.id, prev)} />
                     ))}
                     <button
                       onClick={() => startEdit(workout)}
@@ -289,83 +290,21 @@ export function History() {
                 {isEditing && (
                   <div className="flex flex-col gap-3 border-t border-border px-4 py-3">
                     {editExercises.map((exercise, exIdx) => (
-                      <div key={exercise.id} className="rounded-lg bg-bg-input px-4 py-3">
-                        <div className="mb-3 flex items-center justify-between">
-                          <h3 className="text-sm font-semibold text-text-primary">{exercise.name}</h3>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setHistorySwapTarget(exIdx)}
-                              className="rounded-md px-2 py-1 text-xs text-accent-blue transition-colors active:bg-accent-blue/10"
-                            >
-                              Swap
-                            </button>
-                            <button
-                              onClick={() => handleEditRemoveExercise(exIdx)}
-                              className="rounded-md px-2 py-1 text-xs text-accent-red transition-colors active:bg-accent-red/10"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_1.75rem] items-center gap-1.5 text-[10px] font-medium tracking-wider text-text-muted uppercase">
-                            <span>Set</span>
-                            <span>Kg</span>
-                            <span>Reps</span>
-                            <span className="text-center">Fail</span>
-                            <span />
-                          </div>
-
-                          {exercise.sets.map((set, setIdx) => (
-                            <div key={setIdx} className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_1.75rem] items-center gap-1.5">
-                              <span className="text-center text-sm text-text-muted">{setIdx + 1}</span>
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                value={set.weight || ""}
-                                onChange={(e) => handleEditSetChange(exIdx, setIdx, "weight", parseFloat(e.target.value) || 0)}
-                                className="h-10 min-w-0 rounded-lg bg-bg-card px-2 text-center text-sm text-text-primary outline-none focus:ring-1 focus:ring-accent-red"
-                                placeholder="0"
-                              />
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                value={set.reps || ""}
-                                onChange={(e) => handleEditSetChange(exIdx, setIdx, "reps", parseInt(e.target.value) || 0)}
-                                className="h-10 min-w-0 rounded-lg bg-bg-card px-2 text-center text-sm text-text-primary outline-none focus:ring-1 focus:ring-accent-red"
-                                placeholder="0"
-                              />
-                              <button
-                                onClick={() => handleEditSetChange(exIdx, setIdx, "toFailure", !set.toFailure)}
-                                className={`h-10 rounded-lg text-xs font-medium transition-colors ${
-                                  set.toFailure ? "bg-accent-red/15 text-accent-red" : "bg-bg-card text-text-muted"
-                                }`}
-                              >
-                                {set.toFailure ? "Yes" : "No"}
-                              </button>
-                              <button
-                                onClick={() => handleEditRemoveSet(exIdx, setIdx)}
-                                className={`h-10 text-lg text-text-dim ${exercise.sets.length <= 1 ? "pointer-events-none opacity-20" : ""}`}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-
-                          <button
-                            onClick={() => handleEditAddSet(exIdx)}
-                            className="w-full rounded-lg bg-bg-card py-2.5 text-xs font-medium text-text-secondary transition-colors active:bg-bg-card-hover"
-                          >
-                            Add Set
-                          </button>
-                        </div>
-                      </div>
+                      <ExerciseCard
+                        key={`${exercise.id}-${exIdx}`}
+                        entry={exercise}
+                        exerciseIndex={exIdx}
+                        onSetChange={handleEditSetChange}
+                        onAddSet={handleEditAddSet}
+                        onRemoveSet={handleEditRemoveSet}
+                        onSwap={(idx) => setHistorySwapTarget(idx)}
+                        onRemove={handleEditRemoveExercise}
+                      />
                     ))}
 
                     <button
                       onClick={() => setShowHistoryAddExercise(true)}
-                      className="w-full rounded-lg border border-dashed border-border py-3 text-xs font-medium text-text-secondary transition-colors active:bg-bg-card"
+                      className="w-full rounded-lg border border-dashed border-border py-4 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card"
                     >
                       + Add Exercise
                     </button>
@@ -466,7 +405,7 @@ export function History() {
   );
 }
 
-function ExerciseCard({ exercise, prevSets }: { exercise: ExerciseEntry; prevSets: SetEntry[] | null }) {
+function ExerciseHistoryCard({ exercise, prevSets }: { exercise: ExerciseEntry; prevSets: SetEntry[] | null }) {
   if (exercise.sets.length === 0) {
     return (
       <div className="rounded-lg bg-bg-input px-4 py-2.5">
