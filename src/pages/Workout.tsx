@@ -44,16 +44,26 @@ export function Workout() {
   } = useWorkoutStore();
   const timer = useTimer();
 
+  const isOpen = dayId === "open";
+
   const [showCancel, setShowCancel] = useState(false);
   const [swapTarget, setSwapTarget] = useState<number | null>(null);
-  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [showAddExercise, setShowAddExercise] = useState(
+    () => isOpen && (!activeWorkout || activeWorkout.exercises.length === 0),
+  );
   const restPresets = [60, 90, 120, 180, 300];
-
   const program = programs[0];
   const day = program.days.find((d) => d.id === dayId);
-  const themeColor = focusColors[day?.focus ?? ""] ?? "#FFAA00";
+  const themeColor = isOpen ? "#FFAA00" : (focusColors[day?.focus ?? ""] ?? "#FFAA00");
 
   useEffect(() => {
+    if (isOpen) {
+      if (activeWorkout && activeWorkout.dayId === "open") return;
+      if (activeWorkout) cancelWorkout();
+      startWorkout("open", "Open Workout", "Freeform", []);
+      return;
+    }
+
     if (!day || day.type !== "lift") return;
     if (activeWorkout && activeWorkout.dayId === dayId) return;
     if (activeWorkout) cancelWorkout();
@@ -80,10 +90,10 @@ export function Workout() {
     });
 
     startWorkout(day.id, day.name, program.name, exercises);
-  }, [activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name]);
+  }, [isOpen, activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name]);
 
   // Derive active supersets (exclude split ones)
-  const allSupersets = day?.supersets ?? [];
+  const allSupersets = isOpen ? [] : (day?.supersets ?? []);
   const splitIds = new Set(activeWorkout?.splitSupersets ?? []);
   const activeSupersets = allSupersets.filter(([a]) => !splitIds.has(a));
 
@@ -221,7 +231,7 @@ export function Workout() {
     setShowAddExercise(false);
   };
 
-  if (!day) {
+  if (!day && !isOpen) {
     return (
       <PageLayout withBottomNavPadding={false}>
         <div className="pt-20 text-center text-text-muted">Loading workout...</div>
@@ -229,7 +239,7 @@ export function Workout() {
     );
   }
 
-  if (day.type !== "lift") {
+  if (!isOpen && day && day.type !== "lift") {
     const activities = cardioActivities[day.id] ?? [];
 
     return (
@@ -427,9 +437,9 @@ export function Workout() {
         <header className="flex flex-col gap-3 pt-1">
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-0.5">
-              <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{program.shortName}</p>
+              <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{isOpen ? "Freeform" : program.shortName}</p>
               <h1 className="font-[var(--font-display)] text-[2.25rem] leading-none tracking-wider text-text-primary">
-                {day.focus}
+                {isOpen ? "Open Workout" : day!.focus}
               </h1>
             </div>
             <div className="flex items-center gap-2">
@@ -487,8 +497,8 @@ export function Workout() {
         )}
 
         {activeWorkout.exercises.length === 0 && (
-          <section className="rounded-2xl bg-white/[0.03] p-6 text-sm text-text-secondary" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
-            No lifting exercises for this day.
+          <section className="rounded-2xl bg-white/[0.03] p-6 text-center text-sm text-text-secondary" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            {isOpen ? "Tap the button below to add your first exercise." : "No lifting exercises for this day."}
           </section>
         )}
 

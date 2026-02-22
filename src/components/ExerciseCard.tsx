@@ -272,24 +272,26 @@ export function ExerciseCard({
             return bwMode ? (
               <div key={setIndex} className="flex flex-col gap-1">
                 <div
-                  className="grid grid-cols-[2rem_minmax(0,1fr)_3rem_2.5rem] items-center gap-1.5 rounded-xl transition-all"
+                  className="grid grid-cols-[2rem_minmax(0,1fr)_3rem_2.5rem] items-start gap-1.5 rounded-xl transition-all"
                   style={completed ? { background: `${color}08` } : {}}
                 >
-                  <button
-                    onClick={() => toggleSetComplete(setIndex)}
-                    className="mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-all"
-                  >
-                    {completed ? (
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
-                        <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
-                          <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
-                    )}
-                  </button>
-                  <div className="relative">
+                  <div className="flex h-11 items-center justify-center">
+                    <button
+                      onClick={() => toggleSetComplete(setIndex)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full transition-all"
+                    >
+                      {completed ? (
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
+                          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                            <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
+                      )}
+                    </button>
+                  </div>
+                  <div>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -300,7 +302,7 @@ export function ExerciseCard({
                       placeholder="0"
                     />
                     {prevSet && (
-                      <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
+                      <span className="block mt-0.5 text-center text-[9px] tabular-nums text-text-dim">
                         prev: {prevSet.reps}
                       </span>
                     )}
@@ -344,24 +346,26 @@ export function ExerciseCard({
             ) : (
               <div key={setIndex} className="flex flex-col gap-1">
                 <div
-                  className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_2.5rem] items-center gap-1.5 rounded-xl transition-all"
+                  className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_2.5rem] items-start gap-1.5 rounded-xl transition-all"
                   style={completed ? { background: `${color}08` } : {}}
                 >
-                  <button
-                    onClick={() => toggleSetComplete(setIndex)}
-                    className="mx-auto flex h-7 w-7 items-center justify-center rounded-full transition-all"
-                  >
-                    {completed ? (
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
-                        <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
-                          <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
-                    )}
-                  </button>
-                  <div className="relative">
+                  <div className="flex h-11 items-center justify-center">
+                    <button
+                      onClick={() => toggleSetComplete(setIndex)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full transition-all"
+                    >
+                      {completed ? (
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
+                          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                            <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
+                      )}
+                    </button>
+                  </div>
+                  <div>
                     <input
                       type="number"
                       inputMode="decimal"
@@ -372,12 +376,12 @@ export function ExerciseCard({
                       placeholder="0"
                     />
                     {prevSet && (
-                      <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
+                      <span className="block mt-0.5 text-center text-[9px] tabular-nums text-text-dim">
                         prev: {prevSet.weight}kg
                       </span>
                     )}
                   </div>
-                  <div className="relative">
+                  <div>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -388,7 +392,7 @@ export function ExerciseCard({
                       placeholder="0"
                     />
                     {prevSet && (
-                      <span className="absolute -bottom-3.5 left-0 right-0 text-center text-[9px] tabular-nums text-text-dim">
+                      <span className="block mt-0.5 text-center text-[9px] tabular-nums text-text-dim">
                         prev: {prevSet.reps}
                       </span>
                     )}
@@ -432,9 +436,6 @@ export function ExerciseCard({
             );
           })}
         </div>
-
-        {/* Spacing for prev values */}
-        {previousSets && previousSets.length > 0 && <div className="h-0.5" />}
 
         {/* Remove confirm */}
         {removeConfirm && (

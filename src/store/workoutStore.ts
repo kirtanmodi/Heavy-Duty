@@ -137,3 +137,10 @@ export function getLastSets(exerciseId: string, history: WorkoutEntry[]) {
   }
   return null
 }
+
+export function getExerciseLastDoneDate(exerciseId: string, history: WorkoutEntry[]): string | null {
+  for (const workout of history) {
+    if (workout.exercises.some(e => e.id === exerciseId)) return workout.date
+  }
+  return null
+}

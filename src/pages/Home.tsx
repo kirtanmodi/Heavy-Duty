@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
+import { getEffectiveExercise } from "../data/exercises";
 import { getProgram } from "../data/programs";
 import { getRandomQuote } from "../data/quotes";
 import { calcStats } from "../lib/stats";
-import { useWorkoutStore } from "../store/workoutStore";
+import { useWorkoutStore, getExerciseLastDoneDate } from "../store/workoutStore";
 import type { ProgramDay } from "../types";
 
 function formatRelativeDate(iso: string): string {
@@ -17,6 +18,19 @@ function formatRelativeDate(iso: string): string {
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatExerciseDate(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
+  const day = date.toLocaleDateString("en-US", { weekday: "short" });
+  if (diffDays === 0) return `${day} · Today`;
+  if (diffDays === 1) return `${day} · Yesterday`;
+  const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${day} · ${dateStr}`;
 }
 
 function getMonday(d: Date): Date {
@@ -51,6 +65,17 @@ const CARDIO_ICONS: Record<string, React.ReactNode> = {
   ),
 };
 
+function LastDoneLabel({ day, history }: { day: ProgramDay; history: { dayId: string; date: string }[] }) {
+  const daysSince = daysSinceLastSession(day.id, history);
+  if (daysSince === null) return <span className="text-xs text-text-dim">Never done</span>;
+  if (daysSince === 0) return <span className="text-xs text-accent-green">Done today</span>;
+  return (
+    <span className={`text-xs ${daysSince >= 4 ? "text-accent-orange" : "text-text-muted"}`}>
+      {formatRelativeDate(history.find((w) => w.dayId === day.id)!.date)}
+    </span>
+  );
+}
+
 export function Home() {
   const navigate = useNavigate();
   const history = useWorkoutStore((s) => s.history);
@@ -75,6 +100,26 @@ export function Home() {
 
   const suggested = rankedLifts[0];
   const otherLifts = rankedLifts.slice(1);
+
+  // Map dayId → exercise list (from last session or program definition)
+  const dayExercises = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }[]>();
+    for (const day of liftDays) {
+      const lastWorkout = history.find((w) => w.dayId === day.id);
+      if (lastWorkout) {
+        map.set(day.id, lastWorkout.exercises.map((e) => ({ id: e.id, name: e.name })));
+      } else {
+        map.set(
+          day.id,
+          day.exercises.map((exId) => {
+            const ex = getEffectiveExercise(exId);
+            return { id: exId, name: ex?.name ?? exId };
+          }),
+        );
+      }
+    }
+    return map;
+  }, [liftDays, history]);
 
   const quote = useMemo(() => getRandomQuote(), []);
 
@@ -115,17 +160,6 @@ export function Home() {
     day: "numeric",
   });
 
-  function LastDoneLabel({ day }: { day: ProgramDay }) {
-    const daysSince = daysSinceLastSession(day.id, history);
-    if (daysSince === null) return <span className="text-xs text-text-dim">Never done</span>;
-    if (daysSince === 0) return <span className="text-xs text-accent-green">Done today</span>;
-    return (
-      <span className={`text-xs ${daysSince >= 4 ? "text-accent-orange" : "text-text-muted"}`}>
-        {formatRelativeDate(history.find((w) => w.dayId === day.id)!.date)}
-      </span>
-    );
-  }
-
   return (
     <PageLayout className="flex flex-col gap-5">
       {/* Header */}
@@ -164,7 +198,21 @@ export function Home() {
               <p className="text-sm text-text-secondary">
                 {suggested.day.exercises.length} exercises · Pre-exhaust supersets
               </p>
-              <LastDoneLabel day={suggested.day} />
+              <LastDoneLabel day={suggested.day} history={history} />
+            </div>
+            {/* Exercise list with last-done dates */}
+            <div className="flex flex-col gap-1 mt-1 w-full">
+              {(dayExercises.get(suggested.day.id) ?? []).map((ex) => {
+                const lastDate = getExerciseLastDoneDate(ex.id, history);
+                return (
+                  <div key={ex.id} className="flex items-center justify-between">
+                    <span className="text-xs text-text-secondary truncate">{ex.name}</span>
+                    <span className="text-[10px] text-text-dim shrink-0 ml-2">
+                      {lastDate ? formatExerciseDate(lastDate) : "Never"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
             <div className="flex items-center gap-2 self-start rounded-[10px] btn-primary px-5 py-2.5 text-sm font-semibold text-white">
               Start Workout
@@ -185,7 +233,21 @@ export function Home() {
           >
             <h3 className="font-[var(--font-display)] text-xl tracking-wide text-text-primary">{day.focus}</h3>
             <p className="text-xs text-text-secondary">{day.exercises.length} exercises</p>
-            <LastDoneLabel day={day} />
+            <LastDoneLabel day={day} history={history} />
+            {/* Compact exercise list */}
+            <div className="flex flex-col gap-0.5 mt-1">
+              {(dayExercises.get(day.id) ?? []).map((ex) => {
+                const lastDate = getExerciseLastDoneDate(ex.id, history);
+                return (
+                  <div key={ex.id} className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] text-text-muted truncate">{ex.name}</span>
+                    <span className="text-[9px] text-text-dim shrink-0">
+                      {lastDate ? formatExerciseDate(lastDate) : "—"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
             {daysSince !== null && daysSince === 0 ? (
               <span className="mt-auto flex items-center gap-1 text-[10px] font-semibold text-accent-green">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-3 w-3">
@@ -200,6 +262,26 @@ export function Home() {
             )}
           </button>
         ))}
+
+        {/* Open Workout */}
+        <button
+          onClick={() => navigate("/workout/open")}
+          className="col-span-2 flex items-center gap-4 rounded-[14px] border border-dashed border-accent-yellow/25 bg-bg-card/50 p-4 text-left transition-colors active:bg-bg-card animate-fade-up"
+          style={{ animationDelay: `${(otherLifts.length + 1) * 50}ms` }}
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-yellow/10">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 text-accent-yellow">
+              <path d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <h3 className="font-[var(--font-display)] text-xl tracking-wide text-text-primary">Open Workout</h3>
+            <p className="text-xs text-text-muted">Build your own — pick any exercises</p>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-auto h-4 w-4 shrink-0 text-text-dim">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
 
         {/* Cardio & Recovery — expandable full-width */}
         <div className="col-span-2 overflow-hidden rounded-[14px] bg-bg-card card-surface animate-fade-up" style={{ animationDelay: "150ms" }}>

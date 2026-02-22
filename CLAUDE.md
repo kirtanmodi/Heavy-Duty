@@ -45,9 +45,9 @@ src/
 │   ├── useTimer.ts      # Countdown timer (rest between sets)
 │   └── useOverload.ts   # Connects overload logic to workout history
 ├── pages/
-│   ├── Home.tsx         # Weekly schedule, sorted by today's day-of-week
-│   ├── Workout.tsx      # Active workout logging (sets/reps/weight/failure)
-│   ├── History.tsx      # Past workouts with inline edit mode
+│   ├── Home.tsx         # Weekly schedule + per-exercise last-done dates
+│   ├── Workout.tsx      # Active workout logging (program days + open/freeform)
+│   ├── History.tsx      # Past workouts with inline edit + exercise filter
 │   └── Exercises.tsx    # Exercise management (rename, add, remove)
 └── components/
     ├── ExerciseCard.tsx         # Shared exercise card (used by Workout + History edit)
@@ -64,10 +64,14 @@ src/
 - **Progressive overload** — `lib/overload.ts` is a pure function: given an exercise definition and last session's sets, returns a suggestion (increase/maintain/decrease weight). Bodyweight exercises (`equipment: 'bodyweight+'`) get rep-focused messages instead of weight-focused.
 - **Superset system** — programs define `supersets: [string, string][]` arrays. Workout page groups superset pairs visually (yellow left border). Users can split supersets per-session via `activeWorkout.splitSupersets`. Rest timer: no rest between superset exercises, 2min rest after the pair.
 - **Bodyweight exercise mode** — exercises with `equipment: 'bodyweight+'` default to reps-only (no Kg column). Users toggle "+ Add Weight" / "BW Only" per exercise. Preference persists in `exerciseStore.weightMode`.
-- **Shared exercise card** — `ExerciseCard` component (`src/components/ExerciseCard.tsx`) renders the full exercise UI (name, equipment, rep range, bodyweight toggle, set inputs, swap/remove icons, inline remove confirmation). Used identically by both Workout and History edit pages. Manages bodyweight mode and remove-confirm state internally. Accepts optional `showOverloadBanner`, `overloadSuggestion`, and `restButtons` props (Workout-only features).
+- **Shared exercise card** — `ExerciseCard` component (`src/components/ExerciseCard.tsx`) renders the full exercise UI (name, equipment, rep range, bodyweight toggle, set inputs, swap/remove icons, inline remove confirmation). Used identically by both Workout and History edit pages. Manages bodyweight mode and remove-confirm state internally. Accepts optional `showOverloadBanner`, `overloadSuggestion`, and `restButtons` props (Workout-only features). Set rows use `items-start` alignment with "prev:" hints rendered in normal flow below each input.
 - **Exercise picker modal** — shared `ExercisePickerModal` component (`src/components/ExercisePickerModal.tsx`) used by both Workout and History pages. Supports `mode: 'swap'` (replace exercise) and `mode: 'add'` (append exercise). Filters out exercises already in the workout. Groups candidates by muscle group.
 - **Exercise CRUD (active workout)** — swap exercise (picker modal), add exercise (dashed button, appends at end with overload suggestion), remove exercise (trash icon with inline confirmation), reorder (up/down arrows, superset pairs move as a unit). Store actions: `addExerciseToWorkout`, `removeExerciseFromWorkout`.
 - **Exercise CRUD (history edit)** — identical card UI to active workout. Swap exercise (preserves existing sets, changes exercise identity only), add exercise (appends with empty sets), remove exercise, modify sets/reps/weight. All changes saved atomically via `updateHistoryEntry`. Overload banner and rest timer are omitted.
+- **Open workout** — `/workout/open` starts a freeform session with no predefined exercises or supersets. Exercise picker opens automatically on entry. Day card on Home uses dashed yellow border. `dayId: "open"` is stored in history and colored `accent-yellow`.
+- **Per-exercise last-done dates** — Home page day cards list each exercise with its last-done date (sourced from `getExerciseLastDoneDate` in `workoutStore`). Exercise list comes from last session history or falls back to the program definition.
+- **History exercise filter** — clicking an exercise tag in collapsed history cards filters the list to workouts containing that exercise. Active filter shows as a dismissible chip above results.
+- **History card titles** — card headers strip the "Day N — " prefix from `workout.day`, showing just the focus (e.g., "Chest, Shoulders, Triceps"). Dates always show "Day · Date" format (e.g., "Mon · Feb 23").
 - **Exercise reorder** — up/down arrows per exercise group during active workout. Superset pairs move as a unit. Not available in history edit (order has no functional impact on logged data).
 - **Mobile-first PWA** — max-width 460px, safe-area insets, portrait orientation, standalone display. Bottom nav hides on workout route.
 
@@ -83,6 +87,8 @@ Defined in `src/index.css` `@theme` block (Tailwind v4 syntax):
 | Path | Component | Notes |
 |------|-----------|-------|
 | `/` | Home | Weekly schedule |
-| `/workout/:dayId` | Workout | Active session (bottom nav hidden) |
+| `/workout/:dayId` | Workout | Active session (bottom nav hidden). `dayId=open` for freeform |
+| `/workout-summary` | WorkoutSummary | Post-workout summary screen |
 | `/exercises` | Exercises | Exercise management |
 | `/history` | History | Past workouts with edit mode |
+| `/history/:workoutId/edit` | HistoryEdit | Edit a past workout |

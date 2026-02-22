@@ -7,15 +7,9 @@ import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
 
 function formatRelativeDate(iso: string): string {
   const date = new Date(iso);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const day = date.toLocaleDateString("en-US", { weekday: "short" });
+  const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${day} · ${dateStr}`;
 }
 
 function formatMonthYear(iso: string): string {
@@ -118,6 +112,7 @@ const dayColors: Record<string, string> = {
   "day-2": "accent-orange",
   "day-3": "accent-blue",
   "day-4": "accent-green",
+  open: "accent-yellow",
 };
 
 function getDayColor(dayId: string): string {
@@ -131,9 +126,16 @@ export function History() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [exerciseFilter, setExerciseFilter] = useState<string | null>(null);
 
   const liftingDays = programs[0].days.filter((d) => d.type === "lift");
-  const filteredHistory = activeFilter === "all" ? history : history.filter((w) => w.dayId === activeFilter);
+  const filteredHistory = useMemo(() => {
+    let filtered = activeFilter === "all" ? history : history.filter((w) => w.dayId === activeFilter);
+    if (exerciseFilter) {
+      filtered = filtered.filter((w) => w.exercises.some((e) => e.id === exerciseFilter));
+    }
+    return filtered;
+  }, [history, activeFilter, exerciseFilter]);
   const monthGroups = useMemo(() => groupByMonth(filteredHistory), [filteredHistory]);
 
   const streak = useMemo(() => calcStreak(history), [history]);
@@ -207,6 +209,33 @@ export function History() {
               {day.focus}
             </button>
           ))}
+          {history.some((w) => w.dayId === "open") && (
+            <button
+              onClick={() => setActiveFilter("open")}
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                activeFilter === "open" ? "btn-primary text-white" : "border border-border-card bg-bg-card text-text-muted active:text-text-secondary"
+              }`}
+            >
+              Open
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Active exercise filter chip */}
+      {exerciseFilter && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setExerciseFilter(null)}
+            className="flex items-center gap-1.5 rounded-full bg-accent-red/15 px-3 py-1.5 text-xs font-semibold text-accent-red"
+          >
+            <span>
+              {history.flatMap((w) => w.exercises).find((e) => e.id === exerciseFilter)?.name ?? exerciseFilter}
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3">
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
       )}
 
@@ -264,7 +293,7 @@ export function History() {
                             <div className="flex items-start justify-between">
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2.5">
-                                  <h3 className="text-[15px] font-bold text-text-primary">{workout.day}</h3>
+                                  <h3 className="text-[15px] font-bold text-text-primary">{workout.day.includes(" — ") ? workout.day.split(" — ")[1] : workout.day}</h3>
                                   {progress && (
                                     <span
                                       className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none ${
@@ -314,7 +343,15 @@ export function History() {
                             {workout.exercises.map((ex) => (
                               <span
                                 key={ex.id}
-                                className="rounded-md bg-bg-input px-2 py-0.5 text-[10px] font-medium text-text-secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExerciseFilter((prev) => (prev === ex.id ? null : ex.id));
+                                }}
+                                className={`rounded-md px-2 py-0.5 text-[10px] font-medium cursor-pointer transition-colors ${
+                                  exerciseFilter === ex.id
+                                    ? "bg-accent-red/20 text-accent-red"
+                                    : "bg-bg-input text-text-secondary active:bg-bg-input/70"
+                                }`}
                               >
                                 {ex.name}
                               </span>
