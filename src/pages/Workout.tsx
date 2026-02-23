@@ -56,7 +56,7 @@ export function Workout() {
   const [showAddExercise, setShowAddExercise] = useState(
     () => isOpen && (!activeWorkout || activeWorkout.exercises.length === 0),
   );
-  const finishedRef = useRef(false);
+  const leavingRef = useRef(false);
   const restPresets = [60, 90, 120, 180, 300];
   const program = programs[0];
   const day = program.days.find((d) => d.id === dayId);
@@ -66,7 +66,7 @@ export function Workout() {
   const hasDayConflict = !!(activeWorkout && activeWorkout.dayId !== dayId && activeWorkout.dayId !== (isOpen ? "open" : dayId) && !discardedConflict);
 
   useEffect(() => {
-    if (finishedRef.current) return;
+    if (leavingRef.current) return;
     if (isOpen) {
       if (activeWorkout && activeWorkout.dayId === "open") return;
       if (activeWorkout) return; // conflict — handled by hasDayConflict UI
@@ -178,12 +178,13 @@ export function Workout() {
   };
 
   const handleFinish = () => {
-    finishedRef.current = true;
+    leavingRef.current = true;
     finishWorkout();
     navigate("/workout-summary");
   };
 
   const handleCancel = () => {
+    leavingRef.current = true;
     cancelWorkout();
     navigate("/");
   };
