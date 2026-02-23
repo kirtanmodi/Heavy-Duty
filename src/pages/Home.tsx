@@ -349,13 +349,13 @@ export function Home() {
         {/* This Week — days trained */}
         <div className="flex flex-col gap-2 rounded-[14px] bg-bg-card p-4 card-surface animate-fade-up" style={{ animationDelay: "350ms" }}>
           <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">This Week</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 min-w-0">
             {["M", "T", "W", "T", "F", "S", "S"].map((label, i) => {
               const dow = i === 6 ? 0 : i + 1;
               const trained = weekDaysTrained.has(dow);
               return (
-                <div key={i} className="flex flex-col items-center gap-1">
-                  <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold ${trained ? "bg-accent-green text-white" : "bg-bg-input text-text-dim"}`}>
+                <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                  <div className={`aspect-square w-full max-w-5 rounded-full flex items-center justify-center text-[9px] font-bold ${trained ? "bg-accent-green text-white" : "bg-bg-input text-text-dim"}`}>
                     {label}
                   </div>
                 </div>
