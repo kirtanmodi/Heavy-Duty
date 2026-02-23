@@ -15,6 +15,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Auto-save & resume** — workout data persists automatically on every change. If the app closes mid-workout, a resume banner appears on the home page
 - **Exercise reorder** — move exercises up/down during an active workout (superset pairs move together)
 - **Bodyweight mode** — exercises like hanging leg raises default to reps-only tracking, with a toggle to add external weight
+- **Bento stats dashboard** — streak, total workouts, last session focus, and M–S training-day dots on the home page
 - **Per-exercise tracking** — home page shows last-done date for every exercise in each day card
 - **History filtering** — filter past workouts by exercise; tap any exercise tag to narrow results
 - **History editing** — full editing of past workouts with the same card UI as active workouts: swap/add/remove exercises, modify sets/reps/weight, or delete entire sessions

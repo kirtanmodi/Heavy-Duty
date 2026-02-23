@@ -46,7 +46,7 @@ src/
 │   ├── useTimer.ts      # Countdown timer (rest between sets)
 │   └── useOverload.ts   # Connects overload logic to workout history
 ├── pages/
-│   ├── Home.tsx            # Weekly schedule + per-exercise last-done dates + resume banner
+│   ├── Home.tsx            # Weekly schedule, bento stats grid, resume banner
 │   ├── Workout.tsx         # Active workout logging (program days + open/freeform)
 │   ├── WorkoutSummary.tsx  # Post-finish summary (stats, exercise list, history link)
 │   ├── History.tsx         # Past workouts with inline edit + exercise filter
@@ -72,6 +72,7 @@ src/
 - **Exercise CRUD (history edit)** — identical card UI to active workout. Swap exercise (preserves existing sets, changes exercise identity only), add exercise (appends with empty sets), remove exercise, modify sets/reps/weight. All changes saved atomically via `updateHistoryEntry`. Overload banner and rest timer are omitted.
 - **Open workout** — `/workout/open` starts a freeform session with no predefined exercises or supersets. Exercise picker opens automatically on entry. Day card on Home uses dashed yellow border. `dayId: "open"` is stored in history and colored `accent-yellow`.
 - **Per-exercise last-done dates** — Home page day cards list each exercise with its last-done date (sourced from `getExerciseLastDoneDate` in `workoutStore`). Exercise list comes from last session history or falls back to the program definition.
+- **Bento stats grid** — Home page displays four stat cards in a 2×2 grid: Streak (consecutive days), Total Workouts, Last Session (day focus + relative date), and This Week (M–S day dots, green when trained, with session count).
 - **History exercise filter** — clicking an exercise tag in collapsed history cards filters the list to workouts containing that exercise. Active filter shows as a dismissible chip above results.
 - **History card titles** — card headers strip the "Day N — " prefix from `workout.day`, showing just the focus (e.g., "Chest, Shoulders, Triceps"). Dates always show "Day · Date" format (e.g., "Mon · Feb 23").
 - **Skip exercise (alternate exercises)** — exercises can be skipped for the current session via 3-dot menu ("Skip This Week"). Skipped exercises render as collapsed single-line cards with a "Skipped" badge. `ExerciseEntry.skipped?: boolean` flag is backwards-compatible. Skipped exercises are preserved in history so they seed back next session (unskipped). `getLastSets`, `getExerciseLastDoneDate`, `getExerciseHistory` all skip over entries where `skipped === true`. `calcStats` excludes skipped exercises from totals. History and WorkoutSummary pages show skipped exercises with distinct styling.

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
 import { getProgram } from "../data/programs";
 import { getRandomQuote } from "../data/quotes";
-import { calcStats } from "../lib/stats";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { ProgramDay } from "../types";
 
@@ -119,16 +118,17 @@ export function Home() {
     return count;
   }, [history]);
 
-  const weeklyVolume = useMemo(() => {
+  const weekDaysTrained = useMemo(() => {
     const monday = getMonday(new Date());
     const mondayTime = monday.getTime();
-    let total = 0;
+    const trained = new Set<number>();
     for (const w of history) {
-      if (new Date(w.date).getTime() >= mondayTime) {
-        total += calcStats(w).totalVolume;
+      const d = new Date(w.date);
+      if (d.getTime() >= mondayTime) {
+        trained.add(d.getDay());
       }
     }
-    return total;
+    return trained;
   }, [history]);
 
   const lastSession = history.length > 0 ? history[0] : null;
@@ -331,28 +331,38 @@ export function Home() {
 
         {/* Last Session */}
         <div className="flex flex-col gap-2 rounded-[14px] bg-bg-card p-4 card-surface animate-fade-up" style={{ animationDelay: "300ms" }}>
-          <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">Last Session</span>
+          <div className="flex items-baseline justify-between gap-1">
+            <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">Last Session</span>
+            {lastSession && (
+              <span className="text-[10px] text-text-dim">{formatRelativeDate(lastSession.date)}</span>
+            )}
+          </div>
           {lastSession ? (
-            <div className="flex flex-col gap-0.5">
-              <span className="font-[var(--font-display)] text-xl tracking-wide text-text-primary">
-                {lastSession.day.split("—")[0].trim().split(" ").pop()}
-              </span>
-              <span className="text-xs text-text-muted">{formatRelativeDate(lastSession.date)}</span>
-            </div>
+            <span className="font-[var(--font-display)] text-lg leading-snug tracking-wide text-text-primary">
+              {lastSession.day.includes("—") ? lastSession.day.split("—").pop()!.trim() : lastSession.day}
+            </span>
           ) : (
             <span className="text-sm text-text-dim">No sessions yet</span>
           )}
         </div>
 
-        {/* Weekly Volume */}
+        {/* This Week — days trained */}
         <div className="flex flex-col gap-2 rounded-[14px] bg-bg-card p-4 card-surface animate-fade-up" style={{ animationDelay: "350ms" }}>
           <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">This Week</span>
-          <div className="flex flex-col gap-0.5">
-            <span className="font-[var(--font-display)] text-xl tabular-nums text-text-primary">
-              {weeklyVolume > 0 ? weeklyVolume.toLocaleString() : "—"}
-            </span>
-            {weeklyVolume > 0 && <span className="text-xs text-text-muted">kg volume</span>}
+          <div className="flex items-center gap-1.5">
+            {["M", "T", "W", "T", "F", "S", "S"].map((label, i) => {
+              const dow = i === 6 ? 0 : i + 1;
+              const trained = weekDaysTrained.has(dow);
+              return (
+                <div key={i} className="flex flex-col items-center gap-1">
+                  <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold ${trained ? "bg-accent-green text-white" : "bg-bg-input text-text-dim"}`}>
+                    {label}
+                  </div>
+                </div>
+              );
+            })}
           </div>
+          <span className="text-xs text-text-muted">{weekDaysTrained.size} session{weekDaysTrained.size !== 1 ? "s" : ""}</span>
         </div>
 
         {/* Mentzer Quote — full width */}
