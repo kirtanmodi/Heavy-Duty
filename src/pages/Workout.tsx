@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
@@ -37,7 +37,10 @@ export function Workout() {
     reorderExercises,
     splitSuperset,
     addExerciseToWorkout,
+    insertExerciseAtIndex,
     removeExerciseFromWorkout,
+    skipExercise,
+    unskipExercise,
     finishWorkout,
     cancelWorkout,
     history,
@@ -47,26 +50,33 @@ export function Workout() {
   const isOpen = dayId === "open";
 
   const [showCancel, setShowCancel] = useState(false);
+  const [discardedConflict, setDiscardedConflict] = useState(false);
   const [swapTarget, setSwapTarget] = useState<number | null>(null);
+  const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(
     () => isOpen && (!activeWorkout || activeWorkout.exercises.length === 0),
   );
+  const finishedRef = useRef(false);
   const restPresets = [60, 90, 120, 180, 300];
   const program = programs[0];
   const day = program.days.find((d) => d.id === dayId);
   const themeColor = isOpen ? "#FFAA00" : (focusColors[day?.focus ?? ""] ?? "#FFAA00");
 
+  // Derive conflict: active workout exists for a different day
+  const hasDayConflict = !!(activeWorkout && activeWorkout.dayId !== dayId && activeWorkout.dayId !== (isOpen ? "open" : dayId) && !discardedConflict);
+
   useEffect(() => {
+    if (finishedRef.current) return;
     if (isOpen) {
       if (activeWorkout && activeWorkout.dayId === "open") return;
-      if (activeWorkout) cancelWorkout();
+      if (activeWorkout) return; // conflict — handled by hasDayConflict UI
       startWorkout("open", "Open Workout", "Freeform", []);
       return;
     }
 
     if (!day || day.type !== "lift") return;
     if (activeWorkout && activeWorkout.dayId === dayId) return;
-    if (activeWorkout) cancelWorkout();
+    if (activeWorkout) return; // conflict — handled by hasDayConflict UI
 
     const lastWorkoutForDay = history.find((w) => w.dayId === dayId);
     const exerciseIds = lastWorkoutForDay
@@ -137,9 +147,9 @@ export function Workout() {
 
   const groups = buildGroups();
 
-  // Progress calculation
-  const totalSets = activeWorkout?.exercises.reduce((sum, e) => sum + e.sets.length, 0) ?? 0;
-  const completedSets = activeWorkout?.exercises.reduce(
+  // Progress calculation (exclude skipped exercises)
+  const totalSets = activeWorkout?.exercises.filter(e => !e.skipped).reduce((sum, e) => sum + e.sets.length, 0) ?? 0;
+  const completedSets = activeWorkout?.exercises.filter(e => !e.skipped).reduce(
     (sum, e) => sum + e.sets.filter((s) => s.weight > 0 || s.reps > 0).length,
     0,
   ) ?? 0;
@@ -168,6 +178,7 @@ export function Workout() {
   };
 
   const handleFinish = () => {
+    finishedRef.current = true;
     finishWorkout();
     navigate("/workout-summary");
   };
@@ -229,6 +240,25 @@ export function Workout() {
     }));
     addExerciseToWorkout({ id: exercise.id, name: exercise.name, sets });
     setShowAddExercise(false);
+  };
+
+  const handleInsertExercise = (exercise: Exercise) => {
+    if (insertAtIndex === null) return;
+    const lastSets = getLastSets(exercise.id, history);
+    const suggestion = getOverloadSuggestion(exercise, lastSets);
+    const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
+      weight: suggestion.suggestedWeight ?? 0,
+      reps: suggestion.suggestedReps,
+      toFailure: false,
+      tempo: "4-1-4",
+    }));
+    insertExerciseAtIndex({ id: exercise.id, name: exercise.name, sets }, insertAtIndex);
+    setInsertAtIndex(null);
+  };
+
+  const handleDiscardAndStart = () => {
+    cancelWorkout();
+    setDiscardedConflict(true);
   };
 
   if (!day && !isOpen) {
@@ -346,6 +376,8 @@ export function Workout() {
       onRemoveSet: handleRemoveSet,
       onSwap: (idx: number) => setSwapTarget(idx),
       onRemove: (idx: number) => removeExerciseFromWorkout(idx),
+      onSkip: (idx: number) => skipExercise(idx),
+      onUnskip: (idx: number) => unskipExercise(idx),
       showOverloadBanner: true,
       overloadSuggestion: suggestion,
       restButtons: restBtns.length > 0 ? restBtns : undefined,
@@ -432,6 +464,16 @@ export function Workout() {
         />
       )}
 
+      {/* Insert Exercise Modal */}
+      {insertAtIndex !== null && (
+        <ExercisePickerModal
+          mode="add"
+          activeExerciseIds={activeWorkout.exercises.map((e) => e.id)}
+          onSelect={handleInsertExercise}
+          onClose={() => setInsertAtIndex(null)}
+        />
+      )}
+
       <PageLayout withBottomNavPadding={false} className="flex flex-col gap-5 pb-28">
         {/* Header */}
         <header className="flex flex-col gap-3 pt-1">
@@ -496,38 +538,138 @@ export function Workout() {
           </section>
         )}
 
+        {/* Day conflict dialog */}
+        {hasDayConflict && activeWorkout && (
+          <section
+            className="flex flex-col gap-4 rounded-2xl p-5 animate-slide-up"
+            style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.15)" }}
+          >
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-text-secondary">You have a workout in progress:</p>
+              <p className="text-base font-bold text-text-primary">{activeWorkout.dayName}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => navigate(`/workout/${activeWorkout.dayId}`)}
+                className="rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97]"
+                style={{
+                  background: "linear-gradient(135deg, #46D369, #46D369CC)",
+                }}
+              >
+                Resume
+              </button>
+              <button
+                onClick={handleDiscardAndStart}
+                className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-accent-red transition-colors active:bg-white/[0.04]"
+              >
+                Discard & Start New
+              </button>
+            </div>
+          </section>
+        )}
+
         {activeWorkout.exercises.length === 0 && (
           <section className="rounded-2xl bg-white/[0.03] p-6 text-center text-sm text-text-secondary" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
             {isOpen ? "Tap the button below to add your first exercise." : "No lifting exercises for this day."}
           </section>
         )}
 
-        {/* Exercise groups */}
+        {/* Exercise groups with insert buttons */}
         {groups.map((group, groupIndex) => {
+          const getInsertIdx = () => {
+            if (groupIndex + 1 >= groups.length) return activeWorkout.exercises.length;
+            const next = groups[groupIndex + 1];
+            return next.type === "superset" ? next.indices[0] : next.index;
+          };
           const isFirst = groupIndex === 0;
           const isLast = groupIndex === groups.length - 1;
+
+          // Compute insert index: position of the first exercise in this group
+          const groupStartIdx = group.type === "superset" ? group.indices[0] : group.index;
+
+          const insertButton = (atIndex: number) => (
+            <button
+              onClick={() => setInsertAtIndex(atIndex)}
+              className="group/insert flex w-full items-center gap-3 py-1"
+              aria-label="Insert exercise here"
+            >
+              <div className="h-px flex-1 bg-white/[0.04] transition-colors group-active/insert:bg-white/[0.12]" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-white/[0.1] text-text-dim transition-colors group-active/insert:border-white/[0.2] group-active/insert:text-text-muted">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3">
+                  <path d="M12 5v14m7-7H5" />
+                </svg>
+              </div>
+              <div className="h-px flex-1 bg-white/[0.04] transition-colors group-active/insert:bg-white/[0.12]" />
+            </button>
+          );
 
           if (group.type === "superset") {
             const [firstIdx, secondIdx] = group.indices;
             const firstEntry = activeWorkout.exercises[firstIdx];
             return (
-              <section key={`ss-${firstIdx}`} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-5 items-center gap-1 rounded-md bg-accent-yellow/12 px-2">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 text-accent-yellow">
-                        <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      <span className="text-[10px] font-bold tracking-widest text-accent-yellow uppercase">Superset</span>
+              <div key={`ss-${firstIdx}`} className="flex flex-col">
+                {isFirst && insertButton(groupStartIdx)}
+                <section className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-5 items-center gap-1 rounded-md bg-accent-yellow/12 px-2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 text-accent-yellow">
+                          <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span className="text-[10px] font-bold tracking-widest text-accent-yellow uppercase">Superset</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => splitSuperset(firstEntry.id)}
+                        className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-text-dim transition-colors active:bg-white/[0.06]"
+                      >
+                        Split
+                      </button>
+                      <button
+                        onClick={() => handleMoveGroup(groupIndex, "up")}
+                        className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                        aria-label="Move up"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
+                          <path d="M18 15l-6-6-6 6" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleMoveGroup(groupIndex, "down")}
+                        className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                        aria-label="Move down"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
+
+                  <div
+                    className="flex flex-col gap-2.5 overflow-visible rounded-2xl pl-3"
+                    style={{
+                      borderLeft: "3px solid rgba(255, 170, 0, 0.3)",
+                      background: "rgba(255, 170, 0, 0.02)",
+                    }}
+                  >
+                    <ExerciseCard {...buildCardProps(firstIdx, false)} />
+                    <ExerciseCard {...buildCardProps(secondIdx, true)} />
+                  </div>
+                </section>
+                {insertButton(getInsertIdx())}
+              </div>
+            );
+          }
+
+          // Single exercise
+          return (
+            <div key={`s-${group.index}`} className="flex flex-col">
+              {isFirst && insertButton(groupStartIdx)}
+              <section className="flex flex-col gap-2">
+                <div className="flex justify-end px-1">
                   <div className="flex items-center gap-0.5">
-                    <button
-                      onClick={() => splitSuperset(firstEntry.id)}
-                      className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-text-dim transition-colors active:bg-white/[0.06]"
-                    >
-                      Split
-                    </button>
                     <button
                       onClick={() => handleMoveGroup(groupIndex, "up")}
                       className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
@@ -548,48 +690,10 @@ export function Workout() {
                     </button>
                   </div>
                 </div>
-
-                <div
-                  className="flex flex-col gap-2.5 rounded-2xl pl-3"
-                  style={{
-                    borderLeft: "3px solid rgba(255, 170, 0, 0.3)",
-                    background: "rgba(255, 170, 0, 0.02)",
-                  }}
-                >
-                  <ExerciseCard {...buildCardProps(firstIdx, false)} />
-                  <ExerciseCard {...buildCardProps(secondIdx, true)} />
-                </div>
+                <ExerciseCard {...buildCardProps(group.index, true)} />
               </section>
-            );
-          }
-
-          // Single exercise
-          return (
-            <section key={`s-${group.index}`} className="flex flex-col gap-2">
-              <div className="flex justify-end px-1">
-                <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => handleMoveGroup(groupIndex, "up")}
-                    className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
-                    aria-label="Move up"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
-                      <path d="M18 15l-6-6-6 6" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleMoveGroup(groupIndex, "down")}
-                    className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isLast ? "pointer-events-none opacity-20" : ""}`}
-                    aria-label="Move down"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <ExerciseCard {...buildCardProps(group.index, true)} />
-            </section>
+              {insertButton(getInsertIdx())}
+            </div>
           );
         })}
 

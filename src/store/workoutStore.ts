@@ -21,7 +21,10 @@ interface WorkoutState {
   finishWorkout: () => void
   cancelWorkout: () => void
   addExerciseToWorkout: (exercise: ExerciseEntry) => void
+  insertExerciseAtIndex: (exercise: ExerciseEntry, index: number) => void
   removeExerciseFromWorkout: (exerciseIndex: number) => void
+  skipExercise: (exerciseIndex: number) => void
+  unskipExercise: (exerciseIndex: number) => void
   updateHistoryEntry: (workoutId: string, exercises: ExerciseEntry[]) => void
   deleteHistoryEntry: (workoutId: string) => void
   clearAll: () => void
@@ -81,7 +84,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           day: active.dayName,
           dayId: active.dayId,
           startedAt: active.startedAt,
-          exercises: active.exercises.filter(e => e.sets.some(s => s.reps > 0)),
+          exercises: active.exercises.filter(e => e.skipped || e.sets.some(s => s.reps > 0)),
         }
         set(state => ({
           history: [entry, ...state.history],
@@ -98,10 +101,34 @@ export const useWorkoutStore = create<WorkoutState>()(
         set({ activeWorkout: { ...active, exercises: [...active.exercises, exercise] } })
       },
 
+      insertExerciseAtIndex: (exercise, index) => {
+        const active = get().activeWorkout
+        if (!active) return
+        const exercises = [...active.exercises]
+        exercises.splice(index, 0, exercise)
+        set({ activeWorkout: { ...active, exercises } })
+      },
+
       removeExerciseFromWorkout: (exerciseIndex) => {
         const active = get().activeWorkout
         if (!active) return
         set({ activeWorkout: { ...active, exercises: active.exercises.filter((_, i) => i !== exerciseIndex) } })
+      },
+
+      skipExercise: (exerciseIndex) => {
+        const active = get().activeWorkout
+        if (!active) return
+        const exercises = [...active.exercises]
+        exercises[exerciseIndex] = { ...exercises[exerciseIndex], skipped: true }
+        set({ activeWorkout: { ...active, exercises } })
+      },
+
+      unskipExercise: (exerciseIndex) => {
+        const active = get().activeWorkout
+        if (!active) return
+        const exercises = [...active.exercises]
+        exercises[exerciseIndex] = { ...exercises[exerciseIndex], skipped: false }
+        set({ activeWorkout: { ...active, exercises } })
       },
 
       updateHistoryEntry: (workoutId, exercises) => {
@@ -126,21 +153,22 @@ export const useWorkoutStore = create<WorkoutState>()(
 
 export function getExerciseHistory(exerciseId: string, history: WorkoutEntry[], limit = 8): WorkoutEntry[] {
   return history
-    .filter(w => w.exercises.some(e => e.id === exerciseId))
+    .filter(w => w.exercises.some(e => e.id === exerciseId && !e.skipped))
     .slice(0, limit)
 }
 
 export function getLastSets(exerciseId: string, history: WorkoutEntry[]) {
   for (const workout of history) {
     const ex = workout.exercises.find(e => e.id === exerciseId)
-    if (ex && ex.sets.length > 0) return ex.sets
+    if (ex && !ex.skipped && ex.sets.length > 0) return ex.sets
   }
   return null
 }
 
 export function getExerciseLastDoneDate(exerciseId: string, history: WorkoutEntry[]): string | null {
   for (const workout of history) {
-    if (workout.exercises.some(e => e.id === exerciseId)) return workout.date
+    const ex = workout.exercises.find(e => e.id === exerciseId)
+    if (ex && !ex.skipped) return workout.date
   }
   return null
 }

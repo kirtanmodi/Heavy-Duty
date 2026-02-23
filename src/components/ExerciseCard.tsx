@@ -19,6 +19,8 @@ interface ExerciseCardProps {
   onRemoveSet: (exerciseIndex: number, setIndex: number) => void;
   onSwap: (exerciseIndex: number) => void;
   onRemove: (exerciseIndex: number) => void;
+  onSkip?: (exerciseIndex: number) => void;
+  onUnskip?: (exerciseIndex: number) => void;
   showOverloadBanner?: boolean;
   overloadSuggestion?: OverloadSuggestion;
   restButtons?: RestButton[];
@@ -33,6 +35,8 @@ export function ExerciseCard({
   onRemoveSet,
   onSwap,
   onRemove,
+  onSkip,
+  onUnskip,
   showOverloadBanner,
   overloadSuggestion,
   restButtons,
@@ -62,6 +66,111 @@ export function ExerciseCard({
   if (!exercise) return null;
 
   const color = muscleColors[exercise.primaryMuscles[0]] || "#888";
+
+  // Collapsed skipped render
+  if (entry.skipped) {
+    return (
+      <div
+        className={`relative rounded-2xl ${showMenu ? "z-30" : ""}`}
+        style={{
+          background: `linear-gradient(135deg, ${color}08 0%, rgba(255,255,255,0.02) 50%)`,
+          border: `1px solid ${color}18`,
+        }}
+      >
+        <div
+          className="absolute left-0 top-0 h-full w-[3px] rounded-l-2xl"
+          style={{ background: `${color}40` }}
+        />
+        <div className="flex items-center justify-between pl-5 pr-4 py-4">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-[15px] font-medium text-text-secondary">{entry.name}</h2>
+            <span
+              className="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+              style={{ background: `${color}15`, color: `${color}CC` }}
+            >
+              Skipped
+            </span>
+          </div>
+          <div className="relative shrink-0" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06]"
+              aria-label="Exercise options"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                <circle cx="12" cy="6" r="1.5" />
+                <circle cx="12" cy="12" r="1.5" />
+                <circle cx="12" cy="18" r="1.5" />
+              </svg>
+            </button>
+            {showMenu && (
+              <div
+                className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-2xl py-1 animate-fade-in"
+                style={{
+                  background: "rgba(30,31,36,0.98)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                }}
+              >
+                {onUnskip && (
+                  <button
+                    onClick={() => { onUnskip(exerciseIndex); setShowMenu(false); }}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-green transition-colors active:bg-white/[0.06]"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <path d="M9 12l2 2 4-4" />
+                      <circle cx="12" cy="12" r="9" />
+                    </svg>
+                    Unskip
+                  </button>
+                )}
+                <button
+                  onClick={() => { onSwap(exerciseIndex); setShowMenu(false); }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-text-primary transition-colors active:bg-white/[0.06]"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-text-muted">
+                    <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                  Swap Exercise
+                </button>
+                <button
+                  onClick={() => { setRemoveConfirm(true); setShowMenu(false); }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-red transition-colors active:bg-white/[0.06]"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        {removeConfirm && (
+          <div
+            className="flex flex-col gap-3 rounded-xl mx-4 mb-4 p-4"
+            style={{ background: "rgba(229,9,20,0.06)", border: "1px solid rgba(229,9,20,0.12)" }}
+          >
+            <p className="text-xs text-text-secondary">Remove this exercise?</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { onRemove(exerciseIndex); setRemoveConfirm(false); }}
+                className="rounded-xl bg-accent-red py-2.5 text-xs font-bold text-white transition-all active:scale-[0.97]"
+              >
+                Remove
+              </button>
+              <button
+                onClick={() => setRemoveConfirm(false)}
+                className="rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-xs text-text-secondary transition-colors active:bg-white/[0.04]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
   const isBwExercise = exercise.equipment === "bodyweight+";
 
   const bwMode = (() => {
@@ -211,6 +320,17 @@ export function ExerciseCard({
                   </svg>
                   Swap Exercise
                 </button>
+                {onSkip && (
+                  <button
+                    onClick={() => { onSkip(exerciseIndex); setShowMenu(false); }}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-yellow transition-colors active:bg-white/[0.06]"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <path d="M5 5l14 7-14 7V5z" />
+                    </svg>
+                    Skip This Week
+                  </button>
+                )}
                 <button
                   onClick={() => { setRemoveConfirm(true); setShowMenu(false); }}
                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-red transition-colors active:bg-white/[0.06]"

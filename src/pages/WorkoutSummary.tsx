@@ -39,6 +39,7 @@ export function WorkoutSummary() {
           </svg>
         </div>
         <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">Workout Complete</h1>
+        <p className="text-sm text-accent-green font-medium">Saved to your history</p>
         <p className="max-w-[300px] text-sm leading-relaxed text-text-secondary italic">
           "{getRandomQuote()}"
         </p>
@@ -95,22 +96,34 @@ export function WorkoutSummary() {
       <div className="flex flex-col gap-2 rounded-[14px] bg-bg-card card-surface p-5">
         <h3 className="mb-1 text-xs font-semibold tracking-widest text-text-muted uppercase">Exercise Summary</h3>
         {lastWorkout.exercises.map((entry) => (
-          <div key={entry.id} className="flex items-center justify-between rounded-lg bg-bg-input px-3 py-2.5">
-            <span className="text-sm font-medium text-text-primary">{entry.name}</span>
-            <span className="text-xs tabular-nums text-text-secondary">
-              {entry.sets.length} × {entry.sets[0]?.weight > 0 ? `${entry.sets[0].weight}kg` : "BW"}
-            </span>
+          <div key={entry.id} className={`flex items-center justify-between rounded-lg bg-bg-input px-3 py-2.5 ${entry.skipped ? "opacity-50" : ""}`}>
+            <span className={`text-sm font-medium ${entry.skipped ? "text-text-muted line-through" : "text-text-primary"}`}>{entry.name}</span>
+            {entry.skipped ? (
+              <span className="text-[10px] font-semibold tracking-wider text-accent-yellow uppercase">Skipped</span>
+            ) : (
+              <span className="text-xs tabular-nums text-text-secondary">
+                {entry.sets.length} × {entry.sets[0]?.weight > 0 ? `${entry.sets[0].weight}kg` : "BW"}
+              </span>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Done CTA */}
-      <button
-        onClick={() => navigate("/")}
-        className="w-full rounded-[14px] btn-primary py-4 text-sm font-semibold tracking-wide text-white"
-      >
-        Done
-      </button>
+      {/* CTAs */}
+      <div className="flex flex-col gap-2.5">
+        <button
+          onClick={() => navigate("/")}
+          className="w-full rounded-[14px] btn-primary py-4 text-sm font-semibold tracking-wide text-white"
+        >
+          Done
+        </button>
+        <button
+          onClick={() => navigate("/history")}
+          className="w-full rounded-[14px] border border-white/[0.08] bg-transparent py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+        >
+          View in History
+        </button>
+      </div>
 
       <div className="h-4" />
     </PageLayout>

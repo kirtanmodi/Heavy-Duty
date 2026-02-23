@@ -20,11 +20,14 @@ function formatMonthYear(iso: string): string {
 function calcStats(workout: WorkoutEntry) {
   let totalSets = 0;
   let totalVolume = 0;
+  let totalExercises = 0;
   for (const ex of workout.exercises) {
+    if (ex.skipped) continue;
+    totalExercises++;
     totalSets += ex.sets.length;
     for (const s of ex.sets) totalVolume += s.weight * s.reps;
   }
-  return { totalExercises: workout.exercises.length, totalSets, totalVolume };
+  return { totalExercises, totalSets, totalVolume };
 }
 
 function findPrevSession(workout: WorkoutEntry, history: WorkoutEntry[]): WorkoutEntry | null {
@@ -83,6 +86,7 @@ function calcTotalVolume(history: WorkoutEntry[]): number {
   let total = 0;
   for (const w of history) {
     for (const ex of w.exercises) {
+      if (ex.skipped) continue;
       for (const s of ex.sets) total += s.weight * s.reps;
     }
   }
@@ -345,12 +349,14 @@ export function History() {
                                 key={ex.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setExerciseFilter((prev) => (prev === ex.id ? null : ex.id));
+                                  if (!ex.skipped) setExerciseFilter((prev) => (prev === ex.id ? null : ex.id));
                                 }}
-                                className={`rounded-md px-2 py-0.5 text-[10px] font-medium cursor-pointer transition-colors ${
-                                  exerciseFilter === ex.id
-                                    ? "bg-accent-red/20 text-accent-red"
-                                    : "bg-bg-input text-text-secondary active:bg-bg-input/70"
+                                className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                                  ex.skipped
+                                    ? "bg-bg-input/50 text-text-dim line-through"
+                                    : exerciseFilter === ex.id
+                                      ? "bg-accent-red/20 text-accent-red cursor-pointer"
+                                      : "bg-bg-input text-text-secondary active:bg-bg-input/70 cursor-pointer"
                                 }`}
                               >
                                 {ex.name}
@@ -434,6 +440,19 @@ function ExerciseDetail({
   prevSets: SetEntry[] | null;
   isLast: boolean;
 }) {
+  if (exercise.skipped) {
+    return (
+      <div className={`px-4 py-3 ${!isLast ? "border-b border-border/50" : ""}`}>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-text-dim line-through">{exercise.name}</p>
+          <span className="rounded-md bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-text-dim">
+            Skipped
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   if (exercise.sets.length === 0) {
     return (
       <div className={`px-4 py-3 ${!isLast ? "border-b border-border/50" : ""}`}>

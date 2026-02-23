@@ -46,6 +46,7 @@ export interface ExerciseEntry {
   id: string
   name: string
   sets: SetEntry[]
+  skipped?: boolean
 }
 
 export interface WorkoutEntry {

@@ -10,7 +10,9 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Progressive overload** — automatic suggestions to increase weight, add reps, or deload based on prior session performance
 - **Superset support** — visual grouping of pre-exhaust superset pairs with option to split per-session
 - **Open workout** — freeform sessions where you pick any exercises, no predefined program structure
-- **Exercise management** — swap, add, or remove exercises during an active workout or when editing past sessions
+- **Exercise management** — swap, add, remove, or insert exercises at any position during an active workout or when editing past sessions
+- **Skip/alternate exercises** — skip an exercise for the current session so it returns next time, enabling alternation (e.g. leg press ↔ squats)
+- **Auto-save & resume** — workout data persists automatically on every change. If the app closes mid-workout, a resume banner appears on the home page
 - **Exercise reorder** — move exercises up/down during an active workout (superset pairs move together)
 - **Bodyweight mode** — exercises like hanging leg raises default to reps-only tracking, with a toggle to add external weight
 - **Per-exercise tracking** — home page shows last-done date for every exercise in each day card

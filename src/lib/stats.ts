@@ -3,11 +3,14 @@ import type { WorkoutEntry } from '../types'
 export function calcStats(workout: WorkoutEntry) {
   let totalSets = 0
   let totalVolume = 0
+  let totalExercises = 0
   for (const ex of workout.exercises) {
+    if (ex.skipped) continue
+    totalExercises++
     totalSets += ex.sets.length
     for (const s of ex.sets) totalVolume += s.weight * s.reps
   }
-  return { totalExercises: workout.exercises.length, totalSets, totalVolume }
+  return { totalExercises, totalSets, totalVolume }
 }
 
 export function findPrevSession(workout: WorkoutEntry, history: WorkoutEntry[]): WorkoutEntry | null {
