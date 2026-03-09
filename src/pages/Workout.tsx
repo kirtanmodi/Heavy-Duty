@@ -8,6 +8,7 @@ import { cardioActivities, programs } from "../data/programs";
 
 import { useTimer } from "../hooks/useTimer";
 import { getOverloadSuggestion } from "../lib/overload";
+import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, SetEntry } from "../types";
 
@@ -46,6 +47,7 @@ export function Workout() {
     history,
   } = useWorkoutStore();
   const timer = useTimer();
+  const autoStartTimer = useSettingsStore((s) => s.autoStartTimer);
 
   const isOpen = dayId === "open";
 
@@ -194,6 +196,22 @@ export function Workout() {
     if (!exercise) return;
     const seconds = exercise.restSeconds || 120;
     timer.start(seconds, isSecondInSuperset(exerciseId) ? "Rest after superset" : "Rest");
+  };
+
+  const handleSetComplete = (exerciseIndex: number) => {
+    if (!autoStartTimer || !activeWorkout || timer.isRunning) return;
+    const entry = activeWorkout.exercises[exerciseIndex];
+    if (!entry) return;
+
+    // No auto-rest for first exercise in an active superset pair (rest comes after the second)
+    const isFirstInSuperset = activeSupersets.some(([a]) => a === entry.id);
+    if (isFirstInSuperset) return;
+
+    const exercise = getEffectiveExercise(entry.id);
+    if (!exercise) return;
+    const seconds = exercise.restSeconds || 120;
+    const label = isSecondInSuperset(entry.id) ? "Rest after superset" : "Rest";
+    timer.start(seconds, label);
   };
 
   const handleMoveGroup = (groupIndex: number, direction: "up" | "down") => {
@@ -383,6 +401,7 @@ export function Workout() {
       overloadSuggestion: suggestion,
       restButtons: restBtns.length > 0 ? restBtns : undefined,
       previousSets: lastSets ?? undefined,
+      onSetComplete: handleSetComplete,
     };
   };
 
@@ -439,6 +458,20 @@ export function Workout() {
               className="w-full max-w-[260px] rounded-2xl border border-white/[0.1] bg-transparent py-3.5 text-sm font-semibold text-text-secondary transition-colors active:bg-white/[0.04]"
             >
               Skip Rest
+            </button>
+
+            <button
+              onClick={() => useSettingsStore.getState().setAutoStartTimer(!autoStartTimer)}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-text-dim transition-colors active:bg-white/[0.04]"
+            >
+              <div
+                className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${autoStartTimer ? "bg-accent-green/60" : "bg-white/[0.1]"}`}
+              >
+                <div
+                  className={`h-4 w-4 rounded-full bg-white transition-transform ${autoStartTimer ? "translate-x-4" : "translate-x-0"}`}
+                />
+              </div>
+              Auto-start timer
             </button>
           </div>
         </div>

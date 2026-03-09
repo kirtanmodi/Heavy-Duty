@@ -27,6 +27,7 @@ interface WorkoutState {
   unskipExercise: (exerciseIndex: number) => void
   updateHistoryEntry: (workoutId: string, exercises: ExerciseEntry[]) => void
   deleteHistoryEntry: (workoutId: string) => void
+  importHistory: (workouts: WorkoutEntry[]) => void
   clearAll: () => void
 }
 
@@ -144,6 +145,8 @@ export const useWorkoutStore = create<WorkoutState>()(
           history: state.history.filter(w => w.id !== workoutId),
         }))
       },
+
+      importHistory: (workouts) => set({ history: workouts }),
 
       clearAll: () => set({ history: [], activeWorkout: null, lastCompletedWorkout: null }),
     }),

@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 
 const tabs = [
   { path: "/", label: "Home", icon: "home" },
+  { path: "/progress", label: "Progress", icon: "progress" },
   { path: "/exercises", label: "Exercises", icon: "exercises" },
   { path: "/history", label: "History", icon: "history" },
 ] as const;
@@ -19,6 +20,15 @@ function TabIcon({ icon, active }: { icon: (typeof tabs)[number]["icon"]; active
             <path d="M5.5 9.8V20h13V9.8" />
           </>
         )}
+      </svg>
+    );
+  }
+
+  if (icon === "progress") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} className="h-6 w-6">
+        <path d="M3 3v18h18" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M7 16l4-4 4 4 5-5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
@@ -48,7 +58,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 glass pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      <div className="mx-auto grid w-full max-w-[460px] grid-cols-3">
+      <div className="mx-auto grid w-full max-w-[460px] grid-cols-4">
         {tabs.map((tab) => {
           const active = tab.path === "/" ? location.pathname === "/" : location.pathname.startsWith(tab.path);
           return (

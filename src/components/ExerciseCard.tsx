@@ -4,6 +4,7 @@ import { getEffectiveExercise, muscleColors } from "../data/exercises";
 import { checkPR, hasPR, getPRLabel } from "../lib/records";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import { useExerciseStore } from "../store/exerciseStore";
+import { StepperInput } from "./StepperInput";
 import type { ExerciseEntry, SetEntry, OverloadSuggestion } from "../types";
 
 interface RestButton {
@@ -21,6 +22,7 @@ interface ExerciseCardProps {
   onRemove: (exerciseIndex: number) => void;
   onSkip?: (exerciseIndex: number) => void;
   onUnskip?: (exerciseIndex: number) => void;
+  onSetComplete?: (exerciseIndex: number) => void;
   showOverloadBanner?: boolean;
   overloadSuggestion?: OverloadSuggestion;
   restButtons?: RestButton[];
@@ -37,6 +39,7 @@ export function ExerciseCard({
   onRemove,
   onSkip,
   onUnskip,
+  onSetComplete,
   showOverloadBanner,
   overloadSuggestion,
   restButtons,
@@ -194,12 +197,16 @@ export function ExerciseCard({
   };
 
   const toggleSetComplete = (setIndex: number) => {
+    const wasComplete = completedSets.has(setIndex);
     setCompletedSets((prev) => {
       const next = new Set(prev);
       if (next.has(setIndex)) next.delete(setIndex);
       else next.add(setIndex);
       return next;
     });
+    if (!wasComplete && onSetComplete) {
+      onSetComplete(exerciseIndex);
+    }
   };
 
   const isSetComplete = (set: SetEntry, setIndex: number): boolean => {
@@ -210,8 +217,6 @@ export function ExerciseCard({
 
   const completedCount = entry.sets.filter((s, i) => isSetComplete(s, i)).length;
   const totalSets = entry.sets.length;
-
-  const selectAllOnFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select();
 
   const getSetPR = (set: SetEntry, setIndex: number) => {
     if (!showOverloadBanner) return null;
@@ -411,22 +416,13 @@ export function ExerciseCard({
                       )}
                     </button>
                   </div>
-                  <div>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={set.reps || ""}
-                      onChange={(e) => onSetChange(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || 0)}
-                      onFocus={selectAllOnFocus}
-                      className="h-11 w-full min-w-0 rounded-xl border border-white/[0.06] bg-white/[0.04] px-2 text-center text-[15px] tabular-nums text-text-primary outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
-                      placeholder="0"
-                    />
-                    {prevSet && (
-                      <span className="block mt-0.5 text-center text-[9px] tabular-nums text-text-dim">
-                        prev: {prevSet.reps}
-                      </span>
-                    )}
-                  </div>
+                  <StepperInput
+                    value={set.reps}
+                    onChange={(v) => onSetChange(exerciseIndex, setIndex, "reps", v)}
+                    step={1}
+                    prevHint={prevSet ? `prev: ${prevSet.reps}` : undefined}
+                    onPrevTap={prevSet ? () => onSetChange(exerciseIndex, setIndex, "reps", prevSet.reps) : undefined}
+                  />
                   <button
                     onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
                     className={`h-11 rounded-xl text-[11px] font-semibold transition-all ${
@@ -485,38 +481,21 @@ export function ExerciseCard({
                       )}
                     </button>
                   </div>
-                  <div>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={set.weight || ""}
-                      onChange={(e) => onSetChange(exerciseIndex, setIndex, "weight", parseFloat(e.target.value) || 0)}
-                      onFocus={selectAllOnFocus}
-                      className="h-11 w-full min-w-0 rounded-xl border border-white/[0.06] bg-white/[0.04] px-2 text-center text-[15px] tabular-nums text-text-primary outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
-                      placeholder="0"
-                    />
-                    {prevSet && (
-                      <span className="block mt-0.5 text-center text-[9px] tabular-nums text-text-dim">
-                        prev: {prevSet.weight}kg
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={set.reps || ""}
-                      onChange={(e) => onSetChange(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || 0)}
-                      onFocus={selectAllOnFocus}
-                      className="h-11 w-full min-w-0 rounded-xl border border-white/[0.06] bg-white/[0.04] px-2 text-center text-[15px] tabular-nums text-text-primary outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
-                      placeholder="0"
-                    />
-                    {prevSet && (
-                      <span className="block mt-0.5 text-center text-[9px] tabular-nums text-text-dim">
-                        prev: {prevSet.reps}
-                      </span>
-                    )}
-                  </div>
+                  <StepperInput
+                    value={set.weight}
+                    onChange={(v) => onSetChange(exerciseIndex, setIndex, "weight", v)}
+                    step={exercise.weightIncrement}
+                    inputMode="decimal"
+                    prevHint={prevSet ? `prev: ${prevSet.weight}kg` : undefined}
+                    onPrevTap={prevSet ? () => onSetChange(exerciseIndex, setIndex, "weight", prevSet.weight) : undefined}
+                  />
+                  <StepperInput
+                    value={set.reps}
+                    onChange={(v) => onSetChange(exerciseIndex, setIndex, "reps", v)}
+                    step={1}
+                    prevHint={prevSet ? `prev: ${prevSet.reps}` : undefined}
+                    onPrevTap={prevSet ? () => onSetChange(exerciseIndex, setIndex, "reps", prevSet.reps) : undefined}
+                  />
                   <button
                     onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
                     className={`h-11 rounded-xl text-[11px] font-semibold transition-all ${

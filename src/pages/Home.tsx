@@ -1,8 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
+import { MuscleVolumeCard } from "../components/MuscleVolumeCard";
 import { getProgram } from "../data/programs";
 import { getRandomQuote } from "../data/quotes";
+import { exportJSON, exportCSV, validateImport, mergeImport } from "../lib/export";
+import { useExerciseStore } from "../store/exerciseStore";
+import { useSettingsStore } from "../store/settingsStore";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { ProgramDay } from "../types";
 
@@ -73,6 +77,9 @@ export function Home() {
   const activeWorkout = useWorkoutStore((s) => s.activeWorkout);
   const program = getProgram("heavy-duty-complete")!;
   const [cardioExpanded, setCardioExpanded] = useState(false);
+  const [dataExpanded, setDataExpanded] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const liftDays = useMemo(() => program.days.filter((d) => d.type === "lift"), [program.days]);
   const cardioDays = useMemo(
@@ -146,6 +153,45 @@ export function Home() {
   }, [history]);
 
   const lastSession = history.length > 0 ? history[0] : null;
+
+  const handleExportJSON = () => {
+    const exState = useExerciseStore.getState();
+    const stState = useSettingsStore.getState();
+    exportJSON(history, {
+      customExercises: exState.customExercises,
+      nameOverrides: exState.nameOverrides,
+      removedIds: exState.removedIds,
+      weightMode: exState.weightMode,
+    }, {
+      restTimerSeconds: stState.restTimerSeconds,
+      autoStartTimer: stState.autoStartTimer,
+    });
+  };
+
+  const handleExportCSV = () => exportCSV(history);
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const json = JSON.parse(reader.result as string);
+        const data = validateImport(json);
+        if (!data) {
+          setImportMsg("Invalid backup file.");
+          return;
+        }
+        const result = mergeImport(history, data);
+        useWorkoutStore.getState().importHistory(result.workouts);
+        setImportMsg(`Imported ${result.newCount} new workout${result.newCount !== 1 ? "s" : ""}.`);
+      } catch {
+        setImportMsg("Failed to parse file.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   const dateStr = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -393,6 +439,66 @@ export function Home() {
             ))}
           </div>
           <span className="text-xs text-text-muted">{monthSessionCount} session{monthSessionCount !== 1 ? "s" : ""}</span>
+        </div>
+
+        {/* Weekly Muscle Volume */}
+        <MuscleVolumeCard />
+
+        {/* Data Management */}
+        <div className="col-span-2 overflow-hidden rounded-[14px] bg-bg-card card-surface animate-fade-up" style={{ animationDelay: "420ms" }}>
+          <button
+            onClick={() => setDataExpanded((v) => !v)}
+            className="flex w-full items-center justify-between p-4 text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-blue/10 text-accent-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
+                  <path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-text-primary">Backup & Export</span>
+                <span className="text-[10px] text-text-muted">{history.length} workouts stored</span>
+              </div>
+            </div>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className={`h-4 w-4 text-text-dim transition-transform duration-200 ${dataExpanded ? "rotate-180" : ""}`}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          {dataExpanded && (
+            <div className="flex flex-col gap-3 border-t border-border px-4 py-4">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleExportJSON}
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 text-[13px] font-medium text-text-secondary transition-colors active:bg-white/[0.08]"
+                >
+                  Export JSON
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 text-[13px] font-medium text-text-secondary transition-colors active:bg-white/[0.08]"
+                >
+                  Export CSV
+                </button>
+              </div>
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="w-full rounded-xl border border-dashed border-white/[0.12] bg-transparent py-3 text-[13px] font-medium text-text-muted transition-colors active:bg-white/[0.04]"
+              >
+                Import Backup
+              </button>
+              <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+              {importMsg && (
+                <p className="text-center text-xs text-accent-green">{importMsg}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Mentzer Quote — full width */}
