@@ -7,11 +7,13 @@ interface ExercisePickerModalProps {
   activeExerciseIds: string[];
   currentExerciseId?: string;
   onSelect: (exercise: Exercise) => void;
+  onSelectWithAction?: (exercise: Exercise, action: "swap" | "add") => void;
   onClose: () => void;
 }
 
-export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId, onSelect, onClose }: ExercisePickerModalProps) {
+export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId, onSelect, onSelectWithAction, onClose }: ExercisePickerModalProps) {
   const [search, setSearch] = useState("");
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const allExercises = getEffectiveExercises();
 
   const candidates = allExercises.filter((e) => {
@@ -112,7 +114,13 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
                   {exercises.map((e) => (
                     <button
                       key={e.id}
-                      onClick={() => onSelect(e)}
+                      onClick={() => {
+                        if (mode === "swap" && onSelectWithAction) {
+                          setSelectedExercise(e);
+                        } else {
+                          onSelect(e);
+                        }
+                      }}
                       className="relative flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.99]"
                       style={{
                         background: `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
@@ -156,6 +164,48 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
           </div>
         )}
       </div>
+
+      {/* Action sheet for swap mode */}
+      {selectedExercise && onSelectWithAction && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center animate-fade-in"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={() => setSelectedExercise(null)}
+        >
+          <div
+            className="w-full max-w-[460px] rounded-t-2xl bg-bg-card p-5 flex flex-col gap-4 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-text-primary truncate">{selectedExercise.name}</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => {
+                  onSelectWithAction(selectedExercise, "swap");
+                  setSelectedExercise(null);
+                }}
+                className="rounded-xl bg-accent-red py-3 text-sm font-bold text-white transition-all active:scale-[0.97]"
+              >
+                Swap
+              </button>
+              <button
+                onClick={() => {
+                  onSelectWithAction(selectedExercise, "add");
+                  setSelectedExercise(null);
+                }}
+                className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-semibold text-text-primary transition-colors active:bg-white/[0.04]"
+              >
+                Add to Workout
+              </button>
+            </div>
+            <button
+              onClick={() => setSelectedExercise(null)}
+              className="rounded-xl py-2.5 text-sm text-text-muted transition-colors active:bg-white/[0.04]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

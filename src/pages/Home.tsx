@@ -18,12 +18,6 @@ function formatRelativeDate(iso: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function getMonday(d: Date): Date {
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.getFullYear(), d.getMonth(), diff);
-}
-
 function daysSinceLastSession(dayId: string, history: { dayId: string; date: string }[]): number | null {
   for (const w of history) {
     if (w.dayId === dayId) {
@@ -118,17 +112,37 @@ export function Home() {
     return count;
   }, [history]);
 
-  const weekDaysTrained = useMemo(() => {
-    const monday = getMonday(new Date());
-    const mondayTime = monday.getTime();
+  const { monthSessionCount, monthLabel, calendarDays } = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+
+    // Monday-based offset (0=Mon, 6=Sun)
+    const startDow = (firstDay.getDay() + 6) % 7;
+
     const trained = new Set<number>();
+    let sessions = 0;
     for (const w of history) {
       const d = new Date(w.date);
-      if (d.getTime() >= mondayTime) {
-        trained.add(d.getDay());
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        trained.add(d.getDate());
+        sessions++;
       }
     }
-    return trained;
+
+    const today = now.getDate();
+    const days: { day: number; trained: boolean; isToday: boolean }[] = [];
+    for (let i = 0; i < startDow; i++) days.push({ day: 0, trained: false, isToday: false });
+    for (let d = 1; d <= daysInMonth; d++) {
+      days.push({ day: d, trained: trained.has(d), isToday: d === today });
+    }
+
+    const label = now.toLocaleDateString("en-US", { month: "long" });
+
+    return { monthSessionCount: sessions, monthLabel: label, calendarDays: days };
   }, [history]);
 
   const lastSession = history.length > 0 ? history[0] : null;
@@ -330,7 +344,7 @@ export function Home() {
         </div>
 
         {/* Last Session */}
-        <div className="flex flex-col gap-2 rounded-[14px] bg-bg-card p-4 card-surface animate-fade-up" style={{ animationDelay: "300ms" }}>
+        <div className="col-span-2 flex flex-col gap-2 rounded-[14px] bg-bg-card p-4 card-surface animate-fade-up" style={{ animationDelay: "300ms" }}>
           <div className="flex items-baseline justify-between gap-1">
             <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">Last Session</span>
             {lastSession && (
@@ -346,23 +360,39 @@ export function Home() {
           )}
         </div>
 
-        {/* This Week — days trained */}
-        <div className="flex flex-col gap-2 rounded-[14px] bg-bg-card p-4 card-surface animate-fade-up" style={{ animationDelay: "350ms" }}>
-          <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">This Week</span>
-          <div className="flex items-center gap-1 min-w-0">
-            {["M", "T", "W", "T", "F", "S", "S"].map((label, i) => {
-              const dow = i === 6 ? 0 : i + 1;
-              const trained = weekDaysTrained.has(dow);
-              return (
-                <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
-                  <div className={`aspect-square w-full max-w-5 rounded-full flex items-center justify-center text-[9px] font-bold ${trained ? "bg-accent-green text-white" : "bg-bg-input text-text-dim"}`}>
-                    {label}
-                  </div>
-                </div>
-              );
-            })}
+        {/* This Month — calendar */}
+        <div className="col-span-2 flex flex-col gap-3 rounded-[14px] bg-bg-card p-4 card-surface animate-fade-up" style={{ animationDelay: "350ms" }}>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">This Month</span>
+            <span className="text-[10px] text-text-dim">{monthLabel}</span>
           </div>
-          <span className="text-xs text-text-muted">{weekDaysTrained.size} session{weekDaysTrained.size !== 1 ? "s" : ""}</span>
+          <div className="grid grid-cols-7 gap-1">
+            {["M", "T", "W", "T", "F", "S", "S"].map((label, i) => (
+              <div key={i} className="flex items-center justify-center py-0.5">
+                <span className="text-[9px] font-bold text-text-dim">{label}</span>
+              </div>
+            ))}
+            {calendarDays.map((cell, i) => (
+              <div key={i} className="flex items-center justify-center">
+                {cell.day === 0 ? (
+                  <div className="h-7 w-7" />
+                ) : (
+                  <div
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums ${
+                      cell.trained
+                        ? "bg-accent-green text-white"
+                        : cell.isToday
+                          ? "ring-1 ring-text-muted text-text-primary"
+                          : "text-text-dim"
+                    }`}
+                  >
+                    {cell.day}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <span className="text-xs text-text-muted">{monthSessionCount} session{monthSessionCount !== 1 ? "s" : ""}</span>
         </div>
 
         {/* Mentzer Quote — full width */}

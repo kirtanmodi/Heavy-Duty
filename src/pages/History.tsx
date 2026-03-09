@@ -127,7 +127,9 @@ export function History() {
   const navigate = useNavigate();
   const history = useWorkoutStore((s) => s.history);
   const clearWorkouts = useWorkoutStore((s) => s.clearAll);
+  const deleteHistoryEntry = useWorkoutStore((s) => s.deleteHistoryEntry);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [exerciseFilter, setExerciseFilter] = useState<string | null>(null);
@@ -376,12 +378,51 @@ export function History() {
                                 isLast={exIdx === workout.exercises.length - 1}
                               />
                             ))}
-                            <button
-                              onClick={() => navigate(`/history/${workout.id}/edit`)}
-                              className="m-3 rounded-xl btn-ghost py-2.5 text-xs font-semibold transition-colors"
-                            >
-                              Edit Workout
-                            </button>
+                            {deleteConfirmId === workout.id ? (
+                              <div className="m-3 flex flex-col gap-3 rounded-xl border border-accent-red/15 bg-accent-red/8 p-4">
+                                <p className="text-sm text-text-secondary">Delete this workout?</p>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                  <button
+                                    onClick={() => {
+                                      deleteHistoryEntry(workout.id);
+                                      setDeleteConfirmId(null);
+                                      setExpandedSessions((prev) => {
+                                        const next = new Set(prev);
+                                        next.delete(workout.id);
+                                        return next;
+                                      });
+                                    }}
+                                    className="rounded-[10px] btn-primary py-2.5 text-sm font-semibold text-white"
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmId(null)}
+                                    className="rounded-[10px] btn-ghost py-2.5 text-sm"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="m-3 flex items-center gap-2">
+                                <button
+                                  onClick={() => navigate(`/history/${workout.id}/edit`)}
+                                  className="flex-1 rounded-xl btn-ghost py-2.5 text-xs font-semibold transition-colors"
+                                >
+                                  Edit Workout
+                                </button>
+                                <button
+                                  onClick={() => setDeleteConfirmId(workout.id)}
+                                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06]"
+                                  aria-label="Delete workout"
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </section>

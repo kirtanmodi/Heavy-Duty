@@ -451,6 +451,14 @@ export function Workout() {
           currentExerciseId={activeWorkout.exercises[swapTarget]?.id ?? ""}
           activeExerciseIds={activeWorkout.exercises.map((e) => e.id)}
           onSelect={handleSwap}
+          onSelectWithAction={(exercise, action) => {
+            if (action === "swap") {
+              handleSwap(exercise);
+            } else {
+              handleAddExercise(exercise);
+              setSwapTarget(null);
+            }
+          }}
           onClose={() => setSwapTarget(null)}
         />
       )}
@@ -518,23 +526,34 @@ export function Workout() {
             className="flex flex-col gap-4 rounded-2xl p-5 animate-slide-up"
             style={{ background: "rgba(229,9,20,0.06)", border: "1px solid rgba(229,9,20,0.12)" }}
           >
-            <p className="text-sm text-text-secondary">Cancel this workout? Your logged sets will be lost.</p>
-            <div className="grid grid-cols-2 gap-2.5">
+            <p className="text-sm text-text-secondary">What would you like to do?</p>
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => setShowCancel(false)}
-                className="rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97]"
+                className="w-full rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97]"
                 style={{
                   background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
                 }}
               >
                 Keep Going
               </button>
-              <button
-                onClick={handleCancel}
-                className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-accent-red transition-colors active:bg-white/[0.04]"
-              >
-                Cancel Workout
-              </button>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  onClick={() => {
+                    leavingRef.current = true;
+                    navigate("/");
+                  }}
+                  className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+                >
+                  Go to Home
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-accent-red transition-colors active:bg-white/[0.04]"
+                >
+                  Cancel Workout
+                </button>
+              </div>
             </div>
           </section>
         )}
