@@ -71,7 +71,7 @@ export function StepperInput({
           onMouseDown={() => startLongPressWithRef(-1)}
           onMouseUp={clearTimers}
           onMouseLeave={clearTimers}
-          className="flex h-11 w-8 shrink-0 items-center justify-center rounded-l-xl border border-white/[0.06] bg-white/[0.04] text-text-muted transition-colors active:bg-white/[0.1]"
+          className="flex h-11 w-7 shrink-0 items-center justify-center rounded-l-xl border border-white/[0.06] bg-white/[0.04] text-text-muted transition-colors active:bg-white/[0.1]"
           aria-label="Decrease"
         >
           <svg
@@ -106,7 +106,7 @@ export function StepperInput({
           onMouseDown={() => startLongPressWithRef(1)}
           onMouseUp={clearTimers}
           onMouseLeave={clearTimers}
-          className="flex h-11 w-8 shrink-0 items-center justify-center rounded-r-xl border border-white/[0.06] bg-white/[0.04] text-text-muted transition-colors active:bg-white/[0.1]"
+          className="flex h-11 w-7 shrink-0 items-center justify-center rounded-r-xl border border-white/[0.06] bg-white/[0.04] text-text-muted transition-colors active:bg-white/[0.1]"
           aria-label="Increase"
         >
           <svg
