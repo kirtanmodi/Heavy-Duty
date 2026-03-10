@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
-import { MuscleVolumeCard } from "../components/MuscleVolumeCard";
 import { getProgram } from "../data/programs";
 import { getRandomQuote } from "../data/quotes";
 import { exportJSON, exportCSV, validateImport, mergeImport } from "../lib/export";
@@ -440,9 +439,6 @@ export function Home() {
           </div>
           <span className="text-xs text-text-muted">{monthSessionCount} session{monthSessionCount !== 1 ? "s" : ""}</span>
         </div>
-
-        {/* Weekly Muscle Volume */}
-        <MuscleVolumeCard />
 
         {/* Data Management */}
         <div className="col-span-2 overflow-hidden rounded-[14px] bg-bg-card card-surface animate-fade-up" style={{ animationDelay: "420ms" }}>
