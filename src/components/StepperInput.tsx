@@ -96,7 +96,7 @@ export function StepperInput({
             onChange(parsed);
           }}
           onFocus={selectAllOnFocus}
-          className="h-11 w-full min-w-0 border-y border-white/[0.06] bg-white/[0.04] px-1 text-center text-[15px] tabular-nums text-text-primary outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
+          className="h-11 w-full min-w-0 border-y border-white/[0.06] bg-white/[0.04] px-1 text-center text-[17px] font-semibold tabular-nums text-white outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
           placeholder={placeholder}
         />
         <button
