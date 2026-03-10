@@ -74,7 +74,9 @@
   }
 
   input[type="number"] {
+    -webkit-appearance: none;
     -moz-appearance: textfield;
+    appearance: none;
   }
 
   button,

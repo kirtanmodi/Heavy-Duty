@@ -186,7 +186,7 @@ export function Workout() {
                   <p className="rounded-xl bg-bg-input px-4 py-3 text-sm text-text-secondary">{suggestion.message}</p>
 
                   <div className="flex flex-col gap-3">
-                    <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_1.75rem] items-center gap-1.5 text-xs text-text-muted">
+                    <div className="grid grid-cols-[2rem_1fr_1fr_3rem_1.75rem] items-center gap-1.5 text-xs text-text-muted">
                       <span>Set</span>
                       <span>Kg</span>
                       <span>Reps</span>
@@ -195,7 +195,7 @@ export function Workout() {
                     </div>
 
                     {entry.sets.map((set, setIndex) => (
-                      <div key={setIndex} className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_3rem_1.75rem] items-center gap-1.5">
+                      <div key={setIndex} className="grid grid-cols-[2rem_1fr_1fr_3rem_1.75rem] items-center gap-1.5">
                         <span className="text-center text-base text-text-muted">{setIndex + 1}</span>
 
                         <input
@@ -203,7 +203,7 @@ export function Workout() {
                           inputMode="decimal"
                           value={set.weight || ""}
                           onChange={(event) => handleSetChange(exerciseIndex, setIndex, "weight", parseFloat(event.target.value) || 0)}
-                          className="h-11 min-w-0 rounded-xl border border-border bg-bg-input px-2 text-center text-base text-text-primary outline-none focus:border-accent-red"
+                          className="h-11 w-full rounded-xl border border-border bg-bg-input px-2 text-center text-base text-text-primary outline-none focus:border-accent-red"
                           placeholder="0"
                         />
 
@@ -212,7 +212,7 @@ export function Workout() {
                           inputMode="numeric"
                           value={set.reps || ""}
                           onChange={(event) => handleSetChange(exerciseIndex, setIndex, "reps", parseInt(event.target.value) || 0)}
-                          className="h-11 min-w-0 rounded-xl border border-border bg-bg-input px-2 text-center text-base text-text-primary outline-none focus:border-accent-red"
+                          className="h-11 w-full rounded-xl border border-border bg-bg-input px-2 text-center text-base text-text-primary outline-none focus:border-accent-red"
                           placeholder="0"
                         />
 
