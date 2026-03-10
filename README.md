@@ -10,7 +10,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Progressive overload** — automatic suggestions to increase weight, add reps, or deload based on prior session performance
 - **Superset support** — visual grouping of pre-exhaust superset pairs with option to split per-session
 - **Open workout** — freeform sessions where you pick any exercises, no predefined program structure
-- **Exercise management** — swap, add, remove, or insert exercises at any position during an active workout or when editing past sessions
+- **Exercise management** — swap, add, remove, or insert exercises at any position during an active workout or when editing past sessions. Create custom exercises directly from the exercise picker
 - **Skip/alternate exercises** — skip an exercise for the current session so it returns next time, enabling alternation (e.g. leg press ↔ squats)
 - **Auto-save & resume** — workout data persists automatically on every change. If the app closes mid-workout, a resume banner appears on the home page
 - **Exercise reorder** — move exercises up/down during an active workout (superset pairs move together)
@@ -21,7 +21,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **History editing** — full editing of past workouts with the same card UI as active workouts: swap/add/remove exercises, modify sets/reps/weight, or delete entire sessions
 - **Rest timer** — configurable countdown timer with preset durations, auto-starts on set completion (respects superset logic, toggleable)
 - **Stepper inputs** — ±buttons on weight/rep fields with exercise-specific increments and long-press rapid adjust. Tappable "prev:" hints auto-fill from last session
-- **Progress charts** — per-exercise estimated 1RM trend lines, volume bar charts, and PR dashboard (best weight, est. 1RM, best volume) powered by Recharts
+- **Progress charts** — muscle-group-categorized exercise picker (Chest, Back, Shoulders, Arms, Traps, Legs, Abs tabs), per-exercise estimated 1RM trend lines, volume bar charts, and color-coded PR dashboard (best weight, est. 1RM, best volume) powered by Recharts
 - **Weekly muscle volume** — sets-per-muscle-group bar chart on the home page with target markers
 - **Data export & backup** — full JSON backup (workouts + exercises + settings), CSV export (one row per set), and import with deduplication
 - **Offline-ready PWA** — installable, works without internet, data persists in localStorage

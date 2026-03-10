@@ -16,9 +16,14 @@ import {
   getExerciseSessions,
   getExercisePRs,
 } from "../lib/charts";
-import { muscleColors, getEffectiveExercise } from "../data/exercises";
+import {
+  muscleColors,
+  getEffectiveExercise,
+  exerciseGroups,
+} from "../data/exercises";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { PRRecord } from "../lib/charts";
+import type { MuscleGroup } from "../types";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -34,7 +39,13 @@ function formatPRDate(iso: string): string {
   });
 }
 
-function PRBadge({ pr }: { pr: PRRecord }) {
+const prIcons: Record<string, string> = {
+  weight: "W",
+  "1rm": "1",
+  volume: "V",
+};
+
+function PRBadge({ pr, color }: { pr: PRRecord; color: string }) {
   const labels = {
     weight: "Best Weight",
     "1rm": "Est. 1RM",
@@ -43,15 +54,33 @@ function PRBadge({ pr }: { pr: PRRecord }) {
   const units = {
     weight: `${pr.value}kg${pr.reps ? ` × ${pr.reps}` : ""}`,
     "1rm": `${pr.value}kg`,
-    volume: pr.value >= 1000 ? `${(pr.value / 1000).toFixed(1)}k kg` : `${pr.value}kg`,
+    volume:
+      pr.value >= 1000
+        ? `${(pr.value / 1000).toFixed(1)}k kg`
+        : `${pr.value}kg`,
   };
 
   return (
-    <div className="flex flex-col gap-1 rounded-xl bg-white/[0.04] p-3">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-text-dim">
-        {labels[pr.type]}
-      </span>
-      <span className="font-[var(--font-display)] text-xl tabular-nums text-accent-yellow">
+    <div className="flex flex-col gap-1.5 rounded-xl bg-white/[0.04] p-3 relative overflow-hidden">
+      <div
+        className="absolute top-0 left-0 w-full h-[2px]"
+        style={{ background: color }}
+      />
+      <div className="flex items-center gap-1.5">
+        <span
+          className="flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold"
+          style={{ background: `${color}22`, color }}
+        >
+          {prIcons[pr.type]}
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-dim">
+          {labels[pr.type]}
+        </span>
+      </div>
+      <span
+        className="font-[var(--font-display)] text-xl tabular-nums"
+        style={{ color }}
+      >
         {units[pr.type]}
       </span>
       <span className="text-[10px] text-text-dim">{formatPRDate(pr.date)}</span>
@@ -59,15 +88,81 @@ function PRBadge({ pr }: { pr: PRRecord }) {
   );
 }
 
+// Map muscle groups from exercise data to exercise group labels
+const muscleToGroup = new Map<string, string>();
+for (const g of exerciseGroups) {
+  for (const m of g.muscles) {
+    muscleToGroup.set(m, g.label);
+  }
+}
+
+function getExerciseGroupLabel(exerciseId: string): string {
+  const ex = getEffectiveExercise(exerciseId);
+  if (!ex) return "Other";
+  for (const m of ex.primaryMuscles) {
+    const label = muscleToGroup.get(m);
+    if (label) return label;
+  }
+  return "Other";
+}
+
+const groupColors: Record<string, string> = {
+  Chest: "#FF4444",
+  Back: "#4488FF",
+  Shoulders: "#FFAA00",
+  Arms: "#44DD44",
+  Traps: "#88CCFF",
+  Legs: "#FF8844",
+  Abs: "#CCCC44",
+};
+
 export function Progress() {
   const history = useWorkoutStore((s) => s.history);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [chartMode, setChartMode] = useState<"1rm" | "volume">("1rm");
 
   const tracked = useMemo(() => getTrackedExercises(history), [history]);
 
-  // Auto-select first exercise
-  const activeId = selectedId ?? tracked[0]?.id ?? null;
+  // Group exercises by muscle category
+  const groupedExercises = useMemo(() => {
+    const groups = new Map<
+      string,
+      { id: string; name: string; sessionCount: number }[]
+    >();
+    for (const ex of tracked) {
+      const group = getExerciseGroupLabel(ex.id);
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group)!.push(ex);
+    }
+    // Sort groups by exerciseGroups order
+    const ordered: {
+      label: string;
+      exercises: { id: string; name: string; sessionCount: number }[];
+    }[] = [];
+    for (const g of exerciseGroups) {
+      const exs = groups.get(g.label);
+      if (exs && exs.length > 0) ordered.push({ label: g.label, exercises: exs });
+    }
+    const other = groups.get("Other");
+    if (other && other.length > 0)
+      ordered.push({ label: "Other", exercises: other });
+    return ordered;
+  }, [tracked]);
+
+  // Filter exercises by selected group
+  const visibleExercises = useMemo(() => {
+    if (selectedGroup === "All") return tracked;
+    const group = groupedExercises.find((g) => g.label === selectedGroup);
+    return group?.exercises ?? [];
+  }, [selectedGroup, tracked, groupedExercises]);
+
+  // Auto-select first exercise in visible list
+  const activeId =
+    selectedId &&
+    visibleExercises.some((ex) => ex.id === selectedId)
+      ? selectedId
+      : visibleExercises[0]?.id ?? null;
 
   const sessions = useMemo(
     () => (activeId ? getExerciseSessions(activeId, history) : []),
@@ -81,7 +176,7 @@ export function Progress() {
 
   const exercise = activeId ? getEffectiveExercise(activeId) : null;
   const color = exercise
-    ? muscleColors[exercise.primaryMuscles[0]] || "#888"
+    ? muscleColors[exercise.primaryMuscles[0] as MuscleGroup] || "#888"
     : "#888";
 
   const chartData = sessions.map((s) => ({
@@ -122,53 +217,180 @@ export function Progress() {
   }
 
   return (
-    <PageLayout className="flex flex-col gap-5">
+    <PageLayout className="flex flex-col gap-4">
       <header className="pt-1">
         <h1 className="font-[var(--font-display)] text-[2rem] tracking-wider text-text-primary">
           Progress
         </h1>
       </header>
 
-      {/* Exercise picker */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {tracked.map((ex) => {
-          const isActive = ex.id === activeId;
-          const exDef = getEffectiveExercise(ex.id);
-          const c = exDef
-            ? muscleColors[exDef.primaryMuscles[0]] || "#888"
-            : "#888";
-
+      {/* Muscle group tabs */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+        <button
+          onClick={() => setSelectedGroup("All")}
+          className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-semibold tracking-wide transition-all ${
+            selectedGroup === "All"
+              ? "bg-white/[0.12] text-text-primary"
+              : "text-text-muted"
+          }`}
+        >
+          All
+        </button>
+        {groupedExercises.map((g) => {
+          const isActive = selectedGroup === g.label;
+          const gc = groupColors[g.label] || "#888";
           return (
             <button
-              key={ex.id}
-              onClick={() => setSelectedId(ex.id)}
-              className={`shrink-0 rounded-xl px-3.5 py-2 text-[12px] font-medium transition-all ${
-                isActive
-                  ? "text-white"
-                  : "border border-white/[0.06] bg-white/[0.03] text-text-muted"
+              key={g.label}
+              onClick={() => setSelectedGroup(g.label)}
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-semibold tracking-wide transition-all ${
+                isActive ? "text-white" : "text-text-muted"
               }`}
-              style={isActive ? { background: `${c}CC` } : {}}
+              style={
+                isActive
+                  ? { background: `${gc}30`, color: gc }
+                  : {}
+              }
             >
-              {ex.name}
+              {g.label}
+              <span className="ml-1 text-[10px] opacity-50">
+                {g.exercises.length}
+              </span>
             </button>
           );
         })}
       </div>
 
+      {/* Exercise picker — grouped or flat depending on filter */}
+      {selectedGroup === "All" ? (
+        <div className="flex flex-col gap-3">
+          {groupedExercises.map((group) => (
+            <div key={group.label}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div
+                  className="h-2 w-2 rounded-full"
+                  style={{
+                    background: groupColors[group.label] || "#888",
+                  }}
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-text-dim">
+                  {group.label}
+                </span>
+                <div className="flex-1 h-px bg-white/[0.04]" />
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {group.exercises.map((ex) => {
+                  const isActive = ex.id === activeId;
+                  const gc = groupColors[group.label] || "#888";
+                  return (
+                    <button
+                      key={ex.id}
+                      onClick={() => setSelectedId(ex.id)}
+                      className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${
+                        isActive
+                          ? "text-white shadow-lg"
+                          : "bg-white/[0.03] text-text-muted border border-white/[0.04] hover:border-white/[0.08]"
+                      }`}
+                      style={
+                        isActive
+                          ? {
+                              background: `linear-gradient(135deg, ${gc}DD, ${gc}99)`,
+                              boxShadow: `0 2px 12px ${gc}33`,
+                            }
+                          : {}
+                      }
+                    >
+                      {ex.name}
+                      {ex.sessionCount > 1 && (
+                        <span
+                          className={`ml-1.5 text-[10px] ${
+                            isActive ? "opacity-70" : "opacity-40"
+                          }`}
+                        >
+                          {ex.sessionCount}x
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-1.5 flex-wrap">
+          {visibleExercises.map((ex) => {
+            const isActive = ex.id === activeId;
+            const gc = groupColors[selectedGroup] || "#888";
+            return (
+              <button
+                key={ex.id}
+                onClick={() => setSelectedId(ex.id)}
+                className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${
+                  isActive
+                    ? "text-white shadow-lg"
+                    : "bg-white/[0.03] text-text-muted border border-white/[0.04] hover:border-white/[0.08]"
+                }`}
+                style={
+                  isActive
+                    ? {
+                        background: `linear-gradient(135deg, ${gc}DD, ${gc}99)`,
+                        boxShadow: `0 2px 12px ${gc}33`,
+                      }
+                    : {}
+                }
+              >
+                {ex.name}
+                {ex.sessionCount > 1 && (
+                  <span
+                    className={`ml-1.5 text-[10px] ${
+                      isActive ? "opacity-70" : "opacity-40"
+                    }`}
+                  >
+                    {ex.sessionCount}x
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Active exercise header */}
+      {exercise && (
+        <div className="flex items-center gap-3">
+          <div
+            className="h-8 w-1 rounded-full"
+            style={{ background: color }}
+          />
+          <div className="flex flex-col">
+            <span className="font-[var(--font-display)] text-lg tracking-wide text-text-primary">
+              {exercise.name}
+            </span>
+            <span className="text-[11px] text-text-dim">
+              {exercise.primaryMuscles
+                .map((m) => m.replace(/-/g, " "))
+                .join(", ")}{" "}
+              · {exercise.equipment} · {exercise.type}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* PR badges */}
       {prs.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {prs.map((pr) => (
-            <PRBadge key={pr.type} pr={pr} />
+            <PRBadge key={pr.type} pr={pr} color={color} />
           ))}
         </div>
       )}
 
       {/* Chart mode toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 rounded-lg bg-white/[0.03] p-1 self-start">
         <button
           onClick={() => setChartMode("1rm")}
-          className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+          className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${
             chartMode === "1rm"
               ? "bg-white/[0.1] text-text-primary"
               : "text-text-dim"
@@ -178,7 +400,7 @@ export function Progress() {
         </button>
         <button
           onClick={() => setChartMode("volume")}
-          className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+          className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${
             chartMode === "volume"
               ? "bg-white/[0.1] text-text-primary"
               : "text-text-dim"

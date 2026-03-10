@@ -72,7 +72,7 @@ src/
 - **Superset system** — programs define `supersets: [string, string][]` arrays. Workout page groups superset pairs visually (yellow left border). Users can split supersets per-session via `activeWorkout.splitSupersets`. Rest timer: no rest between superset exercises, 2min rest after the pair.
 - **Bodyweight exercise mode** — exercises with `equipment: 'bodyweight+'` default to reps-only (no Kg column). Users toggle "+ Add Weight" / "BW Only" per exercise. Preference persists in `exerciseStore.weightMode`.
 - **Shared exercise card** — `ExerciseCard` component (`src/components/ExerciseCard.tsx`) renders the full exercise UI (name, equipment, rep range, bodyweight toggle, set inputs, swap/remove icons, inline remove confirmation). Used identically by both Workout and History edit pages. Manages bodyweight mode and remove-confirm state internally. Accepts optional `showOverloadBanner`, `overloadSuggestion`, `restButtons`, `onSkip`, `onUnskip`, and `onSetComplete` props (Workout-only features). When `entry.skipped === true`, renders a collapsed card with exercise name, "Skipped" badge, and 3-dot menu (Unskip/Swap/Remove). Set inputs use `StepperInput` component with ±buttons (weight step from `exercise.weightIncrement`, rep step = 1) and tappable "prev:" hints that auto-fill from last session.
-- **Exercise picker modal** — shared `ExercisePickerModal` component (`src/components/ExercisePickerModal.tsx`) used by both Workout and History pages. Supports `mode: 'swap'` (replace exercise) and `mode: 'add'` (append exercise). Filters out exercises already in the workout. Groups candidates by muscle group. In swap mode, tapping an exercise shows an action sheet with "Swap" and "Add to Workout" options via the `onSelectWithAction` prop.
+- **Exercise picker modal** — shared `ExercisePickerModal` component (`src/components/ExercisePickerModal.tsx`) used by both Workout and History pages. Supports `mode: 'swap'` (replace exercise) and `mode: 'add'` (append exercise). Filters out exercises already in the workout. Groups candidates by muscle group. In swap mode, tapping an exercise shows an action sheet with "Swap" and "Add to Workout" options via the `onSelectWithAction` prop. Includes a "Create new exercise" button (bottom of list + empty state) that triggers a creation flow via `showCreate` state.
 - **Exercise CRUD (active workout)** — swap exercise (picker modal), add exercise (dashed button, appends at end with overload suggestion), insert exercise at position (`+` divider buttons between groups), remove exercise (trash icon with inline confirmation), reorder (up/down arrows, superset pairs move as a unit). Store actions: `addExerciseToWorkout`, `insertExerciseAtIndex`, `removeExerciseFromWorkout`.
 - **Exercise CRUD (history edit)** — identical card UI to active workout. Swap exercise (preserves existing sets, changes exercise identity only), add exercise (appends with empty sets), remove exercise, modify sets/reps/weight. All changes saved atomically via `updateHistoryEntry`. Overload banner and rest timer are omitted.
 - **Open workout** — `/workout/open` starts a freeform session with no predefined exercises or supersets. Exercise picker opens automatically on entry. Day card on Home uses dashed yellow border. `dayId: "open"` is stored in history and colored `accent-yellow`.
@@ -88,13 +88,13 @@ src/
 - **Stepper inputs** — `StepperInput` component (`src/components/StepperInput.tsx`) wraps number inputs with `[-]` / `[+]` buttons. Long-press for rapid increment via `useRef`-based interval. Weight step respects `exercise.weightIncrement`; rep step is always 1. Tappable "prev:" hints auto-fill from last session.
 - **Data export & backup** — collapsible "Backup & Export" section on Home page. `lib/export.ts` handles JSON export (full backup: workouts + exercises + settings), CSV export (flat: one row per set), and import with validation + deduplication by workout ID. Import uses `workoutStore.importHistory()`.
 - **Weekly muscle volume tracker** — `MuscleVolumeCard` component on Home page. Aggregates completed sets per consolidated muscle group (Chest, Back, Shoulders, etc.) for the current Mon–Sun week. Horizontal bars with target line at 15 sets. Auto-hides when no data.
-- **Progress charts & PR dashboard** — `/progress` route with `recharts` library. Exercise picker (horizontal scroll, color-coded). Per-exercise: estimated 1RM trend (Epley formula), volume bar chart, PR badges (best weight, est. 1RM, best volume). `lib/charts.ts` provides pure aggregation functions.
+- **Progress charts & PR dashboard** — `/progress` route with `recharts` library. Two-level exercise picker: muscle group tabs (All/Chest/Back/Shoulders/Arms/Traps/Legs/Abs — only groups with tracked data shown) filter a grouped or flat exercise list below. Each exercise pill shows session count. Active exercise header displays name, muscles, equipment, and type. Color-coded PR badges use the exercise's muscle accent color (colored top stripe + icon). Pill-style 1RM/Volume chart toggle. `lib/charts.ts` provides pure aggregation functions. `groupColors` map in Progress.tsx assigns per-group colors; `muscleToGroup` map links muscle IDs to `exerciseGroups` labels.
 - **Mobile-first PWA** — max-width 460px, safe-area insets, portrait orientation, standalone display. Bottom nav hides on workout route.
 
 ### Design System
 
 Defined in `src/index.css` `@theme` block (Tailwind v4 syntax):
-- **Fonts**: Oswald (display/headings via `--font-display`), DM Sans (body via `--font-body`)
+- **Fonts**: Bebas Neue (display/headings via `--font-display`), Outfit (body via `--font-body`)
 - **Colors**: Dark theme only. Semantic tokens: `bg-primary`, `bg-card`, `bg-input`, `text-primary/secondary/muted/dim`, `border`, `border-card`. Accent colors: `accent-red` (primary CTA), `accent-orange/yellow/green/blue`.
 - Use Tailwind utility classes with these custom tokens (e.g., `bg-bg-card`, `text-text-muted`, `border-accent-red/30`).
 
@@ -105,7 +105,7 @@ Defined in `src/index.css` `@theme` block (Tailwind v4 syntax):
 | `/` | Home | Monthly calendar, stats, muscle volume, backup/export, resume banner |
 | `/workout/:dayId` | Workout | Active session (bottom nav hidden). `dayId=open` for freeform |
 | `/workout-summary` | WorkoutSummary | Post-workout summary screen |
-| `/progress` | Progress | Per-exercise charts (1RM, volume), PR dashboard |
+| `/progress` | Progress | Muscle-group-categorized exercise picker, per-exercise charts (1RM, volume), color-coded PR dashboard |
 | `/exercises` | Exercises | Exercise management |
 | `/history` | History | Past workouts with edit mode |
 | `/history/:workoutId/edit` | HistoryEdit | Edit a past workout |
