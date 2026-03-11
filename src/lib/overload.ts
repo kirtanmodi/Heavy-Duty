@@ -1,5 +1,30 @@
 import type { Exercise, SetEntry, OverloadSuggestion } from '../types'
 
+/** Extract working sets (to-failure) from last session, falling back to the last set */
+function getWorkingSets(lastSets: SetEntry[]): SetEntry[] {
+  const failureSets = lastSets.filter(s => s.toFailure)
+  return failureSets.length > 0 ? failureSets : [lastSets[lastSets.length - 1]]
+}
+
+/** Create Mentzer-style sets: Set 1 = warm-up at 50% weight, Set 2 = working set to failure */
+export function createMentzerSets(suggestion: OverloadSuggestion, exercise: Exercise): SetEntry[] {
+  const workingWeight = suggestion.suggestedWeight ?? 0
+  const isBodyweightOnly = exercise.equipment === 'bodyweight+' && workingWeight === 0
+
+  const warmupWeight = isBodyweightOnly || workingWeight === 0
+    ? 0
+    : Math.round((workingWeight * 0.5) / exercise.weightIncrement) * exercise.weightIncrement
+
+  const warmupReps = isBodyweightOnly
+    ? Math.max(1, Math.ceil(suggestion.suggestedReps / 2))
+    : suggestion.suggestedReps
+
+  return [
+    { weight: warmupWeight, reps: warmupReps, toFailure: false, tempo: "4-1-4" },
+    { weight: workingWeight, reps: suggestion.suggestedReps, toFailure: true, tempo: "4-1-4" },
+  ]
+}
+
 export function getOverloadSuggestion(
   exercise: Exercise,
   lastSets: SetEntry[] | null,
@@ -18,11 +43,13 @@ export function getOverloadSuggestion(
     }
   }
 
-  const lastWeight = lastSets[0].weight
+  // Focus on working sets (to-failure) for progression decisions
+  const workingSets = getWorkingSets(lastSets)
+  const lastWeight = workingSets[0].weight
   const lastRepsStr = lastSets.map((s, i) => `Set ${i + 1}: ${s.reps}`).join(', ')
-  const allHitTop = lastSets.every(s => s.reps >= repMax)
-  const anyBelowBottom = lastSets.some(s => s.reps < repMin)
-  const lastMaxReps = Math.max(...lastSets.map(s => s.reps))
+  const allHitTop = workingSets.every(s => s.reps >= repMax)
+  const anyBelowBottom = workingSets.some(s => s.reps < repMin)
+  const lastMaxReps = Math.max(...workingSets.map(s => s.reps))
 
   const isBodyweightOnly = isBodyweight && lastWeight === 0
 

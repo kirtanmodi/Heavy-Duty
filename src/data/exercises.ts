@@ -459,14 +459,22 @@ function applyOverrides(base: Exercise): Exercise | null {
   return base
 }
 
+function applyEquipmentOverride(exercise: Exercise): Exercise {
+  const { equipmentOverride } = useExerciseStore.getState()
+  const override = equipmentOverride[exercise.id]
+  if (!override || override === exercise.equipment) return exercise
+  return { ...exercise, equipment: override }
+}
+
 export function getEffectiveExercise(id: string): Exercise | undefined {
   const { customExercises, removedIds } = useExerciseStore.getState()
   if (removedIds.includes(id)) return undefined
   const custom = customExercises.find(e => e.id === id)
-  if (custom) return custom
+  if (custom) return applyEquipmentOverride(custom)
   const base = exerciseMap.get(id)
   if (!base) return undefined
-  return applyOverrides(base) ?? undefined
+  const overridden = applyOverrides(base)
+  return overridden ? applyEquipmentOverride(overridden) : undefined
 }
 
 export function getEffectiveExercises(): Exercise[] {
