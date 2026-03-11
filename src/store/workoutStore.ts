@@ -10,7 +10,6 @@ interface WorkoutState {
     program: string;
     exercises: ExerciseEntry[];
     startedAt: string;
-    splitSupersets: string[];
   } | null;
   lastCompletedWorkout: WorkoutEntry | null;
 
@@ -18,7 +17,6 @@ interface WorkoutState {
   updateExercise: (exerciseIndex: number, exercise: ExerciseEntry) => void;
   reorderExercises: (exercises: ExerciseEntry[]) => void;
   replaceActiveWorkoutExercises: (exercises: ExerciseEntry[]) => void;
-  splitSuperset: (firstExerciseId: string) => void;
   finishWorkout: () => void;
   cancelWorkout: () => void;
   addExerciseToWorkout: (exercise: ExerciseEntry) => void;
@@ -47,7 +45,6 @@ export const useWorkoutStore = create<WorkoutState>()(
             program,
             exercises,
             startedAt: new Date().toISOString(),
-            splitSupersets: [],
           },
         }),
 
@@ -68,18 +65,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       replaceActiveWorkoutExercises: (exercises) => {
         const active = get().activeWorkout;
         if (!active) return;
-        set({ activeWorkout: { ...active, exercises, splitSupersets: [] } });
-      },
-
-      splitSuperset: (firstExerciseId) => {
-        const active = get().activeWorkout;
-        if (!active) return;
-        set({
-          activeWorkout: {
-            ...active,
-            splitSupersets: [...(active.splitSupersets ?? []), firstExerciseId],
-          },
-        });
+        set({ activeWorkout: { ...active, exercises } });
       },
 
       finishWorkout: () => {

@@ -1,6 +1,6 @@
 import type { GymEquipmentId, GymEquipmentProfile, LiftFocus } from '../types'
 
-type EquipmentCategory = 'Machines' | 'Free Weights'
+type EquipmentCategory = 'Machines' | 'Free Weights' | 'Cardio'
 
 interface GymEquipmentOption {
   id: GymEquipmentId
@@ -15,7 +15,13 @@ interface CuratedCandidate {
 }
 
 interface CuratedSlot {
+  label: string
   candidates: CuratedCandidate[]
+}
+
+export interface CurateResult {
+  exerciseIds: string[]
+  skippedSlots: string[]
 }
 
 const has = (profile: GymEquipmentProfile, equipmentId: GymEquipmentId) => profile[equipmentId]
@@ -43,7 +49,6 @@ export const gymEquipmentOptions: GymEquipmentOption[] = [
   { id: 'leg-curl-machine', label: 'Leg Curl', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'calf-raise-machine', label: 'Calf Raise', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'abdominal-crunch-machine', label: 'Abdominal Crunch', category: 'Machines', focuses: ['Legs & Abs'] },
-  { id: 'torso-rotation', label: 'Torso Rotation', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'back-extension', label: 'Back Extension', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'hip-adductor', label: 'Hip Adductor', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'hip-abductor', label: 'Hip Abductor', category: 'Machines', focuses: ['Legs & Abs'] },
@@ -53,8 +58,11 @@ export const gymEquipmentOptions: GymEquipmentOption[] = [
   { id: 'flat-bench', label: 'Flat Bench', category: 'Free Weights', focuses: ['Push', 'Pull'] },
   { id: 'incline-bench', label: 'Incline Bench', category: 'Free Weights', focuses: ['Push', 'Pull'] },
   { id: 'decline-bench', label: 'Decline Bench', category: 'Free Weights', focuses: ['Push'] },
-  { id: 'floor-mats', label: 'Floor Mats', category: 'Free Weights', focuses: ['Legs & Abs'] },
   { id: 'leg-raise-stand', label: 'Leg Raise Stand', category: 'Free Weights', focuses: ['Legs & Abs'] },
+  { id: 'stairs', label: 'Stairs / StairMaster', category: 'Cardio', focuses: [] },
+  { id: 'cycle', label: 'Stationary Cycle', category: 'Cardio', focuses: [] },
+  { id: 'elliptical', label: 'Elliptical', category: 'Cardio', focuses: [] },
+  { id: 'treadmill', label: 'Treadmill', category: 'Cardio', focuses: [] },
 ]
 
 export const defaultGymEquipmentProfile = gymEquipmentOptions.reduce((profile, option) => {
@@ -62,15 +70,18 @@ export const defaultGymEquipmentProfile = gymEquipmentOptions.reduce((profile, o
   return profile
 }, {} as GymEquipmentProfile)
 
+// Mentzer Heavy Duty workout templates — each slot picks the best available exercise
 const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
   Push: [
     {
+      label: 'Chest Fly',
       candidates: [
         { exerciseId: 'pec-deck-fly', isAvailable: (profile) => has(profile, 'fly-machine') },
         { exerciseId: 'dumbbell-flyes', isAvailable: (profile) => has(profile, 'dumbbells') && hasAnyBench(profile) },
       ],
     },
     {
+      label: 'Chest Press',
       candidates: [
         { exerciseId: 'machine-chest-press', isAvailable: (profile) => has(profile, 'chest-press-machine') },
         { exerciseId: 'incline-bench-press', isAvailable: (profile) => has(profile, 'barbells') && has(profile, 'incline-bench') },
@@ -78,36 +89,50 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
+      label: 'Shoulder Press',
       candidates: [
         { exerciseId: 'machine-shoulder-press', isAvailable: (profile) => has(profile, 'shoulder-press-machine') },
         { exerciseId: 'overhead-press', isAvailable: (profile) => has(profile, 'barbells') },
       ],
     },
     {
+      label: 'Lateral Raise',
       candidates: [
         { exerciseId: 'machine-lateral-raise', isAvailable: (profile) => has(profile, 'lateral-raise') },
         { exerciseId: 'side-lateral-raise', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
     {
+      label: 'Tricep Isolation',
       candidates: [
         { exerciseId: 'tricep-pushdown', isAvailable: (profile) => hasAny(profile, ['tricep-press-machine', 'dual-adjustable-pulley']) },
+        { exerciseId: 'skull-crushers', isAvailable: (profile) => has(profile, 'barbells') && hasAnyBench(profile) },
+      ],
+    },
+    {
+      label: 'Tricep Compound',
+      candidates: [
+        { exerciseId: 'weighted-dips', isAvailable: (profile) => hasAny(profile, ['assisted-dip-chin-up', 'pull-up-bar']) },
       ],
     },
   ],
   Pull: [
     {
+      label: 'Lat Isolation',
       candidates: [
         { exerciseId: 'dumbbell-pullover', isAvailable: (profile) => has(profile, 'dumbbells') && hasAnyBench(profile) },
+        { exerciseId: 'cable-pullover', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
       ],
     },
     {
+      label: 'Lat Compound',
       candidates: [
         { exerciseId: 'lat-pulldown', isAvailable: (profile) => has(profile, 'lat-pulldown') },
         { exerciseId: 'assisted-chin-up', isAvailable: (profile) => has(profile, 'assisted-dip-chin-up') },
       ],
     },
     {
+      label: 'Row',
       candidates: [
         { exerciseId: 'machine-high-row', isAvailable: (profile) => has(profile, 'high-row-machine') },
         { exerciseId: 'seated-cable-row', isAvailable: (profile) => hasAny(profile, ['row-machine', 'dual-adjustable-pulley']) },
@@ -115,18 +140,21 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
+      label: 'Rear Delt',
       candidates: [
         { exerciseId: 'rear-delt-machine', isAvailable: (profile) => has(profile, 'rear-deltoid-machine') },
         { exerciseId: 'rear-delt-fly', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
     {
+      label: 'Shrugs',
       candidates: [
         { exerciseId: 'barbell-shrugs', isAvailable: (profile) => has(profile, 'barbells') },
         { exerciseId: 'dumbbell-shrugs', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
     {
+      label: 'Bicep Curl',
       candidates: [
         { exerciseId: 'machine-bicep-curl', isAvailable: (profile) => hasAny(profile, ['bicep-curl', 'front-bicep-curl']) },
         { exerciseId: 'barbell-curl', isAvailable: (profile) => has(profile, 'barbells') },
@@ -136,38 +164,66 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
   ],
   'Legs & Abs': [
     {
+      label: 'Quad Isolation',
       candidates: [
         { exerciseId: 'leg-extension', isAvailable: (profile) => has(profile, 'leg-extension-machine') },
       ],
     },
     {
+      label: 'Quad Compound',
       candidates: [
         { exerciseId: 'leg-press', isAvailable: (profile) => hasAny(profile, ['linear-leg-press', 'seated-leg-press']) },
         { exerciseId: 'barbell-squat', isAvailable: (profile) => has(profile, 'squat-rack') && has(profile, 'barbells') },
       ],
     },
     {
+      label: 'RDL',
       candidates: [
         { exerciseId: 'romanian-deadlift', isAvailable: (profile) => has(profile, 'barbells') },
+        { exerciseId: 'dumbbell-rdl', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
     {
+      label: 'Leg Curl',
       candidates: [
         { exerciseId: 'leg-curl', isAvailable: (profile) => has(profile, 'leg-curl-machine') },
+        { exerciseId: 'dumbbell-leg-curl', isAvailable: (profile) => has(profile, 'dumbbells') && hasAnyBench(profile) },
       ],
     },
     {
+      label: 'Calf Raise',
       candidates: [
         { exerciseId: 'calf-raise', isAvailable: (profile) => has(profile, 'calf-raise-machine') },
+        { exerciseId: 'standing-calf-raise', isAvailable: (profile) => has(profile, 'calf-raise-machine') },
       ],
     },
     {
+      label: 'Back Extension',
+      candidates: [
+        { exerciseId: 'back-extension-machine', isAvailable: (profile) => has(profile, 'back-extension') },
+      ],
+    },
+    {
+      label: 'Hip Adduction',
+      candidates: [
+        { exerciseId: 'hip-adduction', isAvailable: (profile) => has(profile, 'hip-adductor') },
+      ],
+    },
+    {
+      label: 'Hip Abduction',
+      candidates: [
+        { exerciseId: 'hip-abduction', isAvailable: (profile) => has(profile, 'hip-abductor') },
+      ],
+    },
+    {
+      label: 'Ab Crunch',
       candidates: [
         { exerciseId: 'abdominal-crunch-machine', isAvailable: (profile) => has(profile, 'abdominal-crunch-machine') },
         { exerciseId: 'cable-crunch', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
       ],
     },
     {
+      label: 'Hanging Leg Raise',
       candidates: [
         { exerciseId: 'hanging-leg-raise', isAvailable: (profile) => hasAny(profile, ['leg-raise-stand', 'pull-up-bar']) },
       ],
@@ -183,19 +239,31 @@ interface CurateOptions {
   shuffle?: boolean
 }
 
-export function curateWorkoutForFocus(focus: LiftFocus, profile: GymEquipmentProfile, options: CurateOptions = {}): string[] {
-  const selected: string[] = []
+function pickCandidate(
+  slot: CuratedSlot,
+  profile: GymEquipmentProfile,
+  selected: string[],
+  shuffle: boolean,
+): string | null {
+  const available = slot.candidates.filter((c) => c.isAvailable(profile) && !selected.includes(c.exerciseId))
+  if (available.length === 0) return null
+  const pick = shuffle ? available[Math.floor(Math.random() * available.length)] : available[0]
+  return pick.exerciseId
+}
+
+export function curateWorkoutForFocus(focus: LiftFocus, profile: GymEquipmentProfile, options: CurateOptions = {}): CurateResult {
+  const exerciseIds: string[] = []
+  const skippedSlots: string[] = []
+  const shuffle = options.shuffle ?? false
 
   for (const slot of workoutTemplates[focus]) {
-    const available = slot.candidates.filter((c) => c.isAvailable(profile) && !selected.includes(c.exerciseId))
-    if (available.length === 0) continue
-
-    const pick = options.shuffle
-      ? available[Math.floor(Math.random() * available.length)]
-      : available[0]
-
-    selected.push(pick.exerciseId)
+    const picked = pickCandidate(slot, profile, exerciseIds, shuffle)
+    if (picked) {
+      exerciseIds.push(picked)
+    } else {
+      skippedSlots.push(slot.label)
+    }
   }
 
-  return selected
+  return { exerciseIds, skippedSlots }
 }

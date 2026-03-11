@@ -296,7 +296,6 @@ function CreateExerciseSheet({ onCreated, onClose }: { onCreated: (exercise: Exe
       repRange: [8, 10],
       restSeconds: 60,
       weightIncrement: 2,
-      supersetWith: null,
     };
 
     addExercise(exercise);

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
-import { getEffectiveExercise } from "../data/exercises";
+import { getAutoReplacement, getEffectiveExercise } from "../data/exercises";
 import { cardioActivities, programs } from "../data/programs";
 
 import { useTimer } from "../hooks/useTimer";
@@ -13,9 +13,9 @@ import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, LiftFocus, SetEntry } from "../types";
 
-type ExerciseGroup =
-  | { type: "single"; index: number }
-  | { type: "superset"; indices: [number, number] };
+interface ExerciseGroup {
+  index: number;
+}
 
 const focusColors: Record<string, string> = {
   Push: "#E50914",
@@ -53,7 +53,6 @@ export function Workout() {
     updateExercise,
     reorderExercises,
     replaceActiveWorkoutExercises,
-    splitSuperset,
     addExerciseToWorkout,
     insertExerciseAtIndex,
     removeExerciseFromWorkout,
@@ -66,8 +65,6 @@ export function Workout() {
   const timer = useTimer();
   const autoStartTimer = useSettingsStore((s) => s.autoStartTimer);
   const gymEquipment = useSettingsStore((s) => s.gymEquipment);
-  const setGymEquipmentAvailability = useSettingsStore((s) => s.setGymEquipmentAvailability);
-  const resetGymEquipment = useSettingsStore((s) => s.resetGymEquipment);
 
   const isOpen = dayId === "open";
 
@@ -78,7 +75,6 @@ export function Workout() {
   const [showAddExercise, setShowAddExercise] = useState(
     () => isOpen && (!activeWorkout || activeWorkout.exercises.length === 0),
   );
-  const [showGymCurator, setShowGymCurator] = useState(false);
   const [curationFeedback, setCurationFeedback] = useState<string | null>(null);
   const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
   const leavingRef = useRef(false);
@@ -129,47 +125,10 @@ export function Workout() {
     startWorkout(day.id, day.name, program.name, exercises);
   }, [isOpen, activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name, seedExerciseEntry]);
 
-  // Derive active supersets (exclude split ones)
-  const allSupersets = isOpen ? [] : (day?.supersets ?? []);
-  const splitIds = new Set(activeWorkout?.splitSupersets ?? []);
-  const activeSupersets = allSupersets.filter(([a]) => !splitIds.has(a));
-
-  const isSecondInSuperset = (id: string) => activeSupersets.some(([, b]) => b === id);
-  const wasSplitFirst = (id: string) => allSupersets.some(([a]) => a === id) && splitIds.has(id);
-
-  // Group exercises into singles and superset pairs
+  // Build flat list of exercise groups (one per exercise)
   const buildGroups = (): ExerciseGroup[] => {
     if (!activeWorkout) return [];
-    const groups: ExerciseGroup[] = [];
-    const handled = new Set<number>();
-
-    for (let i = 0; i < activeWorkout.exercises.length; i++) {
-      if (handled.has(i)) continue;
-      const entry = activeWorkout.exercises[i];
-      const pair = activeSupersets.find(([a]) => a === entry.id);
-      if (pair) {
-        const partnerIdx = activeWorkout.exercises.findIndex((e) => e.id === pair[1]);
-        if (partnerIdx !== -1 && !handled.has(partnerIdx)) {
-          groups.push({ type: "superset", indices: [i, partnerIdx] });
-          handled.add(i);
-          handled.add(partnerIdx);
-          continue;
-        }
-      }
-      const pair2 = activeSupersets.find(([, b]) => b === entry.id);
-      if (pair2) {
-        const firstIdx = activeWorkout.exercises.findIndex((e) => e.id === pair2[0]);
-        if (firstIdx !== -1 && !handled.has(firstIdx)) {
-          groups.push({ type: "superset", indices: [firstIdx, i] });
-          handled.add(firstIdx);
-          handled.add(i);
-          continue;
-        }
-      }
-      groups.push({ type: "single", index: i });
-      handled.add(i);
-    }
-    return groups;
+    return activeWorkout.exercises.map((_, i) => ({ index: i }));
   };
 
   const groups = buildGroups();
@@ -194,13 +153,12 @@ export function Workout() {
     () => (liftFocus ? getGymEquipmentOptionsForFocus(liftFocus) : []),
     [liftFocus],
   );
-  const curatedExerciseIds = useMemo(
-    () => (liftFocus ? curateWorkoutForFocus(liftFocus, gymEquipment) : []),
+  const curatedResult = useMemo(
+    () => (liftFocus ? curateWorkoutForFocus(liftFocus, gymEquipment) : null),
     [gymEquipment, liftFocus],
   );
+  const curatedExerciseIds = curatedResult?.exerciseIds ?? [];
   const selectedEquipmentCount = gymEquipmentOptions.filter((option) => gymEquipment[option.id]).length;
-  const machineOptions = gymEquipmentOptions.filter((option) => option.category === "Machines");
-  const freeWeightOptions = gymEquipmentOptions.filter((option) => option.category === "Free Weights");
 
   const handleSetChange = (exerciseIndex: number, setIndex: number, field: keyof SetEntry, value: number | boolean) => {
     setHasSessionSetInteraction(true);
@@ -243,7 +201,7 @@ export function Workout() {
     const exercise = getEffectiveExercise(exerciseId);
     if (!exercise) return;
     const seconds = exercise.restSeconds || 120;
-    timer.start(seconds, isSecondInSuperset(exerciseId) ? "Rest after superset" : "Rest");
+    timer.start(seconds, "Rest");
   };
 
   const handleSetComplete = (exerciseIndex: number) => {
@@ -252,15 +210,10 @@ export function Workout() {
     const entry = activeWorkout.exercises[exerciseIndex];
     if (!entry) return;
 
-    // No auto-rest for first exercise in an active superset pair (rest comes after the second)
-    const isFirstInSuperset = activeSupersets.some(([a]) => a === entry.id);
-    if (isFirstInSuperset) return;
-
     const exercise = getEffectiveExercise(entry.id);
     if (!exercise) return;
     const seconds = exercise.restSeconds || 120;
-    const label = isSecondInSuperset(entry.id) ? "Rest after superset" : "Rest";
-    timer.start(seconds, label);
+    timer.start(seconds, "Rest");
   };
 
   const handleMoveGroup = (groupIndex: number, direction: "up" | "down") => {
@@ -269,7 +222,7 @@ export function Workout() {
     if (targetGroupIndex < 0 || targetGroupIndex >= groups.length) return;
 
     const exercises = [...activeWorkout.exercises];
-    const allGroupIndices = groups.map((g) => (g.type === "superset" ? [...g.indices] : [g.index]));
+    const allGroupIndices = groups.map((g) => [g.index]);
     const temp = allGroupIndices[groupIndex];
     allGroupIndices[groupIndex] = allGroupIndices[targetGroupIndex];
     allGroupIndices[targetGroupIndex] = temp;
@@ -287,6 +240,18 @@ export function Workout() {
     if (swapTarget === null) return;
     updateExercise(swapTarget, seedExerciseEntry(exercise.id));
     setSwapTarget(null);
+  };
+
+  const handleAutoReplace = (exerciseIndex: number) => {
+    if (!activeWorkout) return;
+    const current = activeWorkout.exercises[exerciseIndex];
+    const excludeIds = activeWorkout.exercises.map((e) => e.id);
+    const replacement = getAutoReplacement(current.id, excludeIds);
+    if (replacement) {
+      updateExercise(exerciseIndex, seedExerciseEntry(replacement.id));
+    } else {
+      setCurationFeedback("No alternative exercises available for this muscle group.");
+    }
   };
 
   const handleAddExercise = (exercise: Exercise) => {
@@ -308,22 +273,25 @@ export function Workout() {
       return;
     }
 
-    const ids = shuffle
+    const result = shuffle
       ? curateWorkoutForFocus(liftFocus, gymEquipment, { shuffle: true })
-      : curatedExerciseIds;
+      : curatedResult;
 
-    if (ids.length === 0) {
+    if (!result || result.exerciseIds.length === 0) {
       setCurationFeedback("No matching exercises found. Turn on more equipment and try again.");
       return;
     }
 
-    replaceActiveWorkoutExercises(ids.map(seedExerciseEntry));
+    replaceActiveWorkoutExercises(result.exerciseIds.map(seedExerciseEntry));
+
+    const skippedMsg = result.skippedSlots.length > 0
+      ? ` Skipped: ${result.skippedSlots.join(", ")}.`
+      : "";
     setCurationFeedback(
       shuffle
-        ? `Shuffled ${liftFocus} workout — ${ids.length} exercises.`
-        : `Built a ${liftFocus} workout with ${ids.length} exercises.`,
+        ? `Shuffled ${liftFocus} workout — ${result.exerciseIds.length} exercises.${skippedMsg}`
+        : `Built a ${liftFocus} workout with ${result.exerciseIds.length} exercises.${skippedMsg}`,
     );
-    setShowGymCurator(false);
   };
 
   const handleDiscardAndStart = () => {
@@ -424,18 +392,15 @@ export function Workout() {
     );
   }
 
-  const buildCardProps = (exerciseIndex: number, showRest: boolean) => {
+  const buildCardProps = (exerciseIndex: number) => {
     const entry = activeWorkout.exercises[exerciseIndex];
     const exercise = entry ? getEffectiveExercise(entry.id) : null;
     const lastSets = exercise ? getLastSets(entry.id, history) : null;
     const suggestion = exercise ? getOverloadSuggestion(exercise, lastSets) : undefined;
 
     const restBtns: { label: string; onClick: () => void }[] = [];
-    if (showRest && exercise && (exercise.restSeconds > 0 || wasSplitFirst(entry.id))) {
+    if (exercise && exercise.restSeconds > 0) {
       restBtns.push({ label: `Rest ${formatDuration(exercise.restSeconds || 60)}`, onClick: () => handleRest(entry.id) });
-    }
-    if (entry && isSecondInSuperset(entry.id)) {
-      restBtns.push({ label: "Rest 2:00", onClick: () => timer.start(120, "Rest after superset") });
     }
 
     return {
@@ -445,6 +410,7 @@ export function Workout() {
       onAddSet: handleAddSet,
       onRemoveSet: handleRemoveSet,
       onSwap: (idx: number) => setSwapTarget(idx),
+      onAutoReplace: handleAutoReplace,
       onRemove: (idx: number) => removeExerciseFromWorkout(idx),
       onSkip: (idx: number) => skipExercise(idx),
       onUnskip: (idx: number) => unskipExercise(idx),
@@ -677,22 +643,11 @@ export function Workout() {
             className="flex flex-col gap-4 rounded-2xl p-5"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-sm font-bold tracking-wide text-text-primary">Curate from My Gym</h2>
-                <p className="text-xs leading-relaxed text-text-muted">
-                  Optional. Rebuild today's {liftFocus.toLowerCase()} workout from your available equipment using the current overload and Mentzer seeding.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowGymCurator((value) => !value);
-                  setCurationFeedback(null);
-                }}
-                className="rounded-xl border border-white/[0.08] bg-transparent px-3 py-2 text-[11px] font-semibold tracking-wide text-text-secondary transition-colors active:bg-white/[0.04]"
-              >
-                {showGymCurator ? "Hide" : "Configure"}
-              </button>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-sm font-bold tracking-wide text-text-primary">Curate from My Gym</h2>
+              <p className="text-xs leading-relaxed text-text-muted">
+                Rebuild today's {liftFocus.toLowerCase()} workout from your available equipment.
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-dim">
@@ -700,53 +655,36 @@ export function Workout() {
               <span className="rounded-full border border-white/[0.08] px-2.5 py-1">{curatedExerciseIds.length} exercises matched</span>
               {hasLoggedSets && <span className="rounded-full border border-accent-yellow/25 px-2.5 py-1 text-accent-yellow">Locked after first logged set</span>}
             </div>
+            {curatedResult && curatedResult.skippedSlots.length > 0 && !hasLoggedSets && (
+              <p className="text-[11px] leading-relaxed text-accent-yellow">
+                Missing equipment for: {curatedResult.skippedSlots.join(", ")}
+              </p>
+            )}
 
-            {showGymCurator && (
-              <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-black/10 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-text-muted">Toggle what your gym has for this {liftFocus.toLowerCase()} day.</p>
-                  <button onClick={() => { resetGymEquipment(); setCurationFeedback(null); }} className="text-[11px] font-semibold text-text-secondary transition-colors active:text-text-primary">Reset all</button>
-                </div>
-                {[{ label: "Machines", options: machineOptions }, { label: "Free Weights", options: freeWeightOptions }].map((group) => group.options.length > 0 ? (
-                  <div key={group.label} className="flex flex-col gap-2">
-                    <h3 className="text-[10px] font-bold tracking-widest text-text-dim uppercase">{group.label}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {group.options.map((option) => {
-                        const isEnabled = gymEquipment[option.id];
-                        return (
-                          <button
-                            key={option.id}
-                            type="button"
-                            aria-pressed={isEnabled}
-                            onClick={() => { setGymEquipmentAvailability(option.id, !isEnabled); setCurationFeedback(null); }}
-                            className="rounded-xl border px-3 py-2 text-xs font-medium transition-colors"
-                            style={{ borderColor: isEnabled ? `${themeColor}55` : "rgba(255,255,255,0.08)", background: isEnabled ? `${themeColor}12` : "rgba(255,255,255,0.03)", color: isEnabled ? themeColor : "var(--color-text-secondary)" }}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null)}
-                {curationFeedback && <p className="text-xs leading-relaxed text-text-secondary">{curationFeedback}</p>}
-                <button
-                  onClick={() => handleCurateWorkout(false)}
-                  disabled={hasLoggedSets || curatedExerciseIds.length === 0}
-                  className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
-                  style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, boxShadow: `0 4px 16px ${themeColor}20` }}
-                >
-                  Build {liftFocus} Workout
-                </button>
-                {curatedExerciseIds.length > 0 && !hasLoggedSets && (
-                  <button
-                    onClick={() => handleCurateWorkout(true)}
-                    className="w-full rounded-2xl border border-white/[0.08] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-                  >
-                    Try Another Split
-                  </button>
-                )}
-              </div>
+            <button
+              onClick={() => navigate("/my-gym")}
+              className="w-full rounded-2xl border border-white/[0.08] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+            >
+              Configure Equipment in My Gym
+            </button>
+
+            {curationFeedback && <p className="text-xs leading-relaxed text-text-secondary">{curationFeedback}</p>}
+
+            <button
+              onClick={() => handleCurateWorkout(false)}
+              disabled={hasLoggedSets || curatedExerciseIds.length === 0}
+              className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
+              style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, boxShadow: `0 4px 16px ${themeColor}20` }}
+            >
+              Build {liftFocus} Workout
+            </button>
+            {curatedExerciseIds.length > 0 && !hasLoggedSets && (
+              <button
+                onClick={() => handleCurateWorkout(true)}
+                className="w-full rounded-2xl border border-white/[0.08] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+              >
+                Try Another Split
+              </button>
             )}
           </section>
         )}
@@ -761,14 +699,10 @@ export function Workout() {
         {groups.map((group, groupIndex) => {
           const getInsertIdx = () => {
             if (groupIndex + 1 >= groups.length) return activeWorkout.exercises.length;
-            const next = groups[groupIndex + 1];
-            return next.type === "superset" ? next.indices[0] : next.index;
+            return groups[groupIndex + 1].index;
           };
           const isFirst = groupIndex === 0;
           const isLast = groupIndex === groups.length - 1;
-
-          // Compute insert index: position of the first exercise in this group
-          const groupStartIdx = group.type === "superset" ? group.indices[0] : group.index;
 
           const insertButton = (atIndex: number) => (
             <button
@@ -786,70 +720,9 @@ export function Workout() {
             </button>
           );
 
-          if (group.type === "superset") {
-            const [firstIdx, secondIdx] = group.indices;
-            const firstEntry = activeWorkout.exercises[firstIdx];
-            return (
-              <div key={`ss-${firstIdx}`} className="flex flex-col">
-                {isFirst && insertButton(groupStartIdx)}
-                <section className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-5 items-center gap-1 rounded-md bg-accent-yellow/12 px-2">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 text-accent-yellow">
-                          <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        <span className="text-[10px] font-bold tracking-widest text-accent-yellow uppercase">Superset</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        onClick={() => splitSuperset(firstEntry.id)}
-                        className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-text-dim transition-colors active:bg-white/[0.06]"
-                      >
-                        Split
-                      </button>
-                      <button
-                        onClick={() => handleMoveGroup(groupIndex, "up")}
-                        className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
-                        aria-label="Move up"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
-                          <path d="M18 15l-6-6-6 6" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleMoveGroup(groupIndex, "down")}
-                        className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isLast ? "pointer-events-none opacity-20" : ""}`}
-                        aria-label="Move down"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
-                          <path d="M6 9l6 6 6-6" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex flex-col gap-2.5 overflow-visible rounded-2xl pl-3"
-                    style={{
-                      borderLeft: "3px solid rgba(255, 170, 0, 0.3)",
-                      background: "rgba(255, 170, 0, 0.02)",
-                    }}
-                  >
-                    <ExerciseCard {...buildCardProps(firstIdx, false)} />
-                    <ExerciseCard {...buildCardProps(secondIdx, true)} />
-                  </div>
-                </section>
-                {insertButton(getInsertIdx())}
-              </div>
-            );
-          }
-
-          // Single exercise
           return (
             <div key={`s-${group.index}`} className="flex flex-col">
-              {isFirst && insertButton(groupStartIdx)}
+              {isFirst && insertButton(group.index)}
               <section className="flex flex-col gap-2">
                 <div className="flex justify-end px-1">
                   <div className="flex items-center gap-0.5">
@@ -873,7 +746,7 @@ export function Workout() {
                     </button>
                   </div>
                 </div>
-                <ExerciseCard {...buildCardProps(group.index, true)} />
+                <ExerciseCard {...buildCardProps(group.index)} />
               </section>
               {insertButton(getInsertIdx())}
             </div>

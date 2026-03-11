@@ -260,7 +260,7 @@ export function Home() {
                 {suggested.day.focus}
               </h2>
               <p className="text-sm text-text-secondary">
-                {suggested.day.exercises.length} exercises · Pre-exhaust supersets
+                {suggested.day.exercises.length} exercises · Mentzer protocol
               </p>
               <LastDoneLabel day={suggested.day} history={history} />
             </div>

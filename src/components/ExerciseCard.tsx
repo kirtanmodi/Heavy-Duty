@@ -20,6 +20,7 @@ interface ExerciseCardProps {
   onRemoveSet: (exerciseIndex: number, setIndex: number) => void;
   onSwap: (exerciseIndex: number) => void;
   onRemove: (exerciseIndex: number) => void;
+  onAutoReplace?: (exerciseIndex: number) => void;
   onSkip?: (exerciseIndex: number) => void;
   onUnskip?: (exerciseIndex: number) => void;
   onSetComplete?: (exerciseIndex: number) => void;
@@ -37,6 +38,7 @@ export function ExerciseCard({
   onRemoveSet,
   onSwap,
   onRemove,
+  onAutoReplace,
   onSkip,
   onUnskip,
   onSetComplete,
@@ -332,6 +334,17 @@ export function ExerciseCard({
                   </svg>
                   Swap Exercise
                 </button>
+                {onAutoReplace && (
+                  <button
+                    onClick={() => { onAutoReplace(exerciseIndex); setShowMenu(false); }}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-blue transition-colors active:bg-white/[0.06]"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <path d="M20 7h-3m3 0v3m0-3l-4 4a4 4 0 01-5.66 0L9 9.66a4 4 0 00-5.66 0L1 12m3 5h3m-3 0v-3m0 3l4-4a4 4 0 015.66 0L15 14.34a4 4 0 005.66 0L23 12" />
+                    </svg>
+                    Auto Replace
+                  </button>
+                )}
                 {onSkip && (
                   <button
                     onClick={() => { onSkip(exerciseIndex); setShowMenu(false); }}

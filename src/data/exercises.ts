@@ -15,7 +15,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 0,
     weightIncrement: 2,
-    supersetWith: "incline-bench-press",
   },
   {
     id: "incline-bench-press",
@@ -29,7 +28,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
-    supersetWith: "dumbbell-flyes",
   },
   {
     id: "barbell-bench-press",
@@ -43,7 +41,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "pec-deck-fly",
@@ -57,7 +54,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
-    supersetWith: null,
   },
   {
     id: "machine-chest-press",
@@ -71,7 +67,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "weighted-dips",
@@ -85,7 +80,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
 
   // === BACK ===
@@ -101,7 +95,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 0,
     weightIncrement: 2,
-    supersetWith: "lat-pulldown",
   },
   {
     id: "lat-pulldown",
@@ -115,7 +108,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
-    supersetWith: "dumbbell-pullover",
   },
   {
     id: "assisted-chin-up",
@@ -129,7 +121,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "barbell-row",
@@ -143,7 +134,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "machine-high-row",
@@ -157,7 +147,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 90,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "seated-cable-row",
@@ -171,7 +160,19 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 90,
     weightIncrement: 2.5,
-    supersetWith: null,
+  },
+  {
+    id: "cable-pullover",
+    name: "Cable Pullover",
+    equipment: "cable",
+    type: "isolation",
+    primaryMuscles: ["lats"],
+    secondaryMuscles: ["chest", "triceps"],
+    mentzerTips:
+      "Pre-exhaust for lats. Stand facing away from pulley. 4s stretch overhead, 1s pause at full extension, 4s pull down to thighs. Keep arms nearly straight — this is a lat movement.",
+    repRange: [8, 10],
+    restSeconds: 0,
+    weightIncrement: 2,
   },
   {
     id: "deadlift",
@@ -185,7 +186,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 5,
-    supersetWith: null,
   },
 
   // === SHOULDERS ===
@@ -201,7 +201,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "machine-shoulder-press",
@@ -215,7 +214,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "side-lateral-raise",
@@ -229,7 +227,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 1,
-    supersetWith: null,
   },
   {
     id: "machine-lateral-raise",
@@ -242,7 +239,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 1,
-    supersetWith: null,
   },
   {
     id: "rear-delt-fly",
@@ -256,7 +252,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 1,
-    supersetWith: null,
   },
   {
     id: "rear-delt-machine",
@@ -270,7 +265,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
-    supersetWith: null,
   },
 
   // === ARMS ===
@@ -286,7 +280,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "machine-bicep-curl",
@@ -300,7 +293,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
-    supersetWith: null,
   },
   {
     id: "tricep-pushdown",
@@ -314,7 +306,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 0,
     weightIncrement: 2,
-    supersetWith: "weighted-dips",
   },
   {
     id: "hammer-curl",
@@ -328,7 +319,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
-    supersetWith: null,
   },
   {
     id: "skull-crushers",
@@ -342,7 +332,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2,
-    supersetWith: null,
   },
 
   // === TRAPS ===
@@ -358,7 +347,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "dumbbell-shrugs",
@@ -372,7 +360,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
-    supersetWith: null,
   },
 
   // === LEGS ===
@@ -388,7 +375,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 0,
     weightIncrement: 2,
-    supersetWith: "leg-press",
   },
   {
     id: "leg-press",
@@ -402,7 +388,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 120,
     weightIncrement: 5,
-    supersetWith: "leg-extension",
   },
   {
     id: "barbell-squat",
@@ -416,7 +401,6 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 5,
-    supersetWith: null,
   },
   {
     id: "romanian-deadlift",
@@ -430,7 +414,32 @@ export const exercises: Exercise[] = [
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
-    supersetWith: null,
+  },
+  {
+    id: "dumbbell-rdl",
+    name: "Dumbbell RDL",
+    equipment: "dumbbells",
+    type: "compound",
+    primaryMuscles: ["hamstrings", "glutes"],
+    secondaryMuscles: ["lower-back"],
+    mentzerTips:
+      "4s hinge down (feel the hamstring stretch), 1s pause at max stretch, 4s drive hips forward. Keep dumbbells close to legs. Slight bend in knees. Back stays flat.",
+    repRange: [6, 8],
+    restSeconds: 120,
+    weightIncrement: 2,
+  },
+  {
+    id: "dumbbell-leg-curl",
+    name: "Dumbbell Leg Curl",
+    equipment: "dumbbells",
+    type: "isolation",
+    primaryMuscles: ["hamstrings"],
+    secondaryMuscles: [],
+    mentzerTips:
+      "Lie face down on bench with dumbbell between feet. 4s lower to full extension, 1s pause, 4s curl up. Squeeze hamstrings hard at the top. No momentum.",
+    repRange: [8, 10],
+    restSeconds: 60,
+    weightIncrement: 2,
   },
   {
     id: "leg-curl",
@@ -444,7 +453,6 @@ export const exercises: Exercise[] = [
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
-    supersetWith: null,
   },
   {
     id: "standing-calf-raise",
@@ -458,7 +466,6 @@ export const exercises: Exercise[] = [
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 2.5,
-    supersetWith: null,
   },
   {
     id: "calf-raise",
@@ -472,7 +479,47 @@ export const exercises: Exercise[] = [
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 2.5,
-    supersetWith: null,
+  },
+
+  // === LOWER BACK / HIPS ===
+  {
+    id: "back-extension-machine",
+    name: "Back Extension",
+    equipment: "machine",
+    type: "isolation",
+    primaryMuscles: ["lower-back", "glutes"],
+    secondaryMuscles: ["hamstrings"],
+    mentzerTips:
+      "4s lower into full flexion, 1s pause, 4s extend up to neutral spine. Do NOT hyperextend. Squeeze glutes and lower back at the top. Controlled movement throughout.",
+    repRange: [10, 12],
+    restSeconds: 60,
+    weightIncrement: 2.5,
+  },
+  {
+    id: "hip-adduction",
+    name: "Hip Adduction",
+    equipment: "machine",
+    type: "isolation",
+    primaryMuscles: ["glutes"],
+    secondaryMuscles: [],
+    mentzerTips:
+      "4s open legs to full stretch, 1s pause, 4s squeeze together. Focus on the inner thigh doing the work. Full range of motion on every rep.",
+    repRange: [10, 12],
+    restSeconds: 60,
+    weightIncrement: 2.5,
+  },
+  {
+    id: "hip-abduction",
+    name: "Hip Abduction",
+    equipment: "machine",
+    type: "isolation",
+    primaryMuscles: ["glutes"],
+    secondaryMuscles: [],
+    mentzerTips:
+      "4s bring legs together, 1s pause, 4s push apart. Targets the outer glutes and hip stabilizers. Keep back against the pad throughout.",
+    repRange: [10, 12],
+    restSeconds: 60,
+    weightIncrement: 2.5,
   },
 
   // === ABS ===
@@ -488,7 +535,6 @@ export const exercises: Exercise[] = [
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 1,
-    supersetWith: null,
   },
   {
     id: "cable-crunch",
@@ -502,7 +548,6 @@ export const exercises: Exercise[] = [
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 2,
-    supersetWith: null,
   },
   {
     id: "abdominal-crunch-machine",
@@ -516,7 +561,6 @@ export const exercises: Exercise[] = [
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 2,
-    supersetWith: null,
   },
 ];
 
@@ -622,4 +666,24 @@ export function getEffectiveExercisesByGroup(groupLabel: string): Exercise[] {
   const group = exerciseGroups.find((g) => g.label === groupLabel);
   if (!group) return [];
   return getEffectiveExercises().filter((e) => e.primaryMuscles.some((m) => (group.muscles as readonly string[]).includes(m)));
+}
+
+export function getAutoReplacement(exerciseId: string, excludeIds: string[]): Exercise | null {
+  const current = getEffectiveExercise(exerciseId);
+  if (!current) return null;
+
+  const primaryMuscle = current.primaryMuscles[0];
+  const group = exerciseGroups.find((g) => (g.muscles as readonly string[]).includes(primaryMuscle));
+  if (!group) return null;
+
+  const candidates = getEffectiveExercisesByGroup(group.label)
+    .filter((e) => e.id !== exerciseId && !excludeIds.includes(e.id));
+  if (candidates.length === 0) return null;
+
+  // Prefer same type (compound/isolation) and same primary muscle
+  const sameBoth = candidates.filter((e) => e.type === current.type && e.primaryMuscles[0] === primaryMuscle);
+  const sameType = candidates.filter((e) => e.type === current.type);
+  const pool = sameBoth.length > 0 ? sameBoth : sameType.length > 0 ? sameType : candidates;
+
+  return pool[Math.floor(Math.random() * pool.length)];
 }

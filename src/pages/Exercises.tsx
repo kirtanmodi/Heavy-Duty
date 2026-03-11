@@ -258,11 +258,6 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
                   +{exercise.weightIncrement}kg increments
                 </span>
               </div>
-              {exercise.supersetWith && (
-                <span className="rounded-full bg-accent-yellow/10 px-2 py-0.5 text-[10px] font-semibold text-accent-yellow">
-                  Superset
-                </span>
-              )}
             </div>
           </div>
         )}
@@ -317,7 +312,6 @@ function AddExerciseSheet({
       repRange: [8, 10],
       restSeconds: 60,
       weightIncrement: 2,
-      supersetWith: null,
     };
 
     addExercise(exercise);

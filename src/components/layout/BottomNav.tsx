@@ -5,6 +5,7 @@ const tabs = [
   { path: "/", label: "Home", icon: "home" },
   { path: "/progress", label: "Progress", icon: "progress" },
   { path: "/exercises", label: "Exercises", icon: "exercises" },
+  { path: "/my-gym", label: "My Gym", icon: "gym" },
   { path: "/history", label: "History", icon: "history" },
 ] as const;
 
@@ -41,6 +42,17 @@ function TabIcon({ icon, active }: { icon: (typeof tabs)[number]["icon"]; active
     );
   }
 
+  if (icon === "gym") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} className="h-6 w-6">
+        <path d="M3 21h18" strokeLinecap="round" />
+        <path d="M5 21V7l7-4 7 4v14" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M9 21v-6h6v6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M9 9h.01M15 9h.01M9 13h.01M15 13h.01" strokeLinecap="round" strokeWidth={active ? 2.5 : 2} />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
       <circle cx="12" cy="12" r="8.5" />
@@ -58,7 +70,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 glass pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      <div className="mx-auto grid w-full max-w-[460px] grid-cols-4">
+      <div className="mx-auto grid w-full max-w-[460px] grid-cols-5">
         {tabs.map((tab) => {
           const active = tab.path === "/" ? location.pathname === "/" : location.pathname.startsWith(tab.path);
           return (

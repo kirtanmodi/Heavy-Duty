@@ -3,13 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
-import { programs } from "../data/programs";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, SetEntry } from "../types";
-
-type ExerciseGroup =
-  | { type: "single"; index: number }
-  | { type: "superset"; indices: [number, number] };
 
 function formatRelativeDate(iso: string): string {
   const date = new Date(iso);
@@ -39,47 +34,6 @@ export function HistoryEdit() {
   const [swapTarget, setSwapTarget] = useState<number | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // Look up program day for superset definitions
-  const program = programs[0];
-  const day = workout ? program.days.find((d) => d.id === workout.dayId) : null;
-  const allSupersets = day?.supersets ?? [];
-
-  // Group exercises into singles and superset pairs
-  const buildGroups = (): ExerciseGroup[] => {
-    const groups: ExerciseGroup[] = [];
-    const handled = new Set<number>();
-
-    for (let i = 0; i < exercises.length; i++) {
-      if (handled.has(i)) continue;
-      const entry = exercises[i];
-      const pair = allSupersets.find(([a]) => a === entry.id);
-      if (pair) {
-        const partnerIdx = exercises.findIndex((e, j) => j > i && !handled.has(j) && e.id === pair[1]);
-        if (partnerIdx !== -1) {
-          groups.push({ type: "superset", indices: [i, partnerIdx] });
-          handled.add(i);
-          handled.add(partnerIdx);
-          continue;
-        }
-      }
-      const pair2 = allSupersets.find(([, b]) => b === entry.id);
-      if (pair2) {
-        const firstIdx = exercises.findIndex((e, j) => j > i && !handled.has(j) && e.id === pair2[0]);
-        if (firstIdx !== -1) {
-          groups.push({ type: "superset", indices: [firstIdx, i] });
-          handled.add(firstIdx);
-          handled.add(i);
-          continue;
-        }
-      }
-      groups.push({ type: "single", index: i });
-      handled.add(i);
-    }
-    return groups;
-  };
-
-  const groups = buildGroups();
 
   // --- Handlers ---
 
@@ -150,19 +104,12 @@ export function HistoryEdit() {
 
   const handleMoveGroup = (groupIndex: number, direction: "up" | "down") => {
     const targetGroupIndex = direction === "up" ? groupIndex - 1 : groupIndex + 1;
-    if (targetGroupIndex < 0 || targetGroupIndex >= groups.length) return;
+    if (targetGroupIndex < 0 || targetGroupIndex >= exercises.length) return;
 
-    const allGroupIndices = groups.map((g) => (g.type === "superset" ? [...g.indices] : [g.index]));
-    const temp = allGroupIndices[groupIndex];
-    allGroupIndices[groupIndex] = allGroupIndices[targetGroupIndex];
-    allGroupIndices[targetGroupIndex] = temp;
-
-    const newExercises: ExerciseEntry[] = [];
-    for (const indices of allGroupIndices) {
-      for (const idx of indices) {
-        newExercises.push(exercises[idx]);
-      }
-    }
+    const newExercises = [...exercises];
+    const temp = newExercises[groupIndex];
+    newExercises[groupIndex] = newExercises[targetGroupIndex];
+    newExercises[targetGroupIndex] = temp;
     setExercises(newExercises);
   };
 
@@ -215,69 +162,16 @@ export function HistoryEdit() {
           <section className="rounded-[14px] bg-bg-card card-surface p-6 text-sm text-text-secondary">No exercises in this workout.</section>
         )}
 
-        {groups.map((group, groupIndex) => {
-          const isFirst = groupIndex === 0;
-          const isLast = groupIndex === groups.length - 1;
+        {exercises.map((entry, exIndex) => {
+          const isFirst = exIndex === 0;
+          const isLast = exIndex === exercises.length - 1;
 
-          if (group.type === "superset") {
-            const [firstIdx, secondIdx] = group.indices;
-            return (
-              <section key={`ss-${firstIdx}`} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-xs font-semibold tracking-widest text-accent-yellow uppercase">Superset</span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleMoveGroup(groupIndex, "up")}
-                      className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
-                      aria-label="Move up"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                        <path d="M18 15l-6-6-6 6" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleMoveGroup(groupIndex, "down")}
-                      className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
-                      aria-label="Move down"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2.5 rounded-[16px] border-l-[3px] border-accent-yellow/40 pl-2.5">
-                  <ExerciseCard
-                    entry={exercises[firstIdx]}
-                    exerciseIndex={firstIdx}
-                    onSetChange={handleSetChange}
-                    onAddSet={handleAddSet}
-                    onRemoveSet={handleRemoveSet}
-                    onSwap={(idx) => setSwapTarget(idx)}
-                    onRemove={handleRemoveExercise}
-                  />
-                  <ExerciseCard
-                    entry={exercises[secondIdx]}
-                    exerciseIndex={secondIdx}
-                    onSetChange={handleSetChange}
-                    onAddSet={handleAddSet}
-                    onRemoveSet={handleRemoveSet}
-                    onSwap={(idx) => setSwapTarget(idx)}
-                    onRemove={handleRemoveExercise}
-                  />
-                </div>
-              </section>
-            );
-          }
-
-          // Single exercise
           return (
-            <section key={`s-${group.index}`} className="flex flex-col gap-2">
+            <section key={`s-${exIndex}`} className="flex flex-col gap-2">
               <div className="flex justify-end px-1">
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => handleMoveGroup(groupIndex, "up")}
+                    onClick={() => handleMoveGroup(exIndex, "up")}
                     className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
                     aria-label="Move up"
                   >
@@ -286,7 +180,7 @@ export function HistoryEdit() {
                     </svg>
                   </button>
                   <button
-                    onClick={() => handleMoveGroup(groupIndex, "down")}
+                    onClick={() => handleMoveGroup(exIndex, "down")}
                     className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
                     aria-label="Move down"
                   >
@@ -297,8 +191,8 @@ export function HistoryEdit() {
                 </div>
               </div>
               <ExerciseCard
-                entry={exercises[group.index]}
-                exerciseIndex={group.index}
+                entry={entry}
+                exerciseIndex={exIndex}
                 onSetChange={handleSetChange}
                 onAddSet={handleAddSet}
                 onRemoveSet={handleRemoveSet}

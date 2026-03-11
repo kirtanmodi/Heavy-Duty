@@ -32,7 +32,6 @@ export interface Exercise {
   repRange: [number, number];
   restSeconds: number;
   weightIncrement: number;
-  supersetWith: string | null;
 }
 
 export interface SetEntry {
@@ -68,7 +67,6 @@ export interface ProgramDay {
   dayOfWeek: number;
   focus: string;
   exercises: string[];
-  supersets: [string, string][];
   description?: string;
   duration?: string;
   tips?: string;
@@ -102,7 +100,6 @@ export type GymEquipmentId =
   | "high-row-machine"
   | "row-machine"
   | "tricep-press-machine"
-  | "torso-rotation"
   | "abdominal-crunch-machine"
   | "leg-curl-machine"
   | "leg-extension-machine"
@@ -118,10 +115,19 @@ export type GymEquipmentId =
   | "flat-bench"
   | "incline-bench"
   | "decline-bench"
-  | "floor-mats"
-  | "leg-raise-stand";
+  | "leg-raise-stand"
+  | "stairs"
+  | "cycle"
+  | "elliptical"
+  | "treadmill";
 
-export type GymEquipmentProfile = Record<GymEquipmentId, boolean>;
+export type GymEquipmentProfile = Record<string, boolean>;
+
+export interface CustomGymEquipment {
+  id: string;
+  label: string;
+  category: string;
+}
 
 export interface OverloadSuggestion {
   message: string;

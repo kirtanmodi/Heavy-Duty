@@ -5,7 +5,7 @@ export const programs: Program[] = [
     id: 'heavy-duty-complete',
     name: 'Heavy Duty Complete',
     shortName: 'Program A',
-    description: 'The full Mentzer plan with pre-exhaust supersets, cardio days, and weekly structure. Recommended for maximum results.',
+    description: 'The full Mentzer plan with cardio days and weekly structure. Recommended for maximum results.',
     recommended: true,
     days: [
       {
@@ -22,10 +22,6 @@ export const programs: Program[] = [
           'tricep-pushdown',
           'weighted-dips',
         ],
-        supersets: [
-          ['dumbbell-flyes', 'incline-bench-press'],
-          ['tricep-pushdown', 'weighted-dips'],
-        ],
       },
       {
         id: 'hd-tuesday',
@@ -34,7 +30,6 @@ export const programs: Program[] = [
         dayOfWeek: 2,
         focus: 'Zone 2 Cardio',
         exercises: [],
-        supersets: [],
         description: 'Cycling or elliptical at a steady, conversational pace. Keep heart rate in Zone 2 (120-140 BPM).',
         duration: '30-40 min',
         tips: 'This is the #1 thing you can do for heart health and longevity. Easy pace — you should be able to hold a conversation.',
@@ -52,9 +47,6 @@ export const programs: Program[] = [
           'barbell-shrugs',
           'barbell-curl',
         ],
-        supersets: [
-          ['dumbbell-pullover', 'lat-pulldown'],
-        ],
       },
       {
         id: 'hd-thursday',
@@ -63,7 +55,6 @@ export const programs: Program[] = [
         dayOfWeek: 4,
         focus: 'Interval Cardio',
         exercises: [],
-        supersets: [],
         description: '30 seconds hard effort / 90 seconds easy recovery. Repeat 8-10 rounds.',
         duration: '20-25 min',
         tips: 'Improves VO2 max and stamina. Push hard on the work intervals — this is where you build endurance.',
@@ -83,9 +74,6 @@ export const programs: Program[] = [
           'hanging-leg-raise',
           'cable-crunch',
         ],
-        supersets: [
-          ['leg-extension', 'leg-press'],
-        ],
       },
       {
         id: 'hd-saturday',
@@ -94,7 +82,6 @@ export const programs: Program[] = [
         dayOfWeek: 6,
         focus: 'Active Recovery',
         exercises: [],
-        supersets: [],
         description: 'Incline treadmill walk (8-12% incline, 5-6 km/h) followed by foam rolling and stretching.',
         duration: '30-40 min',
         tips: 'This helps recovery and burns extra calories without taxing your muscles. Focus on stretching tight areas.',
@@ -106,7 +93,6 @@ export const programs: Program[] = [
         dayOfWeek: 0,
         focus: 'Full Rest',
         exercises: [],
-        supersets: [],
         description: 'Do nothing. Your muscles grow during rest, not in the gym.',
         tips: 'Sleep 7-8 hours. Eat high protein. Let your body rebuild.',
       },
