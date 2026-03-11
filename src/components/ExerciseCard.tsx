@@ -5,7 +5,7 @@ import { checkPR, hasPR, getPRLabel } from "../lib/records";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import { useExerciseStore } from "../store/exerciseStore";
 import { StepperInput } from "./StepperInput";
-import type { ExerciseEntry, SetEntry, OverloadSuggestion } from "../types";
+import type { Equipment, ExerciseEntry, SetEntry, OverloadSuggestion } from "../types";
 
 interface RestButton {
   label: string;
@@ -50,7 +50,7 @@ export function ExerciseCard({
   const [showMenu, setShowMenu] = useState(false);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
-  const { weightMode, setWeightMode } = useExerciseStore();
+  const { weightMode, setWeightMode, equipmentOverride, setEquipmentOverride } = useExerciseStore();
   const history = useWorkoutStore((s) => s.history);
 
   const exercise = getEffectiveExercise(entry.id);
@@ -191,6 +191,16 @@ export function ExerciseCard({
     setWeightMode(entry.id, bwMode ? "weighted" : "bodyweight");
   };
 
+  const equipmentOptions: Equipment[] = ["barbell", "dumbbells", "cable", "machine", "bodyweight+"];
+  const currentEquipment = equipmentOverride[entry.id] ?? exercise.equipment;
+  const equipmentLabel = (eq: Equipment) => eq === "bodyweight+" ? "BW+" : eq.charAt(0).toUpperCase() + eq.slice(1);
+
+  const cycleEquipment = () => {
+    const currentIdx = equipmentOptions.indexOf(currentEquipment);
+    const nextIdx = (currentIdx + 1) % equipmentOptions.length;
+    setEquipmentOverride(entry.id, equipmentOptions[nextIdx]);
+  };
+
   const handleRemoveConfirmed = () => {
     onRemove(exerciseIndex);
     setRemoveConfirm(false);
@@ -265,9 +275,16 @@ export function ExerciseCard({
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                {exercise.equipment === "bodyweight+" ? "BW+" : exercise.equipment}
-              </span>
+              <button
+                onClick={cycleEquipment}
+                className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted transition-colors active:bg-white/[0.12]"
+                title="Tap to change equipment"
+              >
+                {equipmentLabel(currentEquipment)}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-2.5 w-2.5 opacity-40">
+                  <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </button>
               <span className="text-[11px] text-text-dim">
                 {exercise.repRange[0]}–{exercise.repRange[1]} reps
               </span>
@@ -393,12 +410,19 @@ export function ExerciseCard({
             const completed = isSetComplete(set, setIndex);
             const prevSet = previousSets?.[setIndex];
             const prLabel = getSetPR(set, setIndex);
+            const isWarmup = setIndex === 0 && entry.sets.length >= 2;
 
             return bwMode ? (
               <div key={setIndex} className="flex flex-col gap-1">
+                {isWarmup && (
+                  <span className="ml-1 text-[9px] font-bold uppercase tracking-widest text-accent-blue/60">Warm-up · 50%</span>
+                )}
+                {setIndex === 1 && entry.sets.length >= 2 && (
+                  <span className="ml-1 text-[9px] font-bold uppercase tracking-widest text-accent-red/60">Working · Failure</span>
+                )}
                 <div
                   className="grid grid-cols-[1.75rem_minmax(0,1fr)_2.5rem_2rem] items-start gap-1 rounded-xl transition-all"
-                  style={completed ? { background: `${color}08` } : {}}
+                  style={completed ? { background: `${color}08` } : isWarmup ? { background: "rgba(68,136,255,0.04)" } : {}}
                 >
                   <div className="flex h-11 items-center justify-center">
                     <button
@@ -461,9 +485,15 @@ export function ExerciseCard({
               </div>
             ) : (
               <div key={setIndex} className="flex flex-col gap-1">
+                {isWarmup && (
+                  <span className="ml-1 text-[9px] font-bold uppercase tracking-widest text-accent-blue/60">Warm-up · 50%</span>
+                )}
+                {setIndex === 1 && entry.sets.length >= 2 && (
+                  <span className="ml-1 text-[9px] font-bold uppercase tracking-widest text-accent-red/60">Working · Failure</span>
+                )}
                 <div
                   className="grid grid-cols-[1.75rem_minmax(4rem,1fr)_minmax(3.5rem,1fr)_2.5rem_2rem] items-start gap-1 rounded-xl transition-all"
-                  style={completed ? { background: `${color}08` } : {}}
+                  style={completed ? { background: `${color}08` } : isWarmup ? { background: "rgba(68,136,255,0.04)" } : {}}
                 >
                   <div className="flex h-11 items-center justify-center">
                     <button

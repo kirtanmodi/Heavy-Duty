@@ -1,18 +1,20 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Exercise } from '../types'
+import type { Equipment, Exercise } from '../types'
 
 interface ExerciseState {
   customExercises: Exercise[]
   nameOverrides: Record<string, string>
   removedIds: string[]
   weightMode: Record<string, 'bodyweight' | 'weighted'>
+  equipmentOverride: Record<string, Equipment>
 
   renameExercise: (id: string, name: string) => void
   addExercise: (exercise: Exercise) => void
   removeExercise: (id: string) => void
   undoRemove: (id: string) => void
   setWeightMode: (id: string, mode: 'bodyweight' | 'weighted') => void
+  setEquipmentOverride: (id: string, equipment: Equipment) => void
 }
 
 export const useExerciseStore = create<ExerciseState>()(
@@ -22,6 +24,7 @@ export const useExerciseStore = create<ExerciseState>()(
       nameOverrides: {},
       removedIds: [],
       weightMode: {},
+      equipmentOverride: {},
 
       renameExercise: (id, name) =>
         set((state) => ({
@@ -50,6 +53,11 @@ export const useExerciseStore = create<ExerciseState>()(
       setWeightMode: (id, mode) =>
         set((state) => ({
           weightMode: { ...state.weightMode, [id]: mode },
+        })),
+
+      setEquipmentOverride: (id, equipment) =>
+        set((state) => ({
+          equipmentOverride: { ...state.equipmentOverride, [id]: equipment },
         })),
     }),
     { name: 'hd_exercises' }

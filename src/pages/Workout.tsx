@@ -7,7 +7,7 @@ import { getEffectiveExercise } from "../data/exercises";
 import { cardioActivities, programs } from "../data/programs";
 
 import { useTimer } from "../hooks/useTimer";
-import { getOverloadSuggestion } from "../lib/overload";
+import { buildDefaultSets, getOverloadSuggestion } from "../lib/overload";
 import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, SetEntry } from "../types";
@@ -91,12 +91,7 @@ export function Workout() {
 
       const lastSets = getLastSets(exerciseId, history);
       const suggestion = getOverloadSuggestion(exercise, lastSets);
-      const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
-        weight: suggestion.suggestedWeight ?? 0,
-        reps: suggestion.suggestedReps,
-        toFailure: false,
-        tempo: "4-1-4",
-      }));
+      const sets = buildDefaultSets(suggestion.suggestedWeight, suggestion.suggestedReps);
 
       return { id: exerciseId, name: exercise.name, sets };
     });
@@ -238,12 +233,7 @@ export function Workout() {
     if (swapTarget === null) return;
     const lastSets = getLastSets(exercise.id, history);
     const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
-      weight: suggestion.suggestedWeight ?? 0,
-      reps: suggestion.suggestedReps,
-      toFailure: false,
-      tempo: "4-1-4",
-    }));
+    const sets = buildDefaultSets(suggestion.suggestedWeight, suggestion.suggestedReps);
     updateExercise(swapTarget, { id: exercise.id, name: exercise.name, sets });
     setSwapTarget(null);
   };
@@ -251,12 +241,7 @@ export function Workout() {
   const handleAddExercise = (exercise: Exercise) => {
     const lastSets = getLastSets(exercise.id, history);
     const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
-      weight: suggestion.suggestedWeight ?? 0,
-      reps: suggestion.suggestedReps,
-      toFailure: false,
-      tempo: "4-1-4",
-    }));
+    const sets = buildDefaultSets(suggestion.suggestedWeight, suggestion.suggestedReps);
     addExerciseToWorkout({ id: exercise.id, name: exercise.name, sets });
     setShowAddExercise(false);
   };
@@ -265,12 +250,7 @@ export function Workout() {
     if (insertAtIndex === null) return;
     const lastSets = getLastSets(exercise.id, history);
     const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
-      weight: suggestion.suggestedWeight ?? 0,
-      reps: suggestion.suggestedReps,
-      toFailure: false,
-      tempo: "4-1-4",
-    }));
+    const sets = buildDefaultSets(suggestion.suggestedWeight, suggestion.suggestedReps);
     insertExerciseAtIndex({ id: exercise.id, name: exercise.name, sets }, insertAtIndex);
     setInsertAtIndex(null);
   };
@@ -618,6 +598,21 @@ export function Workout() {
                 Discard & Start New
               </button>
             </div>
+          </section>
+        )}
+
+        {/* Volume warning — Mentzer recommended 4-6 exercises per session */}
+        {activeWorkout.exercises.filter(e => !e.skipped).length > 6 && (
+          <section
+            className="flex items-start gap-3 rounded-2xl px-4 py-3 animate-slide-up"
+            style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.12)" }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FFAA00" strokeWidth="2" className="mt-0.5 h-4 w-4 shrink-0">
+              <path d="M12 9v4m0 4h.01M10.29 3.86l-8.6 14.86A2 2 0 003.4 21h17.2a2 2 0 001.71-2.98l-8.6-14.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <p className="text-xs leading-relaxed text-text-secondary">
+              <span className="font-bold text-accent-yellow">High volume.</span> Mentzer recommended 4–6 exercises per session for optimal recovery. Training to failure demands less volume, not more.
+            </p>
           </section>
         )}
 

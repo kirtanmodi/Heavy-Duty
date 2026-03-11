@@ -1,5 +1,23 @@
 import type { Exercise, SetEntry, OverloadSuggestion } from '../types'
 
+/**
+ * Build the default 2-set Heavy Duty pair:
+ *   Set 1 — warm-up at ~50 % of the working weight (NOT to failure)
+ *   Set 2 — working set at full weight (TO failure)
+ *
+ * Per Mike Mentzer's protocol: warm up progressively to avoid injury,
+ * then one all-out working set to absolute muscular failure.
+ */
+export function buildDefaultSets(suggestedWeight: number | null, suggestedReps: number): SetEntry[] {
+  const workingWeight = suggestedWeight ?? 0
+  const warmupWeight = Math.round((workingWeight * 0.5) * 2) / 2 // round to nearest 0.5
+
+  return [
+    { weight: warmupWeight, reps: suggestedReps, toFailure: false, tempo: '4-1-4' },
+    { weight: workingWeight, reps: suggestedReps, toFailure: true,  tempo: '4-1-4' },
+  ]
+}
+
 export function getOverloadSuggestion(
   exercise: Exercise,
   lastSets: SetEntry[] | null,
