@@ -10,6 +10,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Mentzer warm-up/working set protocol** — each exercise gets 2 sets: a warm-up at 50% weight and a working set to failure, both at 4-1-4 tempo. Set labels ("W-up" / "Work") shown inline
 - **Progressive overload** — automatic suggestions to increase weight, add reps, or deload based on working-set (to-failure) performance
 - **Equipment switching** — tap the equipment badge on any exercise to swap between barbell, dumbbells, cable, machine, or bodyweight. Overrides persist per exercise
+- **Gym equipment curation** — configure your gym's available machines and free weights, then auto-build an optimal workout for each lift focus (Push/Pull/Legs & Abs). Locked after first logged set to protect data
 - **Superset support** — visual grouping of pre-exhaust superset pairs with option to split per-session
 - **Open workout** — freeform sessions where you pick any exercises, no predefined program structure
 - **Exercise management** — swap, add, remove, or insert exercises at any position during an active workout or when editing past sessions. Create custom exercises directly from the exercise picker
@@ -54,6 +55,6 @@ All data is client-side. Three Zustand stores persist to localStorage:
 |-------|-----|---------|
 | `workoutStore` | `hd_workouts` | Workout history + active workout session |
 | `exerciseStore` | `hd_exercises` | Custom exercises, name overrides, bodyweight/weighted preference, equipment overrides |
-| `settingsStore` | `hd_settings` | Program selection, rest timer duration, auto-start timer toggle |
+| `settingsStore` | `hd_settings` | Program selection, rest timer duration, auto-start timer toggle, gym equipment profile |
 
-Exercise and program definitions are static in `src/data/`. Currently ships with one program (`heavy-duty-complete`) and 30+ exercises.
+Exercise and program definitions are static in `src/data/`. Currently ships with one program (`heavy-duty-complete`) and ~40 exercises. Gym equipment curation logic lives in `src/lib/curatedWorkout.ts`.

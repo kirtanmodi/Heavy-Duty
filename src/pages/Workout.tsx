@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
@@ -7,10 +7,11 @@ import { getEffectiveExercise } from "../data/exercises";
 import { cardioActivities, programs } from "../data/programs";
 
 import { useTimer } from "../hooks/useTimer";
+import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { createMentzerSets, getOverloadSuggestion } from "../lib/overload";
 import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
-import type { Exercise, ExerciseEntry, SetEntry } from "../types";
+import type { Exercise, ExerciseEntry, LiftFocus, SetEntry } from "../types";
 
 type ExerciseGroup =
   | { type: "single"; index: number }
@@ -28,6 +29,21 @@ function formatDuration(seconds: number): string {
   return s > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `${m}:00`;
 }
 
+function isLiftFocus(focus: string): focus is LiftFocus {
+  return focus === "Push" || focus === "Pull" || focus === "Legs & Abs";
+}
+
+function areSetsEqual(a: SetEntry[], b: SetEntry[]): boolean {
+  return a.length === b.length && a.every((set, index) => {
+    const other = b[index];
+    return !!other
+      && set.weight === other.weight
+      && set.reps === other.reps
+      && set.toFailure === other.toFailure
+      && set.tempo === other.tempo;
+  });
+}
+
 export function Workout() {
   const { dayId } = useParams<{ dayId: string }>();
   const navigate = useNavigate();
@@ -36,6 +52,7 @@ export function Workout() {
     startWorkout,
     updateExercise,
     reorderExercises,
+    replaceActiveWorkoutExercises,
     splitSuperset,
     addExerciseToWorkout,
     insertExerciseAtIndex,
@@ -48,6 +65,9 @@ export function Workout() {
   } = useWorkoutStore();
   const timer = useTimer();
   const autoStartTimer = useSettingsStore((s) => s.autoStartTimer);
+  const gymEquipment = useSettingsStore((s) => s.gymEquipment);
+  const setGymEquipmentAvailability = useSettingsStore((s) => s.setGymEquipmentAvailability);
+  const resetGymEquipment = useSettingsStore((s) => s.resetGymEquipment);
 
   const isOpen = dayId === "open";
 
@@ -58,11 +78,30 @@ export function Workout() {
   const [showAddExercise, setShowAddExercise] = useState(
     () => isOpen && (!activeWorkout || activeWorkout.exercises.length === 0),
   );
+  const [showGymCurator, setShowGymCurator] = useState(false);
+  const [curationFeedback, setCurationFeedback] = useState<string | null>(null);
+  const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
   const leavingRef = useRef(false);
   const restPresets = [60, 90, 120, 180, 300];
   const program = programs[0];
   const day = program.days.find((d) => d.id === dayId);
   const themeColor = isOpen ? "#FFAA00" : (focusColors[day?.focus ?? ""] ?? "#FFAA00");
+  const liftFocus = !isOpen && day?.type === "lift" && isLiftFocus(day.focus) ? day.focus : null;
+
+  const seedExerciseEntry = useCallback((exerciseId: string): ExerciseEntry => {
+    const exercise = getEffectiveExercise(exerciseId);
+    if (!exercise) return { id: exerciseId, name: exerciseId, sets: [] };
+
+    const lastSets = getLastSets(exerciseId, history);
+    const suggestion = getOverloadSuggestion(exercise, lastSets);
+    const sets = createMentzerSets(suggestion, exercise);
+
+    return { id: exercise.id, name: exercise.name, sets };
+  }, [history]);
+
+  useEffect(() => {
+    setHasSessionSetInteraction(false);
+  }, [activeWorkout?.startedAt]);
 
   // Derive conflict: active workout exists for a different day
   const hasDayConflict = !!(activeWorkout && activeWorkout.dayId !== dayId && activeWorkout.dayId !== (isOpen ? "open" : dayId) && !discardedConflict);
@@ -85,19 +124,10 @@ export function Workout() {
       ? lastWorkoutForDay.exercises.map((e) => e.id)
       : day.exercises;
 
-    const exercises: ExerciseEntry[] = exerciseIds.map((exerciseId) => {
-      const exercise = getEffectiveExercise(exerciseId);
-      if (!exercise) return { id: exerciseId, name: exerciseId, sets: [] };
-
-      const lastSets = getLastSets(exerciseId, history);
-      const suggestion = getOverloadSuggestion(exercise, lastSets);
-      const sets = createMentzerSets(suggestion, exercise);
-
-      return { id: exerciseId, name: exercise.name, sets };
-    });
+    const exercises = exerciseIds.map(seedExerciseEntry);
 
     startWorkout(day.id, day.name, program.name, exercises);
-  }, [isOpen, activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name]);
+  }, [isOpen, activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name, seedExerciseEntry]);
 
   // Derive active supersets (exclude split ones)
   const allSupersets = isOpen ? [] : (day?.supersets ?? []);
@@ -151,8 +181,29 @@ export function Workout() {
     0,
   ) ?? 0;
   const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
+  const hasPersistedSetChanges = useMemo(() => {
+    if (!activeWorkout) return false;
+
+    return activeWorkout.exercises.some((entry) => {
+      const seededEntry = seedExerciseEntry(entry.id);
+      return !areSetsEqual(entry.sets, seededEntry.sets);
+    });
+  }, [activeWorkout, seedExerciseEntry]);
+  const hasLoggedSets = hasSessionSetInteraction || hasPersistedSetChanges;
+  const gymEquipmentOptions = useMemo(
+    () => (liftFocus ? getGymEquipmentOptionsForFocus(liftFocus) : []),
+    [liftFocus],
+  );
+  const curatedExerciseIds = useMemo(
+    () => (liftFocus ? curateWorkoutForFocus(liftFocus, gymEquipment) : []),
+    [gymEquipment, liftFocus],
+  );
+  const selectedEquipmentCount = gymEquipmentOptions.filter((option) => gymEquipment[option.id]).length;
+  const machineOptions = gymEquipmentOptions.filter((option) => option.category === "Machines");
+  const freeWeightOptions = gymEquipmentOptions.filter((option) => option.category === "Free Weights");
 
   const handleSetChange = (exerciseIndex: number, setIndex: number, field: keyof SetEntry, value: number | boolean) => {
+    setHasSessionSetInteraction(true);
     const exercise = { ...activeWorkout!.exercises[exerciseIndex] };
     const sets = [...exercise.sets];
     sets[setIndex] = { ...sets[setIndex], [field]: value };
@@ -160,6 +211,7 @@ export function Workout() {
   };
 
   const handleAddSet = (exerciseIndex: number) => {
+    setHasSessionSetInteraction(true);
     const exercise = { ...activeWorkout!.exercises[exerciseIndex] };
     const lastSet = exercise.sets[exercise.sets.length - 1];
     updateExercise(exerciseIndex, {
@@ -169,6 +221,7 @@ export function Workout() {
   };
 
   const handleRemoveSet = (exerciseIndex: number, setIndex: number) => {
+    setHasSessionSetInteraction(true);
     const exercise = { ...activeWorkout!.exercises[exerciseIndex] };
     if (exercise.sets.length <= 1) return;
     updateExercise(exerciseIndex, { ...exercise, sets: exercise.sets.filter((_, i) => i !== setIndex) });
@@ -194,6 +247,7 @@ export function Workout() {
   };
 
   const handleSetComplete = (exerciseIndex: number) => {
+    setHasSessionSetInteraction(true);
     if (!autoStartTimer || !activeWorkout || timer.isRunning) return;
     const entry = activeWorkout.exercises[exerciseIndex];
     if (!entry) return;
@@ -231,28 +285,37 @@ export function Workout() {
 
   const handleSwap = (exercise: Exercise) => {
     if (swapTarget === null) return;
-    const lastSets = getLastSets(exercise.id, history);
-    const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets = createMentzerSets(suggestion, exercise);
-    updateExercise(swapTarget, { id: exercise.id, name: exercise.name, sets });
+    updateExercise(swapTarget, seedExerciseEntry(exercise.id));
     setSwapTarget(null);
   };
 
   const handleAddExercise = (exercise: Exercise) => {
-    const lastSets = getLastSets(exercise.id, history);
-    const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets = createMentzerSets(suggestion, exercise);
-    addExerciseToWorkout({ id: exercise.id, name: exercise.name, sets });
+    addExerciseToWorkout(seedExerciseEntry(exercise.id));
     setShowAddExercise(false);
   };
 
   const handleInsertExercise = (exercise: Exercise) => {
     if (insertAtIndex === null) return;
-    const lastSets = getLastSets(exercise.id, history);
-    const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets = createMentzerSets(suggestion, exercise);
-    insertExerciseAtIndex({ id: exercise.id, name: exercise.name, sets }, insertAtIndex);
+    insertExerciseAtIndex(seedExerciseEntry(exercise.id), insertAtIndex);
     setInsertAtIndex(null);
+  };
+
+  const handleCurateWorkout = () => {
+    if (!activeWorkout || !liftFocus) return;
+
+    if (hasLoggedSets) {
+      setCurationFeedback("Curating is locked after you log a set so you do not overwrite workout data.");
+      return;
+    }
+
+    if (curatedExerciseIds.length === 0) {
+      setCurationFeedback("No matching exercises found. Turn on more equipment and try again.");
+      return;
+    }
+
+    replaceActiveWorkoutExercises(curatedExerciseIds.map(seedExerciseEntry));
+    setCurationFeedback(`Built a ${liftFocus} workout with ${curatedExerciseIds.length} exercises.`);
+    setShowGymCurator(false);
   };
 
   const handleDiscardAndStart = () => {
@@ -598,6 +661,77 @@ export function Workout() {
                 Discard & Start New
               </button>
             </div>
+          </section>
+        )}
+
+        {liftFocus && (
+          <section
+            className="flex flex-col gap-4 rounded-2xl p-5"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-sm font-bold tracking-wide text-text-primary">Curate from My Gym</h2>
+                <p className="text-xs leading-relaxed text-text-muted">
+                  Optional. Rebuild today's {liftFocus.toLowerCase()} workout from your available equipment using the current overload and Mentzer seeding.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowGymCurator((value) => !value);
+                  setCurationFeedback(null);
+                }}
+                className="rounded-xl border border-white/[0.08] bg-transparent px-3 py-2 text-[11px] font-semibold tracking-wide text-text-secondary transition-colors active:bg-white/[0.04]"
+              >
+                {showGymCurator ? "Hide" : "Configure"}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-dim">
+              <span className="rounded-full border border-white/[0.08] px-2.5 py-1">{selectedEquipmentCount}/{gymEquipmentOptions.length} selected</span>
+              <span className="rounded-full border border-white/[0.08] px-2.5 py-1">{curatedExerciseIds.length} exercises matched</span>
+              {hasLoggedSets && <span className="rounded-full border border-accent-yellow/25 px-2.5 py-1 text-accent-yellow">Locked after first logged set</span>}
+            </div>
+
+            {showGymCurator && (
+              <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-black/10 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-text-muted">Toggle what your gym has for this {liftFocus.toLowerCase()} day.</p>
+                  <button onClick={() => { resetGymEquipment(); setCurationFeedback(null); }} className="text-[11px] font-semibold text-text-secondary transition-colors active:text-text-primary">Reset all</button>
+                </div>
+                {[{ label: "Machines", options: machineOptions }, { label: "Free Weights", options: freeWeightOptions }].map((group) => group.options.length > 0 ? (
+                  <div key={group.label} className="flex flex-col gap-2">
+                    <h3 className="text-[10px] font-bold tracking-widest text-text-dim uppercase">{group.label}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {group.options.map((option) => {
+                        const isEnabled = gymEquipment[option.id];
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            aria-pressed={isEnabled}
+                            onClick={() => { setGymEquipmentAvailability(option.id, !isEnabled); setCurationFeedback(null); }}
+                            className="rounded-xl border px-3 py-2 text-xs font-medium transition-colors"
+                            style={{ borderColor: isEnabled ? `${themeColor}55` : "rgba(255,255,255,0.08)", background: isEnabled ? `${themeColor}12` : "rgba(255,255,255,0.03)", color: isEnabled ? themeColor : "var(--color-text-secondary)" }}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null)}
+                {curationFeedback && <p className="text-xs leading-relaxed text-text-secondary">{curationFeedback}</p>}
+                <button
+                  onClick={handleCurateWorkout}
+                  disabled={hasLoggedSets || curatedExerciseIds.length === 0}
+                  className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
+                  style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, boxShadow: `0 4px 16px ${themeColor}20` }}
+                >
+                  Build {liftFocus} Workout
+                </button>
+              </div>
+            )}
           </section>
         )}
 
