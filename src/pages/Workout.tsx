@@ -274,7 +274,10 @@ export function Workout() {
     }
 
     const result = shuffle
-      ? curateWorkoutForFocus(liftFocus, gymEquipment, { shuffle: true })
+      ? curateWorkoutForFocus(liftFocus, gymEquipment, {
+          shuffle: true,
+          avoid: activeWorkout.exercises.map((e) => e.id),
+        })
       : curatedResult;
 
     if (!result || result.exerciseIds.length === 0) {

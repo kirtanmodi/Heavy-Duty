@@ -72,7 +72,7 @@ src/
 - **Progressive overload** — `lib/overload.ts` is a pure function: given an exercise definition and last session's sets, returns a suggestion (increase/maintain/decrease weight). Progression decisions focus on working sets (to-failure) only, ignoring warm-up sets. Bodyweight exercises (`equipment: 'bodyweight+'`) get rep-focused messages instead of weight-focused.
 - **Mentzer warm-up/working set protocol** — `createMentzerSets()` in `lib/overload.ts` generates 2 sets per exercise: Set 1 = warm-up at 50% working weight (not to failure), Set 2 = working set to failure. Both use `4-1-4` tempo. ExerciseCard shows "W-up" / "Work" labels on the set number column when exactly 2 sets exist.
 - **Equipment switching** — each exercise card has a tappable equipment badge that opens an inline picker (barbell/dumbbells/cable/machine/BW+). Overrides persist in `exerciseStore.equipmentOverride` (keyed by exercise ID). `getEffectiveExercise()` in `data/exercises.ts` applies equipment overrides after name overrides.
-- **Gym equipment curation** — `lib/curatedWorkout.ts` defines labeled `CuratedSlot[]` templates per lift focus (Push: 6 slots, Pull: 6 slots, Legs & Abs: 9 slots). Each slot has ranked candidates with `isAvailable(profile)` checks. `curateWorkoutForFocus(focus, profile, options?)` returns a `CurateResult { exerciseIds, skippedSlots }`. Default mode picks the first available candidate (machine > barbell > dumbbell priority); `{ shuffle: true }` randomly picks among available candidates for variety. Skipped slots (no available equipment) are reported in `skippedSlots` with human-readable labels, shown as a yellow warning in the UI. Workout page shows a "Curate from My Gym" section on lift days with "Build Workout" (deterministic) and "Try Another Split" (randomized) buttons. Curation is locked once any set is logged to prevent overwriting data. Profile persists in `settingsStore.gymEquipment`. Equipment management has a dedicated `/my-gym` page.
+- **Gym equipment curation** — `lib/curatedWorkout.ts` defines labeled `CuratedSlot[]` templates per lift focus (Push: 6 slots, Pull: 6 slots, Legs & Abs: 5 slots). Each slot has ranked candidates with `isAvailable(profile)` checks. `curateWorkoutForFocus(focus, profile, options?)` returns a `CurateResult { exerciseIds, skippedSlots }`. Default mode picks the first available candidate (machine > barbell > dumbbell priority); `{ shuffle: true, avoid }` randomly picks among available candidates, preferring exercises not in the `avoid` list (current workout IDs) so repeated shuffles produce visible changes. Skipped slots (no available equipment) are reported in `skippedSlots` with human-readable labels, shown as a yellow warning in the UI. Workout page shows a "Curate from My Gym" section on lift days with "Build Workout" (deterministic) and "Try Another Split" (randomized) buttons. Curation is locked once any set is logged to prevent overwriting data. Profile persists in `settingsStore.gymEquipment`. Equipment management has a dedicated `/my-gym` page.
 - **Bodyweight exercise mode** — exercises with `equipment: 'bodyweight+'` default to reps-only (no Kg column). Users toggle "+ Add Weight" / "BW Only" per exercise. Preference persists in `exerciseStore.weightMode`.
 - **Shared exercise card** — `ExerciseCard` component (`src/components/ExerciseCard.tsx`) renders the full exercise UI (name, equipment, rep range, bodyweight toggle, set inputs, swap/remove icons, inline remove confirmation). Used identically by both Workout and History edit pages. Manages bodyweight mode and remove-confirm state internally. Accepts optional `showOverloadBanner`, `overloadSuggestion`, `restButtons`, `onAutoReplace`, `onSkip`, `onUnskip`, and `onSetComplete` props (Workout-only features). When `entry.skipped === true`, renders a collapsed card with exercise name, "Skipped" badge, and 3-dot menu (Unskip/Swap/Remove). Set inputs use `StepperInput` component with ±buttons (weight step from `exercise.weightIncrement`, rep step = 1) and tappable "prev:" hints that auto-fill from last session.
 - **Exercise picker modal** — shared `ExercisePickerModal` component (`src/components/ExercisePickerModal.tsx`) used by both Workout and History pages. Supports `mode: 'swap'` (replace exercise) and `mode: 'add'` (append exercise). Filters out exercises already in the workout. Groups candidates by muscle group. In swap mode, tapping an exercise shows an action sheet with "Swap" and "Add to Workout" options via the `onSelectWithAction` prop. Includes a "Create new exercise" button (bottom of list + empty state) that triggers a creation flow via `showCreate` state.
@@ -98,18 +98,14 @@ src/
 
 Each lift focus has a slot template. Slots are filled top-to-bottom; skipped slots (no matching equipment) are reported in the UI.
 
-| Push (6 slots) | Pull (6 slots) | Legs & Abs (9 slots) |
+| Push (6 slots) | Pull (6 slots) | Legs & Abs (5 slots) |
 |---|---|---|
 | Chest Fly | Lat Isolation | Quad Isolation |
 | Chest Press | Lat Compound | Quad Compound |
-| Shoulder Press | Row | RDL |
-| Lateral Raise | Rear Delt | Leg Curl |
-| Tricep Isolation | Shrugs | Calf Raise |
-| Tricep Compound | Bicep Curl | Back Extension |
-| | | Hip Adduction |
-| | | Hip Abduction |
-| | | Ab Crunch |
-| | | Hanging Leg Raise |
+| Shoulder Press | Row | Leg Curl |
+| Lateral Raise | Rear Delt | Calf Raise |
+| Tricep Isolation | Shrugs | Ab Crunch |
+| Tricep Compound | Bicep Curl | |
 
 ### Design System
 

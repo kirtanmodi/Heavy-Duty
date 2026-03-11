@@ -177,13 +177,6 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      label: 'RDL',
-      candidates: [
-        { exerciseId: 'romanian-deadlift', isAvailable: (profile) => has(profile, 'barbells') },
-        { exerciseId: 'dumbbell-rdl', isAvailable: (profile) => has(profile, 'dumbbells') },
-      ],
-    },
-    {
       label: 'Leg Curl',
       candidates: [
         { exerciseId: 'leg-curl', isAvailable: (profile) => has(profile, 'leg-curl-machine') },
@@ -198,34 +191,10 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      label: 'Back Extension',
-      candidates: [
-        { exerciseId: 'back-extension-machine', isAvailable: (profile) => has(profile, 'back-extension') },
-      ],
-    },
-    {
-      label: 'Hip Adduction',
-      candidates: [
-        { exerciseId: 'hip-adduction', isAvailable: (profile) => has(profile, 'hip-adductor') },
-      ],
-    },
-    {
-      label: 'Hip Abduction',
-      candidates: [
-        { exerciseId: 'hip-abduction', isAvailable: (profile) => has(profile, 'hip-abductor') },
-      ],
-    },
-    {
       label: 'Ab Crunch',
       candidates: [
         { exerciseId: 'abdominal-crunch-machine', isAvailable: (profile) => has(profile, 'abdominal-crunch-machine') },
         { exerciseId: 'cable-crunch', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
-      ],
-    },
-    {
-      label: 'Hanging Leg Raise',
-      candidates: [
-        { exerciseId: 'hanging-leg-raise', isAvailable: (profile) => hasAny(profile, ['leg-raise-stand', 'pull-up-bar']) },
       ],
     },
   ],
@@ -237,6 +206,7 @@ export function getGymEquipmentOptionsForFocus(focus: LiftFocus): GymEquipmentOp
 
 interface CurateOptions {
   shuffle?: boolean
+  avoid?: string[]
 }
 
 function pickCandidate(
@@ -244,20 +214,26 @@ function pickCandidate(
   profile: GymEquipmentProfile,
   selected: string[],
   shuffle: boolean,
+  avoid: string[],
 ): string | null {
   const available = slot.candidates.filter((c) => c.isAvailable(profile) && !selected.includes(c.exerciseId))
   if (available.length === 0) return null
-  const pick = shuffle ? available[Math.floor(Math.random() * available.length)] : available[0]
-  return pick.exerciseId
+  if (!shuffle) return available[0].exerciseId
+
+  // Prefer candidates not in the avoid list so shuffle produces visible changes
+  const preferred = available.filter((c) => !avoid.includes(c.exerciseId))
+  const pool = preferred.length > 0 ? preferred : available
+  return pool[Math.floor(Math.random() * pool.length)].exerciseId
 }
 
 export function curateWorkoutForFocus(focus: LiftFocus, profile: GymEquipmentProfile, options: CurateOptions = {}): CurateResult {
   const exerciseIds: string[] = []
   const skippedSlots: string[] = []
   const shuffle = options.shuffle ?? false
+  const avoid = options.avoid ?? []
 
   for (const slot of workoutTemplates[focus]) {
-    const picked = pickCandidate(slot, profile, exerciseIds, shuffle)
+    const picked = pickCandidate(slot, profile, exerciseIds, shuffle, avoid)
     if (picked) {
       exerciseIds.push(picked)
     } else {
