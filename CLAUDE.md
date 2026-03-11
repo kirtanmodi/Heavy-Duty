@@ -33,14 +33,14 @@ src/
 ├── types/index.ts       # All shared TypeScript types
 ├── store/
 │   ├── workoutStore.ts  # Zustand: workout history + active workout (key: hd_workouts)
-│   ├── exerciseStore.ts # Zustand: custom exercises, name overrides, weight mode (key: hd_exercises)
+│   ├── exerciseStore.ts # Zustand: custom exercises, name overrides, weight mode, equipment overrides (key: hd_exercises)
 │   └── settingsStore.ts # Zustand: program selection, rest timer, auto-start timer (key: hd_settings)
 ├── data/
 │   ├── exercises.ts     # Static exercise catalog (30+ exercises) + lookup helpers
 │   ├── programs.ts      # Program definitions (days, supersets, cardio/rest days)
 │   └── quotes.ts        # Mike Mentzer quotes
 ├── lib/
-│   ├── overload.ts      # Progressive overload algorithm (pure function, bodyweight-aware)
+│   ├── overload.ts      # Progressive overload algorithm (pure function, bodyweight-aware) + Mentzer warm-up/working set creation
 │   ├── stats.ts         # Workout stats (volume, sets, progress comparison)
 │   ├── charts.ts        # Exercise session aggregation, 1RM estimation (Epley), PR extraction
 │   └── export.ts        # JSON/CSV export, import validation + merge logic
@@ -48,7 +48,7 @@ src/
 │   ├── useTimer.ts      # Countdown timer (rest between sets)
 │   └── useOverload.ts   # Connects overload logic to workout history
 ├── pages/
-│   ├── Home.tsx            # Monthly calendar, bento stats grid, resume banner, muscle volume, backup/export
+│   ├── Home.tsx            # Monthly calendar, bento stats grid, resume banner, backup/export
 │   ├── Workout.tsx         # Active workout logging (program days + open/freeform)
 │   ├── WorkoutSummary.tsx  # Post-finish summary (stats, exercise list, history link)
 │   ├── Progress.tsx        # Per-exercise charts (1RM trend, volume bars), PR dashboard
@@ -58,7 +58,6 @@ src/
     ├── ExerciseCard.tsx         # Shared exercise card (used by Workout + History edit)
     ├── ExercisePickerModal.tsx  # Shared full-screen exercise picker (swap/add modes)
     ├── StepperInput.tsx         # Reusable ±stepper with long-press support (weight/rep inputs)
-    ├── MuscleVolumeCard.tsx     # Weekly sets-per-muscle-group bar chart for Home page
     └── layout/
         ├── PageLayout.tsx   # Safe-area-aware page wrapper
         └── BottomNav.tsx    # 4-tab bar: Home, Progress, Exercises, History (hidden during active workout)
@@ -68,7 +67,9 @@ src/
 
 - **No backend/API** — all data is client-side. Workout history persists in localStorage via Zustand `persist` middleware.
 - **Static exercise/program data** — defined in `src/data/`, looked up via `Map` helpers (`exerciseMap`, `programMap`). Currently only one program: `heavy-duty-complete`.
-- **Progressive overload** — `lib/overload.ts` is a pure function: given an exercise definition and last session's sets, returns a suggestion (increase/maintain/decrease weight). Bodyweight exercises (`equipment: 'bodyweight+'`) get rep-focused messages instead of weight-focused.
+- **Progressive overload** — `lib/overload.ts` is a pure function: given an exercise definition and last session's sets, returns a suggestion (increase/maintain/decrease weight). Progression decisions focus on working sets (to-failure) only, ignoring warm-up sets. Bodyweight exercises (`equipment: 'bodyweight+'`) get rep-focused messages instead of weight-focused.
+- **Mentzer warm-up/working set protocol** — `createMentzerSets()` in `lib/overload.ts` generates 2 sets per exercise: Set 1 = warm-up at 50% working weight (not to failure), Set 2 = working set to failure. Both use `4-1-4` tempo. ExerciseCard shows "W-up" / "Work" labels on the set number column when exactly 2 sets exist.
+- **Equipment switching** — each exercise card has a tappable equipment badge that opens an inline picker (barbell/dumbbells/cable/machine/BW+). Overrides persist in `exerciseStore.equipmentOverride` (keyed by exercise ID). `getEffectiveExercise()` in `data/exercises.ts` applies equipment overrides after name overrides.
 - **Superset system** — programs define `supersets: [string, string][]` arrays. Workout page groups superset pairs visually (yellow left border). Users can split supersets per-session via `activeWorkout.splitSupersets`. Rest timer: no rest between superset exercises, 2min rest after the pair.
 - **Bodyweight exercise mode** — exercises with `equipment: 'bodyweight+'` default to reps-only (no Kg column). Users toggle "+ Add Weight" / "BW Only" per exercise. Preference persists in `exerciseStore.weightMode`.
 - **Shared exercise card** — `ExerciseCard` component (`src/components/ExerciseCard.tsx`) renders the full exercise UI (name, equipment, rep range, bodyweight toggle, set inputs, swap/remove icons, inline remove confirmation). Used identically by both Workout and History edit pages. Manages bodyweight mode and remove-confirm state internally. Accepts optional `showOverloadBanner`, `overloadSuggestion`, `restButtons`, `onSkip`, `onUnskip`, and `onSetComplete` props (Workout-only features). When `entry.skipped === true`, renders a collapsed card with exercise name, "Skipped" badge, and 3-dot menu (Unskip/Swap/Remove). Set inputs use `StepperInput` component with ±buttons (weight step from `exercise.weightIncrement`, rep step = 1) and tappable "prev:" hints that auto-fill from last session.
@@ -87,7 +88,6 @@ src/
 - **Auto-start rest timer** — when a set is completed (checkmark toggle), the rest timer auto-starts using the exercise's `restSeconds`. Respects superset logic: no auto-rest after the first exercise in a pair, auto-rest after the second. Controlled by `settingsStore.autoStartTimer` (default: true). Toggle visible in the rest timer modal.
 - **Stepper inputs** — `StepperInput` component (`src/components/StepperInput.tsx`) wraps number inputs with `[-]` / `[+]` buttons. Long-press for rapid increment via `useRef`-based interval. Weight step respects `exercise.weightIncrement`; rep step is always 1. Tappable "prev:" hints auto-fill from last session.
 - **Data export & backup** — collapsible "Backup & Export" section on Home page. `lib/export.ts` handles JSON export (full backup: workouts + exercises + settings), CSV export (flat: one row per set), and import with validation + deduplication by workout ID. Import uses `workoutStore.importHistory()`.
-- **Weekly muscle volume tracker** — `MuscleVolumeCard` component on Home page. Aggregates completed sets per consolidated muscle group (Chest, Back, Shoulders, etc.) for the current Mon–Sun week. Horizontal bars with target line at 15 sets. Auto-hides when no data.
 - **Progress charts & PR dashboard** — `/progress` route with `recharts` library. Two-level exercise picker: muscle group tabs (All/Chest/Back/Shoulders/Arms/Traps/Legs/Abs — only groups with tracked data shown) filter a grouped or flat exercise list below. Each exercise pill shows session count. Active exercise header displays name, muscles, equipment, and type. Color-coded PR badges use the exercise's muscle accent color (colored top stripe + icon). Pill-style 1RM/Volume chart toggle. `lib/charts.ts` provides pure aggregation functions. `groupColors` map in Progress.tsx assigns per-group colors; `muscleToGroup` map links muscle IDs to `exerciseGroups` labels.
 - **Mobile-first PWA** — max-width 460px, safe-area insets, portrait orientation, standalone display. Bottom nav hides on workout route.
 
@@ -102,7 +102,7 @@ Defined in `src/index.css` `@theme` block (Tailwind v4 syntax):
 
 | Path | Component | Notes |
 |------|-----------|-------|
-| `/` | Home | Monthly calendar, stats, muscle volume, backup/export, resume banner |
+| `/` | Home | Monthly calendar, stats, backup/export, resume banner |
 | `/workout/:dayId` | Workout | Active session (bottom nav hidden). `dayId=open` for freeform |
 | `/workout-summary` | WorkoutSummary | Post-workout summary screen |
 | `/progress` | Progress | Muscle-group-categorized exercise picker, per-exercise charts (1RM, volume), color-coded PR dashboard |

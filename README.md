@@ -7,7 +7,9 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 ## Features
 
 - **Weekly program** — 7-day Heavy Duty schedule with push/pull/legs, cardio, and rest days
-- **Progressive overload** — automatic suggestions to increase weight, add reps, or deload based on prior session performance
+- **Mentzer warm-up/working set protocol** — each exercise gets 2 sets: a warm-up at 50% weight and a working set to failure, both at 4-1-4 tempo. Set labels ("W-up" / "Work") shown inline
+- **Progressive overload** — automatic suggestions to increase weight, add reps, or deload based on working-set (to-failure) performance
+- **Equipment switching** — tap the equipment badge on any exercise to swap between barbell, dumbbells, cable, machine, or bodyweight. Overrides persist per exercise
 - **Superset support** — visual grouping of pre-exhaust superset pairs with option to split per-session
 - **Open workout** — freeform sessions where you pick any exercises, no predefined program structure
 - **Exercise management** — swap, add, remove, or insert exercises at any position during an active workout or when editing past sessions. Create custom exercises directly from the exercise picker
@@ -22,7 +24,6 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Rest timer** — configurable countdown timer with preset durations, auto-starts on set completion (respects superset logic, toggleable)
 - **Stepper inputs** — ±buttons on weight/rep fields with exercise-specific increments and long-press rapid adjust. Tappable "prev:" hints auto-fill from last session
 - **Progress charts** — muscle-group-categorized exercise picker (Chest, Back, Shoulders, Arms, Traps, Legs, Abs tabs), per-exercise estimated 1RM trend lines, volume bar charts, and color-coded PR dashboard (best weight, est. 1RM, best volume) powered by Recharts
-- **Weekly muscle volume** — sets-per-muscle-group bar chart on the home page with target markers
 - **Data export & backup** — full JSON backup (workouts + exercises + settings), CSV export (one row per set), and import with deduplication
 - **Offline-ready PWA** — installable, works without internet, data persists in localStorage
 
@@ -52,7 +53,7 @@ All data is client-side. Three Zustand stores persist to localStorage:
 | Store | Key | Purpose |
 |-------|-----|---------|
 | `workoutStore` | `hd_workouts` | Workout history + active workout session |
-| `exerciseStore` | `hd_exercises` | Custom exercises, name overrides, bodyweight/weighted preference |
+| `exerciseStore` | `hd_exercises` | Custom exercises, name overrides, bodyweight/weighted preference, equipment overrides |
 | `settingsStore` | `hd_settings` | Program selection, rest timer duration, auto-start timer toggle |
 
 Exercise and program definitions are static in `src/data/`. Currently ships with one program (`heavy-duty-complete`) and 30+ exercises.
