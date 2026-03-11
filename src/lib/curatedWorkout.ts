@@ -179,12 +179,22 @@ export function getGymEquipmentOptionsForFocus(focus: LiftFocus): GymEquipmentOp
   return gymEquipmentOptions.filter((option) => option.focuses.includes(focus))
 }
 
-export function curateWorkoutForFocus(focus: LiftFocus, profile: GymEquipmentProfile): string[] {
+interface CurateOptions {
+  shuffle?: boolean
+}
+
+export function curateWorkoutForFocus(focus: LiftFocus, profile: GymEquipmentProfile, options: CurateOptions = {}): string[] {
   const selected: string[] = []
 
   for (const slot of workoutTemplates[focus]) {
-    const match = slot.candidates.find((candidate) => candidate.isAvailable(profile) && !selected.includes(candidate.exerciseId))
-    if (match) selected.push(match.exerciseId)
+    const available = slot.candidates.filter((c) => c.isAvailable(profile) && !selected.includes(c.exerciseId))
+    if (available.length === 0) continue
+
+    const pick = options.shuffle
+      ? available[Math.floor(Math.random() * available.length)]
+      : available[0]
+
+    selected.push(pick.exerciseId)
   }
 
   return selected

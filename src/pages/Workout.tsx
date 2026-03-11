@@ -300,7 +300,7 @@ export function Workout() {
     setInsertAtIndex(null);
   };
 
-  const handleCurateWorkout = () => {
+  const handleCurateWorkout = (shuffle = false) => {
     if (!activeWorkout || !liftFocus) return;
 
     if (hasLoggedSets) {
@@ -308,13 +308,21 @@ export function Workout() {
       return;
     }
 
-    if (curatedExerciseIds.length === 0) {
+    const ids = shuffle
+      ? curateWorkoutForFocus(liftFocus, gymEquipment, { shuffle: true })
+      : curatedExerciseIds;
+
+    if (ids.length === 0) {
       setCurationFeedback("No matching exercises found. Turn on more equipment and try again.");
       return;
     }
 
-    replaceActiveWorkoutExercises(curatedExerciseIds.map(seedExerciseEntry));
-    setCurationFeedback(`Built a ${liftFocus} workout with ${curatedExerciseIds.length} exercises.`);
+    replaceActiveWorkoutExercises(ids.map(seedExerciseEntry));
+    setCurationFeedback(
+      shuffle
+        ? `Shuffled ${liftFocus} workout — ${ids.length} exercises.`
+        : `Built a ${liftFocus} workout with ${ids.length} exercises.`,
+    );
     setShowGymCurator(false);
   };
 
@@ -723,13 +731,21 @@ export function Workout() {
                 ) : null)}
                 {curationFeedback && <p className="text-xs leading-relaxed text-text-secondary">{curationFeedback}</p>}
                 <button
-                  onClick={handleCurateWorkout}
+                  onClick={() => handleCurateWorkout(false)}
                   disabled={hasLoggedSets || curatedExerciseIds.length === 0}
                   className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
                   style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, boxShadow: `0 4px 16px ${themeColor}20` }}
                 >
                   Build {liftFocus} Workout
                 </button>
+                {curatedExerciseIds.length > 0 && !hasLoggedSets && (
+                  <button
+                    onClick={() => handleCurateWorkout(true)}
+                    className="w-full rounded-2xl border border-white/[0.08] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+                  >
+                    Try Another Split
+                  </button>
+                )}
               </div>
             )}
           </section>
