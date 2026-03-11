@@ -5,7 +5,7 @@ import { checkPR, hasPR, getPRLabel } from "../lib/records";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import { useExerciseStore } from "../store/exerciseStore";
 import { StepperInput } from "./StepperInput";
-import type { ExerciseEntry, SetEntry, OverloadSuggestion } from "../types";
+import type { Equipment, ExerciseEntry, SetEntry, OverloadSuggestion } from "../types";
 
 interface RestButton {
   label: string;
@@ -48,9 +48,10 @@ export function ExerciseCard({
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const [weightOverride, setWeightOverride] = useState<boolean | undefined>(undefined);
   const [showMenu, setShowMenu] = useState(false);
+  const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
-  const { weightMode, setWeightMode } = useExerciseStore();
+  const { weightMode, setWeightMode, equipmentOverride, setEquipmentOverride } = useExerciseStore();
   const history = useWorkoutStore((s) => s.history);
 
   const exercise = getEffectiveExercise(entry.id);
@@ -265,9 +266,15 @@ export function ExerciseCard({
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+              <button
+                onClick={() => setShowEquipmentPicker(!showEquipmentPicker)}
+                className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted transition-colors active:bg-white/[0.1]"
+              >
                 {exercise.equipment === "bodyweight+" ? "BW+" : exercise.equipment}
-              </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-2.5 w-2.5 opacity-50">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
               <span className="text-[11px] text-text-dim">
                 {exercise.repRange[0]}–{exercise.repRange[1]} reps
               </span>
@@ -350,6 +357,36 @@ export function ExerciseCard({
           </div>
         </div>
 
+        {/* Equipment picker */}
+        {showEquipmentPicker && (
+          <div className="flex flex-wrap gap-1.5">
+            {(["barbell", "dumbbells", "cable", "machine", "bodyweight+"] as Equipment[]).map((eq) => {
+              const isActive = exercise.equipment === eq;
+              const hasOverride = !!equipmentOverride[entry.id];
+              const label = eq === "bodyweight+" ? "BW+" : eq.charAt(0).toUpperCase() + eq.slice(1);
+              return (
+                <button
+                  key={eq}
+                  onClick={() => {
+                    setEquipmentOverride(entry.id, eq);
+                    setShowEquipmentPicker(false);
+                    setWeightOverride(undefined);
+                  }}
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                    isActive
+                      ? hasOverride
+                        ? "bg-accent-blue/15 text-accent-blue border border-accent-blue/25"
+                        : "bg-white/[0.1] text-text-primary border border-white/[0.12]"
+                      : "bg-white/[0.04] text-text-dim border border-white/[0.06] active:bg-white/[0.08]"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Overload banner */}
         {showOverloadBanner && overloadSuggestion && (
           <div
@@ -373,14 +410,14 @@ export function ExerciseCard({
         {/* Set inputs */}
         <div className="flex flex-col gap-2">
           {bwMode ? (
-            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_2.5rem_2rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
+            <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem_2rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
               <span className="text-center">#</span>
               <span>Reps</span>
               <span className="text-center">Fail</span>
               <span />
             </div>
           ) : (
-            <div className="grid grid-cols-[1.75rem_minmax(4rem,1fr)_minmax(3.5rem,1fr)_2.5rem_2rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
+            <div className="grid grid-cols-[2.5rem_minmax(4rem,1fr)_minmax(3.5rem,1fr)_2.5rem_2rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
               <span className="text-center">#</span>
               <span>Kg</span>
               <span>Reps</span>
@@ -397,10 +434,10 @@ export function ExerciseCard({
             return bwMode ? (
               <div key={setIndex} className="flex flex-col gap-1">
                 <div
-                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_2.5rem_2rem] items-start gap-1 rounded-xl transition-all"
+                  className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem_2rem] items-start gap-1 rounded-xl transition-all"
                   style={completed ? { background: `${color}08` } : {}}
                 >
-                  <div className="flex h-11 items-center justify-center">
+                  <div className="flex h-11 flex-col items-center justify-center">
                     <button
                       onClick={() => toggleSetComplete(setIndex)}
                       className="flex h-7 w-7 items-center justify-center rounded-full transition-all"
@@ -415,6 +452,11 @@ export function ExerciseCard({
                         <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
                       )}
                     </button>
+                    {entry.sets.length === 2 && !completed && (
+                      <span className={`text-[8px] font-bold uppercase tracking-wide ${setIndex === 0 ? "text-text-dim" : "text-accent-red/70"}`}>
+                        {setIndex === 0 ? "W-up" : "Work"}
+                      </span>
+                    )}
                   </div>
                   <StepperInput
                     value={set.reps}
@@ -462,10 +504,10 @@ export function ExerciseCard({
             ) : (
               <div key={setIndex} className="flex flex-col gap-1">
                 <div
-                  className="grid grid-cols-[1.75rem_minmax(4rem,1fr)_minmax(3.5rem,1fr)_2.5rem_2rem] items-start gap-1 rounded-xl transition-all"
+                  className="grid grid-cols-[2.5rem_minmax(4rem,1fr)_minmax(3.5rem,1fr)_2.5rem_2rem] items-start gap-1 rounded-xl transition-all"
                   style={completed ? { background: `${color}08` } : {}}
                 >
-                  <div className="flex h-11 items-center justify-center">
+                  <div className="flex h-11 flex-col items-center justify-center">
                     <button
                       onClick={() => toggleSetComplete(setIndex)}
                       className="flex h-7 w-7 items-center justify-center rounded-full transition-all"
@@ -480,6 +522,11 @@ export function ExerciseCard({
                         <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
                       )}
                     </button>
+                    {entry.sets.length === 2 && !completed && (
+                      <span className={`text-[8px] font-bold uppercase tracking-wide ${setIndex === 0 ? "text-text-dim" : "text-accent-red/70"}`}>
+                        {setIndex === 0 ? "W-up" : "Work"}
+                      </span>
+                    )}
                   </div>
                   <StepperInput
                     value={set.weight}

@@ -7,7 +7,7 @@ import { getEffectiveExercise } from "../data/exercises";
 import { cardioActivities, programs } from "../data/programs";
 
 import { useTimer } from "../hooks/useTimer";
-import { getOverloadSuggestion } from "../lib/overload";
+import { createMentzerSets, getOverloadSuggestion } from "../lib/overload";
 import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, SetEntry } from "../types";
@@ -91,12 +91,7 @@ export function Workout() {
 
       const lastSets = getLastSets(exerciseId, history);
       const suggestion = getOverloadSuggestion(exercise, lastSets);
-      const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
-        weight: suggestion.suggestedWeight ?? 0,
-        reps: suggestion.suggestedReps,
-        toFailure: false,
-        tempo: "4-1-4",
-      }));
+      const sets = createMentzerSets(suggestion, exercise);
 
       return { id: exerciseId, name: exercise.name, sets };
     });
@@ -238,12 +233,7 @@ export function Workout() {
     if (swapTarget === null) return;
     const lastSets = getLastSets(exercise.id, history);
     const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
-      weight: suggestion.suggestedWeight ?? 0,
-      reps: suggestion.suggestedReps,
-      toFailure: false,
-      tempo: "4-1-4",
-    }));
+    const sets = createMentzerSets(suggestion, exercise);
     updateExercise(swapTarget, { id: exercise.id, name: exercise.name, sets });
     setSwapTarget(null);
   };
@@ -251,12 +241,7 @@ export function Workout() {
   const handleAddExercise = (exercise: Exercise) => {
     const lastSets = getLastSets(exercise.id, history);
     const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
-      weight: suggestion.suggestedWeight ?? 0,
-      reps: suggestion.suggestedReps,
-      toFailure: false,
-      tempo: "4-1-4",
-    }));
+    const sets = createMentzerSets(suggestion, exercise);
     addExerciseToWorkout({ id: exercise.id, name: exercise.name, sets });
     setShowAddExercise(false);
   };
@@ -265,12 +250,7 @@ export function Workout() {
     if (insertAtIndex === null) return;
     const lastSets = getLastSets(exercise.id, history);
     const suggestion = getOverloadSuggestion(exercise, lastSets);
-    const sets: SetEntry[] = Array.from({ length: 2 }, () => ({
-      weight: suggestion.suggestedWeight ?? 0,
-      reps: suggestion.suggestedReps,
-      toFailure: false,
-      tempo: "4-1-4",
-    }));
+    const sets = createMentzerSets(suggestion, exercise);
     insertExerciseAtIndex({ id: exercise.id, name: exercise.name, sets }, insertAtIndex);
     setInsertAtIndex(null);
   };
