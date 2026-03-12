@@ -16,8 +16,11 @@ interface SettingsState {
   setRestTimerSeconds: (seconds: number) => void;
   setAutoStartTimer: (enabled: boolean) => void;
   setGymEquipmentAvailability: (equipmentId: string, available: boolean) => void;
+  bulkSetGymEquipmentAvailability: (equipmentIds: string[], available: boolean) => void;
   addCustomGymEquipment: (item: CustomGymEquipment) => void;
+  updateCustomGymEquipment: (id: string, updates: Partial<Pick<CustomGymEquipment, 'label' | 'category'>>) => void;
   removeCustomGymEquipment: (id: string) => void;
+  bulkRemoveCustomGymEquipment: (ids: string[]) => void;
   resetGymEquipment: () => void;
   clearAll: () => void;
 }
@@ -39,10 +42,22 @@ export const useSettingsStore = create<SettingsState>()(
             [equipmentId]: available,
           },
         })),
+      bulkSetGymEquipmentAvailability: (equipmentIds, available) =>
+        set((state) => {
+          const updated = { ...state.gymEquipment };
+          for (const id of equipmentIds) updated[id] = available;
+          return { gymEquipment: updated };
+        }),
       addCustomGymEquipment: (item) =>
         set((state) => ({
           customGymEquipment: [...state.customGymEquipment, item],
           gymEquipment: { ...state.gymEquipment, [item.id]: true },
+        })),
+      updateCustomGymEquipment: (id, updates) =>
+        set((state) => ({
+          customGymEquipment: state.customGymEquipment.map((e) =>
+            e.id === id ? { ...e, ...updates } : e,
+          ),
         })),
       removeCustomGymEquipment: (id) =>
         set((state) => {
@@ -51,6 +66,16 @@ export const useSettingsStore = create<SettingsState>()(
           return {
             customGymEquipment: state.customGymEquipment.filter((e) => e.id !== id),
             gymEquipment: rest,
+          };
+        }),
+      bulkRemoveCustomGymEquipment: (ids) =>
+        set((state) => {
+          const idSet = new Set(ids);
+          const gymEquipment = { ...state.gymEquipment };
+          for (const id of ids) delete gymEquipment[id];
+          return {
+            customGymEquipment: state.customGymEquipment.filter((e) => !idSet.has(e.id)),
+            gymEquipment,
           };
         }),
       resetGymEquipment: () =>

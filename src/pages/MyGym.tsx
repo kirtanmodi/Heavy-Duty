@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PageLayout } from "../components/layout/PageLayout";
 import { gymEquipmentOptions } from "../lib/curatedWorkout";
 import { useSettingsStore } from "../store/settingsStore";
+import type { CustomGymEquipment } from "../types";
 
 type CategoryFilter = "All" | "Machines" | "Free Weights" | "Cardio" | "Custom";
 
@@ -12,29 +13,41 @@ const categoryColors: Record<string, string> = {
   Custom: "#FFAA00",
 };
 
-const categoryOptions: { label: string; value: CategoryFilter }[] = [
+const categoryOptions: { label: string; value: string }[] = [
   { label: "Machines", value: "Machines" },
   { label: "Free Weights", value: "Free Weights" },
   { label: "Cardio", value: "Cardio" },
 ];
 
-function AddEquipmentSheet({ onClose }: { onClose: () => void }) {
-  const { addCustomGymEquipment } = useSettingsStore();
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("Machines");
+/* ── Bottom sheet for Add / Edit ───────────────────────────── */
 
-  const handleAdd = () => {
+function EquipmentSheet({
+  mode,
+  initial,
+  onClose,
+}: {
+  mode: "add" | "edit";
+  initial?: CustomGymEquipment;
+  onClose: () => void;
+}) {
+  const { addCustomGymEquipment, updateCustomGymEquipment } = useSettingsStore();
+  const [name, setName] = useState(initial?.label ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "Machines");
+
+  const handleSubmit = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    addCustomGymEquipment({
-      id: `custom-${Date.now()}`,
-      label: trimmed,
-      category,
-    });
+    if (mode === "edit" && initial) {
+      updateCustomGymEquipment(initial.id, { label: trimmed, category });
+    } else {
+      addCustomGymEquipment({ id: `custom-${Date.now()}`, label: trimmed, category });
+    }
     onClose();
   };
 
   const color = categoryColors[category] || "#888";
+  const title = mode === "edit" ? "EDIT EQUIPMENT" : "ADD EQUIPMENT";
+  const buttonLabel = mode === "edit" ? "Save Changes" : "Add Equipment";
 
   return (
     <>
@@ -53,7 +66,7 @@ function AddEquipmentSheet({ onClose }: { onClose: () => void }) {
           <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/[0.12]" />
 
           <h3 className="mb-4 font-[var(--font-display)] text-xl tracking-wider text-text-primary">
-            ADD EQUIPMENT
+            {title}
           </h3>
 
           <div className="flex flex-col gap-4">
@@ -105,7 +118,7 @@ function AddEquipmentSheet({ onClose }: { onClose: () => void }) {
               >
                 <div className="h-2 w-2 rounded-full" style={{ background: color }} />
                 <span className="text-xs text-text-secondary">
-                  {name.trim()} will be added to{" "}
+                  {name.trim()} will be {mode === "edit" ? "updated in" : "added to"}{" "}
                   <span style={{ color }}>{category}</span>
                 </span>
               </div>
@@ -119,7 +132,7 @@ function AddEquipmentSheet({ onClose }: { onClose: () => void }) {
                 Cancel
               </button>
               <button
-                onClick={handleAdd}
+                onClick={handleSubmit}
                 disabled={!name.trim()}
                 className="rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97] disabled:opacity-30"
                 style={{
@@ -127,7 +140,7 @@ function AddEquipmentSheet({ onClose }: { onClose: () => void }) {
                   boxShadow: `0 4px 16px ${color}30`,
                 }}
               >
-                Add Equipment
+                {buttonLabel}
               </button>
             </div>
           </div>
@@ -137,6 +150,8 @@ function AddEquipmentSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
+/* ── Equipment row ──────────────────────────────────────────── */
+
 function EquipmentRow({
   label,
   available,
@@ -144,6 +159,10 @@ function EquipmentRow({
   onToggle,
   isCustom,
   onRemove,
+  onEdit,
+  bulkMode,
+  bulkSelected,
+  onBulkToggle,
 }: {
   label: string;
   available: boolean;
@@ -151,6 +170,10 @@ function EquipmentRow({
   onToggle: () => void;
   isCustom?: boolean;
   onRemove?: () => void;
+  onEdit?: () => void;
+  bulkMode?: boolean;
+  bulkSelected?: boolean;
+  onBulkToggle?: () => void;
 }) {
   const [confirmRemove, setConfirmRemove] = useState(false);
 
@@ -168,26 +191,52 @@ function EquipmentRow({
     }
   };
 
+  const handleClick = () => {
+    if (bulkMode) {
+      onBulkToggle?.();
+    } else {
+      onToggle();
+    }
+  };
+
   return (
     <div
       className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors active:bg-white/[0.04] cursor-pointer"
-      onClick={onToggle}
+      onClick={handleClick}
     >
-      {/* Toggle indicator */}
-      <div
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all"
-        style={
-          available
-            ? { borderColor: color, background: `${color}20` }
-            : { borderColor: "rgba(255,255,255,0.12)", background: "transparent" }
-        }
-      >
-        {available && (
-          <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" className="h-3 w-3">
-            <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </div>
+      {/* Bulk selection checkbox */}
+      {bulkMode ? (
+        <div
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all"
+          style={
+            bulkSelected
+              ? { borderColor: "#E53935", background: "#E5393520" }
+              : { borderColor: "rgba(255,255,255,0.12)", background: "transparent" }
+          }
+        >
+          {bulkSelected && (
+            <svg viewBox="0 0 24 24" fill="none" stroke="#E53935" strokeWidth="3" className="h-3 w-3">
+              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+      ) : (
+        /* Toggle indicator */
+        <div
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all"
+          style={
+            available
+              ? { borderColor: color, background: `${color}20` }
+              : { borderColor: "rgba(255,255,255,0.12)", background: "transparent" }
+          }
+        >
+          {available && (
+            <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" className="h-3 w-3">
+              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+      )}
 
       {/* Label */}
       <span
@@ -199,14 +248,30 @@ function EquipmentRow({
       </span>
 
       {/* Custom badge */}
-      {isCustom && (
+      {isCustom && !bulkMode && (
         <span className="rounded-full bg-accent-yellow/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-accent-yellow">
           Custom
         </span>
       )}
 
-      {/* Remove button (custom only) */}
-      {isCustom && onRemove && (
+      {/* Edit button (custom only, not in bulk mode) */}
+      {isCustom && onEdit && !bulkMode && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-text-dim hover:text-text-muted active:bg-white/[0.06] transition-all"
+          aria-label="Edit equipment"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3.5 w-3.5">
+            <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+          </svg>
+        </button>
+      )}
+
+      {/* Remove button (custom only, not in bulk mode) */}
+      {isCustom && onRemove && !bulkMode && (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -228,16 +293,83 @@ function EquipmentRow({
   );
 }
 
+/* ── Category section header with Select/Deselect All ──────── */
+
+function CategoryHeader({
+  label,
+  color,
+  availableCount,
+  totalCount,
+  onSelectAll,
+  onDeselectAll,
+}: {
+  label: string;
+  color: string;
+  availableCount: number;
+  totalCount: number;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
+}) {
+  const allSelected = availableCount === totalCount;
+
+  return (
+    <div className="flex items-center gap-2 px-0.5 mb-1">
+      <div className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-muted">
+        {label}
+      </h3>
+      <span className="text-[10px] text-text-dim">
+        {availableCount}/{totalCount}
+      </span>
+      <button
+        onClick={allSelected ? onDeselectAll : onSelectAll}
+        className="ml-auto text-[10px] font-semibold uppercase tracking-wider transition-colors active:opacity-70"
+        style={{ color }}
+      >
+        {allSelected ? "Deselect All" : "Select All"}
+      </button>
+    </div>
+  );
+}
+
+/* ── Main page ──────────────────────────────────────────────── */
+
 export function MyGym() {
-  const [showAdd, setShowAdd] = useState(false);
+  const [showSheet, setShowSheet] = useState<{ mode: "add" | "edit"; item?: CustomGymEquipment } | null>(null);
   const [activeFilter, setActiveFilter] = useState<CategoryFilter>("All");
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
   const {
     gymEquipment,
     customGymEquipment,
     setGymEquipmentAvailability,
+    bulkSetGymEquipmentAvailability,
     removeCustomGymEquipment,
+    bulkRemoveCustomGymEquipment,
     resetGymEquipment,
   } = useSettingsStore();
+
+  // Reset bulk state when exiting bulk mode
+  useEffect(() => {
+    if (!bulkMode) {
+      setBulkSelected(new Set());
+      setConfirmBulkDelete(false);
+    }
+  }, [bulkMode]);
+
+  // Auto-reset confirm after timeout
+  useEffect(() => {
+    if (!confirmBulkDelete) return;
+    const id = setTimeout(() => setConfirmBulkDelete(false), 3000);
+    return () => clearTimeout(id);
+  }, [confirmBulkDelete]);
+
+  // Exit bulk mode if no custom equipment
+  useEffect(() => {
+    if (customGymEquipment.length === 0) setBulkMode(false);
+  }, [customGymEquipment.length]);
 
   // Group static equipment by category
   const groupedStatic = gymEquipmentOptions.reduce(
@@ -260,6 +392,29 @@ export function MyGym() {
   const showCategory = (cat: string) =>
     activeFilter === "All" || activeFilter === cat;
 
+  const handleBulkToggle = (id: string) => {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (bulkSelected.size === 0) return;
+    if (confirmBulkDelete) {
+      bulkRemoveCustomGymEquipment(Array.from(bulkSelected));
+      setBulkMode(false);
+    } else {
+      setConfirmBulkDelete(true);
+    }
+  };
+
+  const handleBulkSelectAllCustom = () => {
+    setBulkSelected(new Set(customGymEquipment.map((c) => c.id)));
+  };
+
   return (
     <PageLayout className="flex flex-col gap-5">
       {/* Header */}
@@ -273,7 +428,7 @@ export function MyGym() {
           </p>
         </div>
         <button
-          onClick={() => setShowAdd(true)}
+          onClick={() => setShowSheet({ mode: "add" })}
           className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-red/15 text-accent-red transition-all active:scale-90"
           aria-label="Add equipment"
         >
@@ -341,21 +496,19 @@ export function MyGym() {
         const items = groupedStatic[cat] || [];
         if (items.length === 0) return null;
         const color = categoryColors[cat];
+        const catAvailable = items.filter((i) => gymEquipment[i.id]).length;
 
         return (
           <section key={cat} className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 px-0.5 mb-1">
-              <div className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-muted">
-                {cat}
-              </h3>
-              <span className="text-[10px] text-text-dim">
-                {items.filter((i) => gymEquipment[i.id]).length}/{items.length}
-              </span>
-            </div>
-            <div
-              className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden"
-            >
+            <CategoryHeader
+              label={cat}
+              color={color}
+              availableCount={catAvailable}
+              totalCount={items.length}
+              onSelectAll={() => bulkSetGymEquipmentAvailability(items.map((i) => i.id), true)}
+              onDeselectAll={() => bulkSetGymEquipmentAvailability(items.map((i) => i.id), false)}
+            />
+            <div className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
               {items.map((item, idx) => (
                 <div key={item.id}>
                   {idx > 0 && <div className="mx-3 border-t border-white/[0.04]" />}
@@ -383,7 +536,49 @@ export function MyGym() {
             <span className="text-[10px] text-text-dim">
               {customGymEquipment.filter((c) => gymEquipment[c.id]).length}/{customGymEquipment.length}
             </span>
+            {/* Bulk mode toggle */}
+            <button
+              onClick={() => setBulkMode(!bulkMode)}
+              className={`ml-auto text-[10px] font-semibold uppercase tracking-wider transition-colors active:opacity-70 ${
+                bulkMode ? "text-accent-red" : "text-accent-yellow"
+              }`}
+            >
+              {bulkMode ? "Done" : "Manage"}
+            </button>
           </div>
+
+          {/* Bulk actions bar */}
+          {bulkMode && (
+            <div className="flex items-center gap-2 mb-1 animate-fade-in">
+              <button
+                onClick={handleBulkSelectAllCustom}
+                className="rounded-lg bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-text-secondary transition-colors active:bg-white/[0.1]"
+              >
+                Select All
+              </button>
+              <button
+                onClick={() => setBulkSelected(new Set())}
+                className="rounded-lg bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-text-secondary transition-colors active:bg-white/[0.1]"
+              >
+                Clear
+              </button>
+              {bulkSelected.size > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className={`ml-auto rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all active:scale-95 ${
+                    confirmBulkDelete
+                      ? "bg-accent-red text-white animate-pulse"
+                      : "bg-accent-red/15 text-accent-red"
+                  }`}
+                >
+                  {confirmBulkDelete
+                    ? `Confirm Delete (${bulkSelected.size})`
+                    : `Delete (${bulkSelected.size})`}
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
             {customGymEquipment.map((item, idx) => (
               <div key={item.id}>
@@ -395,6 +590,10 @@ export function MyGym() {
                   onToggle={() => setGymEquipmentAvailability(item.id, !gymEquipment[item.id])}
                   isCustom
                   onRemove={() => removeCustomGymEquipment(item.id)}
+                  onEdit={() => setShowSheet({ mode: "edit", item })}
+                  bulkMode={bulkMode}
+                  bulkSelected={bulkSelected.has(item.id)}
+                  onBulkToggle={() => handleBulkToggle(item.id)}
                 />
               </div>
             ))}
@@ -412,7 +611,13 @@ export function MyGym() {
         </button>
       </div>
 
-      {showAdd && <AddEquipmentSheet onClose={() => setShowAdd(false)} />}
+      {showSheet && (
+        <EquipmentSheet
+          mode={showSheet.mode}
+          initial={showSheet.item}
+          onClose={() => setShowSheet(null)}
+        />
+      )}
     </PageLayout>
   );
 }
