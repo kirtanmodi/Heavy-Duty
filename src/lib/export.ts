@@ -1,41 +1,80 @@
-import type { WorkoutEntry } from "../types";
+import type {
+  CustomGymEquipment,
+  Equipment,
+  Exercise,
+  ExerciseEntry,
+  GymEquipmentProfile,
+  ProgramId,
+  WorkoutEntry,
+} from "../types";
 
-interface ExportData {
-  version: 1;
+export interface BackupWorkoutState {
+  history: WorkoutEntry[];
+  activeWorkout: {
+    dayId: string;
+    dayName: string;
+    program: string;
+    exercises: ExerciseEntry[];
+    startedAt: string;
+  } | null;
+  lastCompletedWorkout: WorkoutEntry | null;
+}
+
+export interface BackupExerciseState {
+  customExercises: Exercise[];
+  nameOverrides: Record<string, string>;
+  removedIds: string[];
+  weightMode: Record<string, "bodyweight" | "weighted">;
+  equipmentOverride: Record<string, Equipment>;
+}
+
+export interface BackupSettingsState {
+  activeProgram: ProgramId;
+  restTimerSeconds: number;
+  autoStartTimer: boolean;
+  gymEquipment: GymEquipmentProfile;
+  customGymEquipment: CustomGymEquipment[];
+}
+
+export interface BackupData {
+  version: 2;
   exportedAt: string;
+  workout: BackupWorkoutState;
+  exercises: BackupExerciseState;
+  settings: BackupSettingsState;
+}
+
+type LegacyExportData = {
+  version: 1;
+  exportedAt?: string;
   workouts: WorkoutEntry[];
-  exercises: {
-    custom: unknown[];
-    nameOverrides: Record<string, string>;
-    removedIds: string[];
-    weightMode: Record<string, string>;
+  exercises?: {
+    custom?: Exercise[];
+    nameOverrides?: Record<string, string>;
+    removedIds?: string[];
+    weightMode?: Record<string, "bodyweight" | "weighted">;
   };
-  settings: {
-    restTimerSeconds: number;
-    autoStartTimer: boolean;
+  settings?: {
+    restTimerSeconds?: number;
+    autoStartTimer?: boolean;
   };
+};
+
+export interface ValidatedBackup {
+  backup: BackupData;
+  sourceVersion: 1 | 2;
 }
 
 export function exportJSON(
-  workouts: WorkoutEntry[],
-  exerciseState: {
-    customExercises: unknown[];
-    nameOverrides: Record<string, string>;
-    removedIds: string[];
-    weightMode: Record<string, string>;
-  },
-  settings: { restTimerSeconds: number; autoStartTimer: boolean },
+  workout: BackupWorkoutState,
+  exercises: BackupExerciseState,
+  settings: BackupSettingsState,
 ): void {
-  const data: ExportData = {
-    version: 1,
+  const data: BackupData = {
+    version: 2,
     exportedAt: new Date().toISOString(),
-    workouts,
-    exercises: {
-      custom: exerciseState.customExercises,
-      nameOverrides: exerciseState.nameOverrides,
-      removedIds: exerciseState.removedIds,
-      weightMode: exerciseState.weightMode,
-    },
+    workout,
+    exercises,
     settings,
   };
 
@@ -83,33 +122,134 @@ function csvRow(fields: string[]): string {
   return fields.map((f) => (f.includes(",") || f.includes('"') ? `"${f.replace(/"/g, '""')}"` : f)).join(",");
 }
 
-export function validateImport(json: unknown): ExportData | null {
-  if (!json || typeof json !== "object") return null;
-  const data = json as Record<string, unknown>;
-  if (data.version !== 1) return null;
-  if (!Array.isArray(data.workouts)) return null;
-  return json as ExportData;
+export function validateImport(json: unknown): ValidatedBackup | null {
+  if (!isRecord(json)) return null;
+  if (json.version === 2) return validateV2Backup(json);
+  if (json.version === 1) return validateLegacyBackup(json as LegacyExportData);
+  return null;
 }
 
-export function mergeImport(
-  existing: WorkoutEntry[],
-  imported: ExportData,
-): {
-  workouts: WorkoutEntry[];
-  exercises: ExportData["exercises"];
-  settings: ExportData["settings"];
-  newCount: number;
-} {
-  const existingIds = new Set(existing.map((w) => w.id));
-  const newWorkouts = imported.workouts.filter((w) => !existingIds.has(w.id));
-  const merged = [...newWorkouts, ...existing].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
+function validateV2Backup(json: Record<string, unknown>): ValidatedBackup | null {
+  if (!isRecord(json.workout) || !Array.isArray(json.workout.history)) return null;
+  if (!isRecord(json.exercises) || !isRecord(json.settings)) return null;
+
+  const exercises = json.exercises;
+  const settings = json.settings;
+
+  if (!Array.isArray(exercises.customExercises)) return null;
+  if (!Array.isArray(settings.customGymEquipment)) return null;
 
   return {
-    workouts: merged,
-    exercises: imported.exercises,
-    settings: imported.settings,
-    newCount: newWorkouts.length,
+    sourceVersion: 2,
+    backup: {
+      version: 2,
+      exportedAt: typeof json.exportedAt === "string" ? json.exportedAt : new Date().toISOString(),
+      workout: {
+        history: json.workout.history as WorkoutEntry[],
+        activeWorkout: (json.workout.activeWorkout ?? null) as BackupWorkoutState["activeWorkout"],
+        lastCompletedWorkout: (json.workout.lastCompletedWorkout ?? null) as WorkoutEntry | null,
+      },
+      exercises: {
+        customExercises: exercises.customExercises as Exercise[],
+        nameOverrides: asStringRecord(exercises.nameOverrides),
+        removedIds: asStringArray(exercises.removedIds),
+        weightMode: asWeightModeRecord(exercises.weightMode),
+        equipmentOverride: asEquipmentRecord(exercises.equipmentOverride),
+      },
+      settings: {
+        activeProgram: (settings.activeProgram as ProgramId | undefined) ?? "heavy-duty-complete",
+        restTimerSeconds: asNumber(settings.restTimerSeconds, 120),
+        autoStartTimer: asBoolean(settings.autoStartTimer, true),
+        gymEquipment: asBooleanRecord(settings.gymEquipment),
+        customGymEquipment: settings.customGymEquipment as CustomGymEquipment[],
+      },
+    },
   };
+}
+
+function validateLegacyBackup(json: LegacyExportData): ValidatedBackup | null {
+  if (!Array.isArray(json.workouts)) return null;
+
+  return {
+    sourceVersion: 1,
+    backup: {
+      version: 2,
+      exportedAt: typeof json.exportedAt === "string" ? json.exportedAt : new Date().toISOString(),
+      workout: {
+        history: json.workouts,
+        activeWorkout: null,
+        lastCompletedWorkout: null,
+      },
+      exercises: {
+        customExercises: json.exercises?.custom ?? [],
+        nameOverrides: json.exercises?.nameOverrides ?? {},
+        removedIds: json.exercises?.removedIds ?? [],
+        weightMode: json.exercises?.weightMode ?? {},
+        equipmentOverride: {},
+      },
+      settings: {
+        activeProgram: "heavy-duty-complete",
+        restTimerSeconds: json.settings?.restTimerSeconds ?? 120,
+        autoStartTimer: json.settings?.autoStartTimer ?? true,
+        gymEquipment: {},
+        customGymEquipment: [],
+      },
+    },
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function asStringRecord(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function asWeightModeRecord(
+  value: unknown,
+): Record<string, "bodyweight" | "weighted"> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, "bodyweight" | "weighted"] =>
+        entry[1] === "bodyweight" || entry[1] === "weighted",
+    ),
+  );
+}
+
+function asEquipmentRecord(value: unknown): Record<string, Equipment> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, Equipment] =>
+        entry[1] === "barbell" ||
+        entry[1] === "dumbbells" ||
+        entry[1] === "cable" ||
+        entry[1] === "machine" ||
+        entry[1] === "bodyweight+",
+    ),
+  );
+}
+
+function asBooleanRecord(value: unknown): Record<string, boolean> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+  );
+}
+
+function asNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" ? value : fallback;
+}
+
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
 }

@@ -109,6 +109,13 @@ export function HistoryEdit() {
     );
   }
 
+  const totalSetCount = exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0);
+  const workoutTypeLabel = (() => {
+    const dayType = workout.dayType ?? "lift";
+    if (dayType === "lift") return workout.dayId === "open" ? "Open workout" : "Lift workout";
+    return `${dayType.charAt(0).toUpperCase()}${dayType.slice(1)} log`;
+  })();
+
   return (
     <>
       {/* Swap Exercise Modal */}
@@ -132,96 +139,178 @@ export function HistoryEdit() {
         />
       )}
 
-      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
-        <header className="flex items-start justify-between gap-4 pt-1">
-          <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium tracking-widest text-text-muted uppercase">{formatRelativeDate(workout.date)}</p>
-            <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{workout.day}</h1>
+      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-5 pb-28">
+        <header className="surface-card rounded-[1.75rem] p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="section-label">Edit Logged Workout</p>
+              <h1 className="mt-1 font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{workout.day}</h1>
+              <p className="mt-1 text-sm leading-relaxed text-text-muted">
+                Adjust the saved sets, reorder exercises, or swap movements before saving the updated session.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/history")}
+              className="btn-ghost shrink-0 px-4 py-2 text-sm font-semibold"
+            >
+              Cancel
+            </button>
           </div>
-          <button
-            onClick={() => navigate("/history")}
-            className="rounded-[8px] btn-ghost px-4 py-2 text-sm transition-colors"
-          >
-            Cancel
-          </button>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
+              {formatRelativeDate(workout.date)}
+            </span>
+            <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
+              {workoutTypeLabel}
+            </span>
+            <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
+              {exercises.length} exercise{exercises.length !== 1 ? "s" : ""}
+            </span>
+            <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
+              {totalSetCount} set{totalSetCount !== 1 ? "s" : ""}
+            </span>
+          </div>
         </header>
 
-        {exercises.length === 0 && (
-          <section className="rounded-[14px] bg-bg-card card-surface p-6 text-sm text-text-secondary">No exercises in this workout.</section>
+        {exercises.length === 0 ? (
+          <section className="surface-card flex flex-col items-center gap-4 rounded-[1.6rem] p-7 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/[0.04]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-6 w-6 text-text-dim">
+                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="flex max-w-[18rem] flex-col gap-2">
+              <p className="font-semibold text-text-primary">No exercises in this workout</p>
+              <p className="text-sm leading-relaxed text-text-muted">
+                Add an exercise if you want this logged session to include set details.
+              </p>
+            </div>
+            <button onClick={() => setShowAddExercise(true)} className="btn-secondary px-5 py-3 text-sm font-semibold">
+              Add Exercise
+            </button>
+          </section>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {exercises.map((entry, exIndex) => {
+              const isFirst = exIndex === 0;
+              const isLast = exIndex === exercises.length - 1;
+
+              return (
+                <section key={`s-${exIndex}`} className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-3 px-1">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-[11px] font-semibold tabular-nums text-text-secondary">
+                        {String(exIndex + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">
+                          Exercise {exIndex + 1}
+                        </p>
+                        <p className="text-[12px] text-text-muted">Move this block up or down in the saved order.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleMoveGroup(exIndex, "up")}
+                        className={`btn-ghost flex h-10 w-10 items-center justify-center ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                        aria-label="Move up"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                          <path d="M18 15l-6-6-6 6" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleMoveGroup(exIndex, "down")}
+                        className={`btn-ghost flex h-10 w-10 items-center justify-center ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                        aria-label="Move down"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <ExerciseCard
+                    mode="history-edit"
+                    entry={entry}
+                    exerciseIndex={exIndex}
+                    onSetChange={handleSetChange}
+                    onAddSet={handleAddSet}
+                    onRemoveSet={handleRemoveSet}
+                    onSwap={(idx) => setSwapTarget(idx)}
+                    onRemove={handleRemoveExercise}
+                  />
+                </section>
+              );
+            })}
+          </div>
         )}
-
-        {exercises.map((entry, exIndex) => {
-          const isFirst = exIndex === 0;
-          const isLast = exIndex === exercises.length - 1;
-
-          return (
-            <section key={`s-${exIndex}`} className="flex flex-col gap-2">
-              <div className="flex justify-end px-1">
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleMoveGroup(exIndex, "up")}
-                    className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isFirst ? "pointer-events-none opacity-20" : ""}`}
-                    aria-label="Move up"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                      <path d="M18 15l-6-6-6 6" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleMoveGroup(exIndex, "down")}
-                    className={`rounded-md p-1.5 text-text-muted transition-colors active:bg-bg-input ${isLast ? "pointer-events-none opacity-20" : ""}`}
-                    aria-label="Move down"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <ExerciseCard
-                entry={entry}
-                exerciseIndex={exIndex}
-                onSetChange={handleSetChange}
-                onAddSet={handleAddSet}
-                onRemoveSet={handleRemoveSet}
-                onSwap={(idx) => setSwapTarget(idx)}
-                onRemove={handleRemoveExercise}
-              />
-            </section>
-          );
-        })}
 
         <button
           onClick={() => setShowAddExercise(true)}
-          className="w-full rounded-[14px] border border-dashed border-border py-4 text-sm font-medium text-text-secondary transition-colors active:bg-bg-card"
+          className="w-full rounded-[1.45rem] border border-dashed border-white/[0.1] bg-white/[0.03] py-4 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.05]"
         >
           + Add Exercise
         </button>
 
-        <button onClick={handleSave} className="w-full rounded-[14px] btn-primary py-4 text-sm font-semibold tracking-wide text-white">
-          Save Changes
-        </button>
+        <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-10 mt-1">
+          <section className="glass rounded-[1.6rem] p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text-primary">Save this workout</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-text-muted">
+                  Changes apply to this logged session only. Exercises without reps are removed on save.
+                </p>
+              </div>
+              <span className="chip chip-muted shrink-0 px-3 py-2 text-[11px] font-semibold text-text-secondary">
+                {exercises.length} items
+              </span>
+            </div>
 
-        {showDeleteConfirm ? (
-          <div className="flex flex-col gap-3 rounded-[14px] border border-accent-red/15 bg-accent-red/8 p-5">
-            <p className="text-sm text-text-secondary">Delete this workout permanently?</p>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button onClick={handleDelete} className="rounded-[10px] btn-primary py-3 text-sm font-semibold text-white">
-                Delete
+            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+              <button onClick={() => setShowAddExercise(true)} className="btn-ghost px-4 py-3 text-sm font-semibold">
+                Add Exercise
               </button>
-              <button onClick={() => setShowDeleteConfirm(false)} className="rounded-[10px] btn-ghost py-3 text-sm font-medium">
-                Cancel
+              <button onClick={handleSave} className="btn-primary px-5 py-3 text-sm font-semibold tracking-wide text-white">
+                Save Changes
               </button>
             </div>
+          </section>
+        </div>
+
+        <section className="surface-card rounded-[1.6rem] p-4">
+          <div className="flex flex-col gap-1">
+            <p className="section-label text-accent-red">Danger Zone</p>
+            <p className="text-sm font-semibold text-text-primary">Delete Workout</p>
+            <p className="text-sm leading-relaxed text-text-muted">
+              Permanently removes this logged workout from history.
+            </p>
           </div>
-        ) : (
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-full rounded-[10px] py-2.5 text-xs text-text-muted transition-colors active:text-accent-red"
-          >
-            Delete Workout
-          </button>
-        )}
+
+          {showDeleteConfirm ? (
+            <div className="mt-4 flex flex-col gap-3 rounded-[1.3rem] border border-accent-red/15 bg-accent-red/8 p-4">
+              <p className="text-sm text-text-secondary">Delete this workout permanently?</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button onClick={handleDelete} className="btn-primary py-3 text-sm font-semibold text-white">
+                  Delete
+                </button>
+                <button onClick={() => setShowDeleteConfirm(false)} className="btn-ghost py-3 text-sm font-medium">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="btn-ghost mt-4 w-full py-3 text-sm font-semibold text-accent-red"
+            >
+              Delete Workout
+            </button>
+          )}
+        </section>
       </PageLayout>
     </>
   );

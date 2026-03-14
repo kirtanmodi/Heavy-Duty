@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { BottomNav } from "./components/layout/BottomNav";
+import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
 import { Home } from "./pages/Home";
 import { Workout } from "./pages/Workout";
 import { WorkoutSummary } from "./pages/WorkoutSummary";
@@ -28,7 +29,7 @@ function AppRoutes() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[460px] min-w-0 flex-col">
-      <main className="min-w-0 flex-1">
+      <main className="relative min-w-0 flex-1">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageTransition><Home /></PageTransition>} />
@@ -42,6 +43,7 @@ function AppRoutes() {
           </Routes>
         </AnimatePresence>
       </main>
+      <PwaInstallPrompt />
       <BottomNav />
     </div>
   );
@@ -50,7 +52,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <div className="app-shell">
+        <AppRoutes />
+      </div>
     </BrowserRouter>
   );
 }

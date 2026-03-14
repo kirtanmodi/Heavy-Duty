@@ -8,6 +8,7 @@ import { cardioActivities, programs } from "../data/programs";
 
 import { useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
+import { formatDateKey, getIsoDateKey } from "../lib/dates";
 import { createMentzerSets, getOverloadSuggestion } from "../lib/overload";
 import { getMuscleRecoveryStatus, getGroupSkipHistory, muscleToGroup } from "../lib/recovery";
 import { useSettingsStore } from "../store/settingsStore";
@@ -64,8 +65,9 @@ function CardioRecoveryView({
 }) {
   const navigate = useNavigate();
   const activities = cardioActivities[day.id] ?? [];
+  const todayDateKey = formatDateKey(new Date());
   const isDoneToday = history.some(
-    (w) => w.dayId === day.id && w.date.slice(0, 10) === new Date().toISOString().slice(0, 10),
+    (w) => w.dayId === day.id && getIsoDateKey(w.date) === todayDateKey,
   );
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
 

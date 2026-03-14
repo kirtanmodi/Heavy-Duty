@@ -8,16 +8,16 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, className = "", withBottomNavPadding = true }: PageLayoutProps) {
   const style: CSSProperties = {
-    paddingTop: "max(1.75rem, env(safe-area-inset-top))",
-    paddingLeft: "max(1.75rem, calc(env(safe-area-inset-left) + 1.25rem))",
-    paddingRight: "max(1.75rem, calc(env(safe-area-inset-right) + 1.25rem))",
+    paddingTop: "max(1.1rem, calc(env(safe-area-inset-top) + 0.4rem))",
+    paddingLeft: "max(1rem, calc(env(safe-area-inset-left) + 1rem))",
+    paddingRight: "max(1rem, calc(env(safe-area-inset-right) + 1rem))",
     paddingBottom: withBottomNavPadding
-      ? "calc(7.5rem + env(safe-area-inset-bottom))"
-      : "max(2rem, env(safe-area-inset-bottom))",
+      ? "calc(7.8rem + env(safe-area-inset-bottom))"
+      : "max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem))",
   };
 
   return (
-    <div className={`w-full min-h-dvh overflow-x-hidden ${className}`} style={style}>
+    <div className={`page-shell w-full min-h-dvh overflow-x-hidden ${className}`} style={style}>
       {children}
     </div>
   );

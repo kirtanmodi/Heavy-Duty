@@ -69,30 +69,35 @@ export function BottomNav() {
   if (/^\/history\/.+\/edit/.test(location.pathname)) return null;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 glass pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      <div className="mx-auto grid w-full max-w-[460px] grid-cols-5">
-        {tabs.map((tab) => {
-          const active = tab.path === "/" ? location.pathname === "/" : location.pathname.startsWith(tab.path);
-          return (
-            <button
-              key={tab.path}
-              onClick={() => navigate(tab.path)}
-              className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
-                active ? "text-text-primary" : "text-text-muted active:text-text-secondary"
-              }`}
-            >
-              <TabIcon icon={tab.icon} active={active} />
-              <span className="text-[10px] font-medium">{tab.label}</span>
-              {active && (
-                <motion.div
-                  layoutId="nav-indicator"
-                  className="absolute -bottom-0.5 h-[3px] w-5 rounded-full bg-accent-red"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          );
-        })}
+    <nav className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto w-full max-w-[460px]">
+        <div className="floating-nav grid grid-cols-5 rounded-[1.75rem] p-2">
+          {tabs.map((tab) => {
+            const active = tab.path === "/" ? location.pathname === "/" : location.pathname.startsWith(tab.path);
+            return (
+              <button
+                key={tab.path}
+                onClick={() => navigate(tab.path)}
+                className={`relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[1.2rem] px-2 transition-colors ${
+                  active ? "text-text-primary" : "text-text-muted active:text-text-secondary"
+                }`}
+              >
+                {active && (
+                  <motion.div
+                    layoutId="nav-indicator"
+                    className="absolute inset-0 rounded-[1.2rem] bg-white/[0.07]"
+                    transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                  />
+                )}
+                {active && <span className="absolute top-2 h-1 w-1 rounded-full bg-accent-red" />}
+                <span className="relative z-10">
+                  <TabIcon icon={tab.icon} active={active} />
+                </span>
+                <span className="relative z-10 text-[10px] font-medium">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

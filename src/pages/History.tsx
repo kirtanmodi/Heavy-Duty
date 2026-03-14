@@ -101,23 +101,33 @@ function groupByMonth(workouts: WorkoutEntry[]): MonthGroup[] {
 }
 
 const dayColors: Record<string, string> = {
-  "day-1": "accent-red",
-  "day-2": "accent-orange",
-  "day-3": "accent-blue",
-  "day-4": "accent-green",
-  open: "accent-yellow",
+  "day-1": "#ff453a",
+  "day-2": "#ff9f0a",
+  "day-3": "#0a84ff",
+  "day-4": "#30d158",
+  open: "#ffd60a",
 };
 
 const dayTypeColors: Record<string, string> = {
-  cardio: "accent-blue",
-  recovery: "accent-blue",
-  rest: "accent-green",
+  cardio: "#0a84ff",
+  recovery: "#0a84ff",
+  rest: "#30d158",
 };
 
 function getDayColor(workout: WorkoutEntry): string {
   const dayType = workout.dayType ?? "lift";
-  if (dayType !== "lift") return dayTypeColors[dayType] || "accent-yellow";
-  return dayColors[workout.dayId] || "accent-yellow";
+  if (dayType !== "lift") return dayTypeColors[dayType] || "#ffd60a";
+  return dayColors[workout.dayId] || "#ffd60a";
+}
+
+function getWorkoutTitle(workout: WorkoutEntry): string {
+  return workout.day.includes(" — ") ? workout.day.split(" — ")[1] : workout.day;
+}
+
+function getWorkoutTypeLabel(workout: WorkoutEntry): string {
+  const dayType = workout.dayType ?? "lift";
+  if (dayType === "lift") return workout.dayId === "open" ? "Open" : "Lift";
+  return dayType.charAt(0).toUpperCase() + dayType.slice(1);
 }
 
 export function History() {
@@ -155,6 +165,28 @@ export function History() {
     return history.filter((w) => new Date(w.date) >= startOfWeek).length;
   }, [history]);
 
+  const exerciseNames = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const workout of history) {
+      for (const exercise of workout.exercises) {
+        if (!names.has(exercise.id)) names.set(exercise.id, exercise.name);
+      }
+    }
+    return names;
+  }, [history]);
+
+  const activeFilterLabel = useMemo(() => {
+    if (activeFilter === "all") return "All sessions";
+    if (activeFilter === "cardio-all") return "Cardio, recovery & rest";
+    if (activeFilter === "open") return "Open workouts";
+    return liftingDays.find((day) => day.id === activeFilter)?.focus ?? "Filtered sessions";
+  }, [activeFilter, liftingDays]);
+
+  const exerciseFilterLabel = exerciseFilter ? exerciseNames.get(exerciseFilter) ?? exerciseFilter : null;
+  const hasActiveFilters = activeFilter !== "all" || exerciseFilter !== null;
+  const hasCardioHistory = history.some((w) => (w.dayType ?? "lift") !== "lift");
+  const hasOpenHistory = history.some((w) => w.dayId === "open");
+
   const toggleSession = (id: string) => {
     setExpandedSessions((prev) => {
       const next = new Set(prev);
@@ -164,130 +196,195 @@ export function History() {
     });
   };
 
+  const clearFilters = () => {
+    setActiveFilter("all");
+    setExerciseFilter(null);
+  };
+
+  const filteredSummary = hasActiveFilters
+    ? exerciseFilterLabel
+      ? `${activeFilterLabel} · filtered by ${exerciseFilterLabel}`
+      : activeFilterLabel
+    : "All-time history across lift, open, cardio, recovery, and rest sessions.";
+
   return (
     <PageLayout className="flex flex-col gap-5">
-      {/* Header */}
-      <header className="flex items-end justify-between pt-2">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">History</h1>
-          <p className="text-sm text-text-muted">
-            {history.length} workout{history.length !== 1 ? "s" : ""} logged
-          </p>
+      <header className="flex flex-col gap-4 pt-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="section-label">Training Log</p>
+            <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">History</h1>
+            <p className="mt-1 max-w-[28rem] text-sm leading-relaxed text-text-muted">
+              Review past sessions, compare progress, and jump back into edits without losing your place.
+            </p>
+          </div>
+          {history.length > 0 && (
+            <div className="chip chip-muted shrink-0 px-3 py-2 text-[11px] font-semibold text-text-secondary">
+              {history.length} logged
+            </div>
+          )}
         </div>
+
+        {history.length > 0 && (
+          <section className="surface-card rounded-[1.6rem] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="section-label">Browse</p>
+                <p className="mt-1 text-sm font-semibold text-text-primary">
+                  Showing {filteredHistory.length} of {history.length} session{history.length !== 1 ? "s" : ""}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-text-muted">{filteredSummary}</p>
+              </div>
+              {hasActiveFilters && (
+                <button onClick={clearFilters} className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold">
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Streak</p>
+                <p className="mt-2 text-xl font-semibold tabular-nums text-accent-red">{streak}</p>
+                <p className="mt-1 text-[11px] text-text-dim">All-time</p>
+              </div>
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">This Week</p>
+                <p className="mt-2 text-xl font-semibold tabular-nums text-accent-orange">{thisWeek}</p>
+                <p className="mt-1 text-[11px] text-text-dim">Sessions</p>
+              </div>
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Total Vol</p>
+                <p className="mt-2 text-xl font-semibold tabular-nums text-accent-green">{formatVolume(totalVol)}</p>
+                <p className="mt-1 text-[11px] text-text-dim">All-time</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="section-label">Day Filters</p>
+                <p className="text-[11px] text-text-dim">Exercise chips below each card filter the feed.</p>
+              </div>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                <button
+                  onClick={() => setActiveFilter("all")}
+                  className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                    activeFilter === "all"
+                      ? "btn-primary text-white"
+                      : "border border-border-card bg-white/[0.04] text-text-muted active:text-text-secondary"
+                  }`}
+                >
+                  All
+                </button>
+                {liftingDays.map((day) => (
+                  <button
+                    key={day.id}
+                    onClick={() => setActiveFilter(day.id)}
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                      activeFilter === day.id
+                        ? "btn-primary text-white"
+                        : "border border-border-card bg-white/[0.04] text-text-muted active:text-text-secondary"
+                    }`}
+                  >
+                    {day.focus}
+                  </button>
+                ))}
+                {hasOpenHistory && (
+                  <button
+                    onClick={() => setActiveFilter("open")}
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                      activeFilter === "open"
+                        ? "btn-primary text-white"
+                        : "border border-border-card bg-white/[0.04] text-text-muted active:text-text-secondary"
+                    }`}
+                  >
+                    Open
+                  </button>
+                )}
+                {hasCardioHistory && (
+                  <button
+                    onClick={() => setActiveFilter("cardio-all")}
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                      activeFilter === "cardio-all"
+                        ? "btn-primary text-white"
+                        : "border border-border-card bg-white/[0.04] text-text-muted active:text-text-secondary"
+                    }`}
+                  >
+                    Cardio, Recovery & Rest
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {exerciseFilterLabel && (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-accent-red/15 bg-accent-red/8 px-3.5 py-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-red">Exercise Filter</p>
+                  <p className="truncate text-sm font-medium text-text-primary">{exerciseFilterLabel}</p>
+                </div>
+                <button
+                  onClick={() => setExerciseFilter(null)}
+                  className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold text-accent-red"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </section>
+        )}
       </header>
 
-      {/* Stats row */}
-      {history.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
-          <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-card p-3 card-surface">
-            <span className="text-xl font-bold tabular-nums text-accent-red">{streak}</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">Streak</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-card p-3 card-surface">
-            <span className="text-xl font-bold tabular-nums text-accent-orange">{thisWeek}</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">This Week</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-card p-3 card-surface">
-            <span className="text-xl font-bold tabular-nums text-accent-green">{formatVolume(totalVol)}</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">Total Vol</span>
-          </div>
-        </div>
-      )}
-
-      {/* Filter chips */}
-      {history.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-          <button
-            onClick={() => setActiveFilter("all")}
-            className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-              activeFilter === "all" ? "btn-primary text-white" : "border border-border-card bg-bg-card text-text-muted active:text-text-secondary"
-            }`}
-          >
-            All
-          </button>
-          {liftingDays.map((day) => (
-            <button
-              key={day.id}
-              onClick={() => setActiveFilter(day.id)}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-                activeFilter === day.id ? "btn-primary text-white" : "border border-border-card bg-bg-card text-text-muted active:text-text-secondary"
-              }`}
-            >
-              {day.focus}
-            </button>
-          ))}
-          {history.some((w) => w.dayId === "open") && (
-            <button
-              onClick={() => setActiveFilter("open")}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-                activeFilter === "open" ? "btn-primary text-white" : "border border-border-card bg-bg-card text-text-muted active:text-text-secondary"
-              }`}
-            >
-              Open
-            </button>
-          )}
-          {history.some((w) => (w.dayType ?? "lift") !== "lift") && (
-            <button
-              onClick={() => setActiveFilter("cardio-all")}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-                activeFilter === "cardio-all" ? "btn-primary text-white" : "border border-border-card bg-bg-card text-text-muted active:text-text-secondary"
-              }`}
-            >
-              Cardio & Recovery
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Active exercise filter chip */}
-      {exerciseFilter && (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setExerciseFilter(null)}
-            className="flex items-center gap-1.5 rounded-full bg-accent-red/15 px-3 py-1.5 text-xs font-semibold text-accent-red"
-          >
-            <span>
-              {history.flatMap((w) => w.exercises).find((e) => e.id === exerciseFilter)?.name ?? exerciseFilter}
-            </span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3">
-              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* Empty state */}
       {history.length === 0 ? (
-        <section className="flex flex-col items-center gap-6 rounded-[14px] bg-bg-card card-surface p-8 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-red/10">
+        <section className="surface-card flex flex-col items-center gap-6 rounded-[1.75rem] p-8 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-accent-red/10">
             <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-accent-red">
               <path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
             </svg>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex max-w-[18rem] flex-col gap-2">
             <p className="font-[var(--font-display)] text-xl tracking-wide text-text-primary">No workouts yet</p>
-            <p className="text-sm leading-relaxed text-text-muted">Complete your first workout and it will show up here.</p>
+            <p className="text-sm leading-relaxed text-text-muted">
+              Complete your first workout and it will show up here with set details, progress, and edit controls.
+            </p>
           </div>
-          <button onClick={() => navigate("/")} className="rounded-[10px] btn-primary px-8 py-3 text-sm font-semibold text-white">
+          <button onClick={() => navigate("/")} className="btn-primary px-8 py-3 text-sm font-semibold text-white">
             Start Today's Workout
           </button>
         </section>
+      ) : filteredHistory.length === 0 ? (
+        <section className="surface-card flex flex-col items-center gap-5 rounded-[1.75rem] p-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/[0.04]">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-6 w-6 text-text-dim">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M16.5 16.5L21 21" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div className="flex max-w-[18rem] flex-col gap-2">
+            <p className="font-semibold text-text-primary">No matching sessions</p>
+            <p className="text-sm leading-relaxed text-text-muted">
+              Try a different day filter or clear the exercise filter to see more of your history.
+            </p>
+          </div>
+          <button onClick={clearFilters} className="btn-secondary px-5 py-3 text-sm font-semibold">
+            Clear Filters
+          </button>
+        </section>
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
           {monthGroups.map((group) => (
-            <div key={group.label} className="flex flex-col gap-2.5">
-              {/* Month header */}
-              <div className="flex items-center gap-3">
-                <h2 className="shrink-0 text-xs font-bold uppercase tracking-widest text-text-muted">{group.label}</h2>
-                <div className="h-px flex-1 bg-border" />
+            <section key={group.label} className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3 px-1">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <h2 className="shrink-0 text-xs font-bold uppercase tracking-[0.2em] text-text-muted">{group.label}</h2>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <span className="shrink-0 text-[11px] text-text-dim">
+                  {group.workouts.length} session{group.workouts.length !== 1 ? "s" : ""}
+                </span>
               </div>
 
-              {/* Timeline */}
-              <div className="relative flex flex-col gap-2.5 pl-6">
-                {/* Timeline line */}
-                <div className="absolute bottom-4 left-[7px] top-4 w-px bg-border" />
-
+              <div className="flex flex-col gap-3">
                 {group.workouts.map((workout, index) => {
                   const expanded = expandedSessions.has(workout.id);
                   const stats = calcStats(workout);
@@ -297,176 +394,220 @@ export function History() {
                   const isCardioEntry = (workout.dayType ?? "lift") !== "lift";
 
                   return (
-                    <div key={workout.id} className="relative animate-fade-up" style={{ animationDelay: `${index * 40}ms` }}>
-                      {/* Timeline dot */}
-                      <div
-                        className={`absolute -left-6 top-5 h-[15px] w-[15px] rounded-full border-[2.5px] border-bg-primary`}
-                        style={{ backgroundColor: `var(--color-${color})` }}
-                      />
+                    <section
+                      key={workout.id}
+                      className="animate-fade-up overflow-hidden rounded-[1.6rem]"
+                      style={{
+                        animationDelay: `${index * 35}ms`,
+                        background: `linear-gradient(180deg, ${color}0D 0%, rgba(18, 22, 31, 0.96) 26%, rgba(11, 14, 22, 0.98) 100%)`,
+                        border: `1px solid ${expanded ? `${color}24` : "rgba(255,255,255,0.08)"}`,
+                        boxShadow: expanded
+                          ? `0 22px 44px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px ${color}0C`
+                          : `0 18px 38px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255,255,255,0.03)`,
+                      }}
+                    >
+                      <button onClick={() => toggleSession(workout.id)} className="w-full text-left">
+                        <div className="px-4 py-4">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{ background: color, boxShadow: `0 0 0 5px ${color}18` }}
+                            />
 
-                      <section className="overflow-hidden rounded-2xl bg-bg-card card-surface">
-                        <button onClick={() => toggleSession(workout.id)} className="w-full text-left">
-                          {/* Card header */}
-                          <div className="px-4 pb-3 pt-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2.5">
-                                  <h3 className="text-[15px] font-bold text-text-primary">{workout.day.includes(" — ") ? workout.day.split(" — ")[1] : workout.day}</h3>
-                                  {progress && (
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <span
-                                      className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none ${
-                                        progress.type === "increase"
-                                          ? "bg-accent-green/12 text-accent-green"
-                                          : progress.type === "decrease"
-                                            ? "bg-accent-red/12 text-accent-red"
-                                            : "bg-bg-input text-text-muted"
-                                      }`}
+                                      className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
+                                      style={{ background: `${color}18`, color }}
                                     >
-                                      {progress.type === "increase" ? "+" : progress.type === "decrease" ? "" : ""}
-                                      {progress.volumePercent.toFixed(0)}%
+                                      {getWorkoutTypeLabel(workout)}
                                     </span>
-                                  )}
+                                    {progress && (
+                                      <span
+                                        className={`rounded-full px-2.5 py-1 text-[10px] font-semibold tabular-nums ${
+                                          progress.type === "increase"
+                                            ? "bg-accent-green/12 text-accent-green"
+                                            : progress.type === "decrease"
+                                              ? "bg-accent-red/12 text-accent-red"
+                                              : "bg-white/[0.06] text-text-muted"
+                                        }`}
+                                      >
+                                        {progress.type === "increase" ? "+" : progress.type === "decrease" ? "" : ""}
+                                        {progress.volumePercent.toFixed(0)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                  <h3 className="mt-2 text-[17px] font-semibold leading-tight text-text-primary">
+                                    {getWorkoutTitle(workout)}
+                                  </h3>
+                                  <p className="mt-1 text-[12px] text-text-muted">{formatDayDate(workout.date)}</p>
                                 </div>
-                                <p className="text-[11px] text-text-muted">{formatDayDate(workout.date)}</p>
-                              </div>
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                                className={`mt-1 h-3.5 w-3.5 text-text-dim transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-                              >
-                                <path d="M6 9l6 6 6-6" />
-                              </svg>
-                            </div>
-                          </div>
 
-                          {/* Inline stats */}
-                          {isCardioEntry ? (
-                            <div className="flex items-center gap-2 px-4 pb-3.5 text-[11px]">
-                              <span
-                                className={`rounded-md bg-${color}/12 text-${color} px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider`}
-                              >
-                                {workout.dayType}
-                              </span>
-                              {workout.activityName && (
-                                <span className="text-[11px] text-text-secondary">{workout.activityName}</span>
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/[0.04] text-text-dim">
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                                  >
+                                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                </div>
+                              </div>
+
+                              {isCardioEntry ? (
+                                <div className="mt-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">
+                                    Logged Activity
+                                  </p>
+                                  <p className="mt-1 text-sm text-text-primary">
+                                    {workout.activityName ?? `${getWorkoutTypeLabel(workout)} session`}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="mt-4 grid grid-cols-3 gap-2">
+                                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Exercises</p>
+                                    <p className="mt-1.5 text-base font-semibold tabular-nums text-text-primary">{stats.totalExercises}</p>
+                                  </div>
+                                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Sets</p>
+                                    <p className="mt-1.5 text-base font-semibold tabular-nums text-text-primary">{stats.totalSets}</p>
+                                  </div>
+                                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Volume</p>
+                                    <p className="mt-1.5 text-base font-semibold tabular-nums text-text-primary">
+                                      {formatVolume(stats.totalVolume)}kg
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {workout.exercises.length > 0 && (
+                                <div className="mt-4 flex flex-col gap-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">Exercises</p>
+                                    <p className="text-[11px] text-text-dim">Tap to filter</p>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {workout.exercises.map((ex) => (
+                                      <span
+                                        key={ex.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (!ex.skipped) setExerciseFilter((prev) => (prev === ex.id ? null : ex.id));
+                                        }}
+                                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                                          ex.skipped
+                                            ? "bg-white/[0.04] text-text-dim line-through"
+                                            : exerciseFilter === ex.id
+                                              ? "bg-accent-red/18 text-accent-red"
+                                              : "bg-white/[0.06] text-text-secondary active:bg-white/[0.1]"
+                                        }`}
+                                      >
+                                        {ex.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
                               )}
                             </div>
-                          ) : (
-                            <div className="flex items-center gap-4 px-4 pb-3.5 text-[11px]">
-                              <span className="tabular-nums text-text-secondary">
-                                <span className="font-semibold text-text-primary">{stats.totalExercises}</span> exercises
-                              </span>
-                              <span className="text-text-dim">·</span>
-                              <span className="tabular-nums text-text-secondary">
-                                <span className="font-semibold text-text-primary">{stats.totalSets}</span> sets
-                              </span>
-                              <span className="text-text-dim">·</span>
-                              <span className="tabular-nums text-text-secondary">
-                                <span className="font-semibold text-text-primary">{formatVolume(stats.totalVolume)}</span>kg
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Exercise name pills */}
-                          {workout.exercises.length > 0 && (
-                          <div className="flex flex-wrap gap-1 border-t border-border px-4 py-2.5">
-                            {workout.exercises.map((ex) => (
-                              <span
-                                key={ex.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (!ex.skipped) setExerciseFilter((prev) => (prev === ex.id ? null : ex.id));
-                                }}
-                                className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                                  ex.skipped
-                                    ? "bg-bg-input/50 text-text-dim line-through"
-                                    : exerciseFilter === ex.id
-                                      ? "bg-accent-red/20 text-accent-red cursor-pointer"
-                                      : "bg-bg-input text-text-secondary active:bg-bg-input/70 cursor-pointer"
-                                }`}
-                              >
-                                {ex.name}
-                              </span>
-                            ))}
                           </div>
-                          )}
-                        </button>
+                        </div>
+                      </button>
 
-                        {/* Expanded detail */}
-                        {expanded && (
-                          <div className="flex flex-col gap-0 border-t border-border">
-                            {workout.exercises.map((exercise, exIdx) => (
+                      {expanded && (
+                        <div className="border-t border-white/[0.06] px-3 pb-3 pt-3">
+                          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">Session Details</p>
+                            <p className="mt-1 text-sm text-text-muted">
+                              Expanded rows compare this session with the previous matching workout when data exists.
+                            </p>
+                          </div>
+
+                          <div className="mt-3 flex flex-col gap-2.5">
+                            {workout.exercises.map((exercise) => (
                               <ExerciseDetail
-                                key={exercise.id}
+                                key={`${workout.id}-${exercise.id}-${exercise.name}`}
                                 exercise={exercise}
                                 prevSets={getPrevExerciseSets(exercise.id, prev)}
-                                isLast={exIdx === workout.exercises.length - 1}
                               />
                             ))}
-                            {deleteConfirmId === workout.id ? (
-                              <div className="m-3 flex flex-col gap-3 rounded-xl border border-accent-red/15 bg-accent-red/8 p-4">
-                                <p className="text-sm text-text-secondary">Delete this workout?</p>
-                                <div className="grid grid-cols-2 gap-2.5">
-                                  <button
-                                    onClick={() => {
-                                      deleteHistoryEntry(workout.id);
-                                      setDeleteConfirmId(null);
-                                      setExpandedSessions((prev) => {
-                                        const next = new Set(prev);
-                                        next.delete(workout.id);
-                                        return next;
-                                      });
-                                    }}
-                                    className="rounded-[10px] btn-primary py-2.5 text-sm font-semibold text-white"
-                                  >
-                                    Delete
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteConfirmId(null)}
-                                    className="rounded-[10px] btn-ghost py-2.5 text-sm"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="m-3 flex items-center gap-2">
-                                <button
-                                  onClick={() => navigate(`/history/${workout.id}/edit`)}
-                                  className="flex-1 rounded-xl btn-ghost py-2.5 text-xs font-semibold transition-colors"
-                                >
-                                  Edit Workout
-                                </button>
-                                <button
-                                  onClick={() => setDeleteConfirmId(workout.id)}
-                                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06]"
-                                  aria-label="Delete workout"
-                                >
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
-                                  </svg>
-                                </button>
-                              </div>
-                            )}
                           </div>
-                        )}
-                      </section>
-                    </div>
+
+                          {deleteConfirmId === workout.id ? (
+                            <div className="mt-3 flex flex-col gap-3 rounded-[1.3rem] border border-accent-red/15 bg-accent-red/8 p-4">
+                              <div className="flex flex-col gap-1">
+                                <p className="text-sm font-semibold text-text-primary">Delete this workout?</p>
+                                <p className="text-sm text-text-secondary">
+                                  This removes the logged session from history and cannot be undone.
+                                </p>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2.5">
+                                <button
+                                  onClick={() => {
+                                    deleteHistoryEntry(workout.id);
+                                    setDeleteConfirmId(null);
+                                    setExpandedSessions((prevSet) => {
+                                      const next = new Set(prevSet);
+                                      next.delete(workout.id);
+                                      return next;
+                                    });
+                                  }}
+                                  className="btn-primary py-3 text-sm font-semibold text-white"
+                                >
+                                  Delete
+                                </button>
+                                <button onClick={() => setDeleteConfirmId(null)} className="btn-ghost py-3 text-sm">
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                              <button
+                                onClick={() => navigate(`/history/${workout.id}/edit`)}
+                                className="btn-primary px-4 py-3 text-sm font-semibold text-white"
+                              >
+                                Edit Workout
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmId(workout.id)}
+                                className="btn-ghost flex h-[3.1rem] w-[3.1rem] items-center justify-center"
+                                aria-label="Delete workout"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-text-dim">
+                                  <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </section>
                   );
                 })}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
 
-      {/* Clear data */}
       {history.length > 0 && (
-        <section className="mt-2">
+        <section className="surface-card mt-1 rounded-[1.6rem] p-4">
+          <div className="flex flex-col gap-1">
+            <p className="section-label text-accent-red">Danger Zone</p>
+            <p className="text-sm font-semibold text-text-primary">Clear All Data</p>
+            <p className="text-sm leading-relaxed text-text-muted">
+              Removes every logged session and clears any in-progress workout saved on this device.
+            </p>
+          </div>
+
           {showClearConfirm ? (
-            <div className="flex flex-col gap-4 rounded-[14px] border border-accent-red/15 bg-accent-red/8 p-5">
+            <div className="mt-4 flex flex-col gap-4 rounded-[1.3rem] border border-accent-red/15 bg-accent-red/8 p-4">
               <p className="text-sm text-text-secondary">Delete all workout history? This cannot be undone.</p>
               <div className="grid grid-cols-2 gap-2.5">
                 <button
@@ -474,20 +615,17 @@ export function History() {
                     clearWorkouts();
                     setShowClearConfirm(false);
                   }}
-                  className="rounded-[10px] btn-primary py-3 text-sm font-semibold text-white"
+                  className="btn-primary py-3 text-sm font-semibold text-white"
                 >
                   Delete
                 </button>
-                <button onClick={() => setShowClearConfirm(false)} className="rounded-[10px] btn-ghost py-3 text-sm">
+                <button onClick={() => setShowClearConfirm(false)} className="btn-ghost py-3 text-sm">
                   Cancel
                 </button>
               </div>
             </div>
           ) : (
-            <button
-              onClick={() => setShowClearConfirm(true)}
-              className="w-full rounded-[14px] bg-bg-card card-surface py-4 text-sm text-text-muted transition-colors active:bg-bg-card-hover"
-            >
+            <button onClick={() => setShowClearConfirm(true)} className="btn-ghost mt-4 w-full py-3 text-sm font-semibold">
               Clear All Data
             </button>
           )}
@@ -502,18 +640,16 @@ export function History() {
 function ExerciseDetail({
   exercise,
   prevSets,
-  isLast,
 }: {
   exercise: ExerciseEntry;
   prevSets: SetEntry[] | null;
-  isLast: boolean;
 }) {
   if (exercise.skipped) {
     return (
-      <div className={`px-4 py-3 ${!isLast ? "border-b border-border/50" : ""}`}>
-        <div className="flex items-center gap-2">
-          <p className="text-xs text-text-dim line-through">{exercise.name}</p>
-          <span className="rounded-md bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-text-dim">
+      <div className="rounded-[1.25rem] border border-white/[0.06] bg-white/[0.03] px-4 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <p className="text-sm text-text-dim line-through">{exercise.name}</p>
+          <span className="rounded-full bg-white/[0.05] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">
             Skipped
           </span>
         </div>
@@ -523,8 +659,8 @@ function ExerciseDetail({
 
   if (exercise.sets.length === 0) {
     return (
-      <div className={`px-4 py-3 ${!isLast ? "border-b border-border/50" : ""}`}>
-        <p className="text-xs text-text-dim">{exercise.name} — No sets logged</p>
+      <div className="rounded-[1.25rem] border border-white/[0.06] bg-white/[0.03] px-4 py-3.5">
+        <p className="text-sm text-text-dim">{exercise.name} — No sets logged</p>
       </div>
     );
   }
@@ -532,17 +668,20 @@ function ExerciseDetail({
   const bestSet = exercise.sets.reduce((best, s) => (s.weight * s.reps > best.weight * best.reps ? s : best), exercise.sets[0]);
 
   return (
-    <div className={`px-4 py-3.5 ${!isLast ? "border-b border-border/50" : ""}`}>
-      {/* Exercise name + best set */}
-      <div className="mb-2.5 flex items-center justify-between">
-        <h4 className="text-[13px] font-bold text-text-primary">{exercise.name}</h4>
-        <span className="text-[10px] tabular-nums text-text-dim">
-          best: {bestSet.weight > 0 ? `${bestSet.weight}kg` : "BW"} × {bestSet.reps}
+    <div className="rounded-[1.25rem] border border-white/[0.06] bg-white/[0.03] px-4 py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="text-[14px] font-semibold text-text-primary">{exercise.name}</h4>
+          <p className="mt-1 text-[11px] text-text-dim">
+            {prevSets ? "Compared with the previous matching session." : "First logged session for this exercise."}
+          </p>
+        </div>
+        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-text-secondary">
+          Best {bestSet.weight > 0 ? `${bestSet.weight}kg` : "BW"} × {bestSet.reps}
         </span>
       </div>
 
-      {/* Sets grid */}
-      <div className="flex flex-col gap-1">
+      <div className="mt-3 flex flex-col gap-2">
         {exercise.sets.map((set, idx) => {
           const prevSet = prevSets?.[idx] ?? null;
           const wDelta = prevSet ? set.weight - prevSet.weight : 0;
@@ -550,60 +689,59 @@ function ExerciseDetail({
           const volume = set.weight * set.reps;
           const prevVolume = prevSet ? prevSet.weight * prevSet.reps : 0;
           const volDelta = prevSet ? volume - prevVolume : 0;
+          const weightChange = wDelta === 0 ? null : `${wDelta > 0 ? "+" : ""}${wDelta}kg`;
+          const repChange = rDelta === 0 ? null : `${rDelta > 0 ? "+" : ""}${rDelta} reps`;
+          const volumeChange = volDelta === 0 ? null : `${volDelta > 0 ? "+" : ""}${volDelta}`;
 
           return (
-            <div key={idx} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-bg-input/50">
-              {/* Set number */}
-              <span className="w-4 text-center text-[10px] font-bold text-text-dim">{idx + 1}</span>
-
-              {/* Weight */}
-              <div className="flex min-w-[60px] items-baseline gap-1">
-                <span className="text-sm font-semibold tabular-nums text-text-primary">
-                  {set.weight > 0 ? `${set.weight}` : "BW"}
+            <div key={idx} className="rounded-[1rem] border border-white/[0.05] bg-white/[0.03] px-3 py-3">
+              <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-[11px] font-semibold text-text-muted">
+                  {idx + 1}
                 </span>
-                {set.weight > 0 && <span className="text-[10px] text-text-dim">kg</span>}
-                {wDelta !== 0 && (
-                  <span className={`text-[9px] font-bold tabular-nums ${wDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
-                    {wDelta > 0 ? "+" : ""}{wDelta}
-                  </span>
-                )}
-              </div>
 
-              {/* Divider */}
-              <span className="text-[10px] text-text-dim">×</span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold tabular-nums text-text-primary">
+                      {set.weight > 0 ? `${set.weight}kg` : "BW"} × {set.reps}
+                    </span>
+                    {set.toFailure && (
+                      <span className="rounded-full bg-accent-red/15 px-2 py-0.5 text-[10px] font-semibold text-accent-red">
+                        F
+                      </span>
+                    )}
+                  </div>
 
-              {/* Reps */}
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-semibold tabular-nums text-text-primary">{set.reps}</span>
-                {rDelta !== 0 && (
-                  <span className={`text-[9px] font-bold tabular-nums ${rDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
-                    {rDelta > 0 ? "+" : ""}{rDelta}
-                  </span>
-                )}
-              </div>
+                  {prevSet ? (
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-dim">
+                      <span className={wDelta > 0 ? "text-accent-green" : wDelta < 0 ? "text-accent-red" : ""}>
+                        {weightChange ?? "Same weight"}
+                      </span>
+                      <span className={rDelta > 0 ? "text-accent-green" : rDelta < 0 ? "text-accent-red" : ""}>
+                        {repChange ?? "Same reps"}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-text-dim">No previous set to compare.</p>
+                  )}
+                </div>
 
-              {/* Spacer */}
-              <div className="flex-1" />
-
-              {/* Volume */}
-              <div className="flex items-center gap-1.5">
-                {set.toFailure && (
-                  <span className="rounded bg-accent-red/15 px-1.5 py-0.5 text-[9px] font-bold text-accent-red">F</span>
-                )}
-                <span className="text-[11px] tabular-nums text-text-muted">{volume > 0 ? `${volume.toLocaleString()}` : "—"}</span>
-                {volDelta !== 0 && (
-                  <span className={`text-[9px] font-bold tabular-nums ${volDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
-                    {volDelta > 0 ? "+" : ""}{volDelta}
-                  </span>
-                )}
+                <div className="text-right">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Volume</p>
+                  <p className="mt-1 text-sm font-semibold tabular-nums text-text-primary">
+                    {volume > 0 ? volume.toLocaleString() : "—"}
+                  </p>
+                  {volumeChange && (
+                    <p className={`mt-1 text-[11px] font-medium tabular-nums ${volDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
+                      {volumeChange}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
-
-      {/* First session indicator */}
-      {!prevSets && <p className="mt-1.5 text-[10px] text-text-dim">First session</p>}
     </div>
   );
 }

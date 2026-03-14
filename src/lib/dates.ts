@@ -1,16 +1,42 @@
 // Shared date formatting utilities
 
-function diffDays(iso: string): number {
-  const date = new Date(iso);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  return Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
+function padDatePart(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+export function formatDateKey(date: Date): string {
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+}
+
+function dateKeyToUtcTime(dateKey: string): number {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+export function getIsoDateKey(iso: string): string {
+  return formatDateKey(new Date(iso));
+}
+
+export function createSessionIso(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0, 0).toISOString();
+}
+
+export function getTodayDateKey(now = new Date()): string {
+  return formatDateKey(now);
+}
+
+export function daysBetweenDateKeys(laterDateKey: string, earlierDateKey: string): number {
+  return Math.round((dateKeyToUtcTime(laterDateKey) - dateKeyToUtcTime(earlierDateKey)) / 86400000);
+}
+
+export function daysSinceIsoDate(iso: string, todayDateKey = getTodayDateKey()): number {
+  return daysBetweenDateKeys(todayDateKey, getIsoDateKey(iso));
 }
 
 /** "Today", "Yesterday", "3 days ago", then "Wed, Mar 14" */
 export function formatRelativeDate(iso: string): string {
-  const days = diffDays(iso);
+  const days = daysSinceIsoDate(iso);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days} days ago`;
@@ -19,7 +45,7 @@ export function formatRelativeDate(iso: string): string {
 
 /** "Today", "Yesterday", "3d ago", then "Mar 14" */
 export function formatRelativeDateShort(iso: string): string {
-  const days = diffDays(iso);
+  const days = daysSinceIsoDate(iso);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days}d ago`;
@@ -43,9 +69,7 @@ export function formatMonthYear(iso: string): string {
 export function daysSinceLastSession(dayId: string, history: { dayId: string; date: string }[]): number | null {
   for (const w of history) {
     if (w.dayId === dayId) {
-      const now = new Date();
-      const then = new Date(w.date);
-      return Math.round((now.getTime() - then.getTime()) / 86400000);
+      return daysSinceIsoDate(w.date);
     }
   }
   return null;

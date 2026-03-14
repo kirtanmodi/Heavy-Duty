@@ -62,16 +62,17 @@ export function StepperInput({
     e.target.select();
 
   return (
-    <div className="flex flex-col">
-      <div className="flex items-center gap-0.5">
+    <div className="flex flex-col gap-1">
+      <div className="input-shell flex items-center overflow-hidden">
         <button
           onClick={() => handleStep(-1)}
           onTouchStart={() => startLongPressWithRef(-1)}
           onTouchEnd={clearTimers}
+          onTouchCancel={clearTimers}
           onMouseDown={() => startLongPressWithRef(-1)}
           onMouseUp={clearTimers}
           onMouseLeave={clearTimers}
-          className="flex h-11 w-6 shrink-0 items-center justify-center rounded-l-xl border border-white/[0.06] bg-white/[0.04] text-text-muted transition-colors active:bg-white/[0.1]"
+          className="touch-target flex h-11 w-9 shrink-0 items-center justify-center border-r border-white/[0.06] bg-white/[0.02] text-text-muted transition-colors active:bg-white/[0.08]"
           aria-label="Decrease"
         >
           <svg
@@ -96,17 +97,18 @@ export function StepperInput({
             onChange(parsed);
           }}
           onFocus={selectAllOnFocus}
-          className="h-11 w-full min-w-0 border-y border-white/[0.06] bg-white/[0.04] px-0 text-center text-[15px] font-bold tabular-nums text-white outline-none transition-colors focus:border-white/[0.15] focus:bg-white/[0.06]"
+          className="input-focus h-11 w-full min-w-0 border-0 bg-transparent px-1 text-center text-[15px] font-semibold tabular-nums text-white outline-none"
           placeholder={placeholder}
         />
         <button
           onClick={() => handleStep(1)}
           onTouchStart={() => startLongPressWithRef(1)}
           onTouchEnd={clearTimers}
+          onTouchCancel={clearTimers}
           onMouseDown={() => startLongPressWithRef(1)}
           onMouseUp={clearTimers}
           onMouseLeave={clearTimers}
-          className="flex h-11 w-6 shrink-0 items-center justify-center rounded-r-xl border border-white/[0.06] bg-white/[0.04] text-text-muted transition-colors active:bg-white/[0.1]"
+          className="touch-target flex h-11 w-9 shrink-0 items-center justify-center border-l border-white/[0.06] bg-white/[0.02] text-text-muted transition-colors active:bg-white/[0.08]"
           aria-label="Increase"
         >
           <svg
@@ -123,7 +125,7 @@ export function StepperInput({
       {prevHint && (
         <button
           onClick={onPrevTap}
-          className="mt-0.5 text-center text-[9px] tabular-nums text-text-dim transition-colors active:text-text-muted"
+          className="self-center rounded-full bg-white/[0.04] px-2.5 py-1 text-center text-[10px] font-medium tabular-nums text-text-dim transition-colors active:bg-white/[0.07] active:text-text-muted"
         >
           {prevHint}
         </button>

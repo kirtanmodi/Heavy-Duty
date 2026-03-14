@@ -13,6 +13,7 @@ interface RestButton {
 }
 
 interface ExerciseCardProps {
+  mode?: "workout" | "history-edit";
   entry: ExerciseEntry;
   exerciseIndex: number;
   onSetChange: (exerciseIndex: number, setIndex: number, field: keyof SetEntry, value: number | boolean) => void;
@@ -31,6 +32,7 @@ interface ExerciseCardProps {
 }
 
 export function ExerciseCard({
+  mode = "workout",
   entry,
   exerciseIndex,
   onSetChange,
@@ -71,7 +73,13 @@ export function ExerciseCard({
 
   if (!exercise) return null;
 
+  const isHistoryEdit = mode === "history-edit";
   const color = muscleColors[exercise.primaryMuscles[0]] || "#888";
+  const menuPanelStyle = {
+    background: "rgba(18, 21, 29, 0.98)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 16px 38px rgba(0,0,0,0.42)",
+  };
 
   // Collapsed skipped render
   if (entry.skipped) {
@@ -79,7 +87,7 @@ export function ExerciseCard({
       <div
         className={`relative rounded-2xl ${showMenu ? "z-30" : ""}`}
         style={{
-          background: `linear-gradient(135deg, ${color}08 0%, rgba(255,255,255,0.02) 50%)`,
+          background: `linear-gradient(180deg, ${color}${isHistoryEdit ? "0C" : "08"} 0%, rgba(255,255,255,0.02) 54%, rgba(255,255,255,0.01) 100%)`,
           border: `1px solid ${color}18`,
         }}
       >
@@ -112,11 +120,7 @@ export function ExerciseCard({
             {showMenu && (
               <div
                 className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-2xl py-1 animate-fade-in"
-                style={{
-                  background: "rgba(30,31,36,0.98)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                }}
+                style={menuPanelStyle}
               >
                 {onUnskip && (
                   <button
@@ -242,8 +246,10 @@ export function ExerciseCard({
     <div
       className="relative overflow-hidden rounded-2xl"
       style={{
-        background: `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
-        border: `1px solid ${color}15`,
+        background: isHistoryEdit
+          ? `linear-gradient(180deg, ${color}0A 0%, rgba(255,255,255,0.02) 44%, rgba(255,255,255,0.01) 100%)`
+          : `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
+        border: `1px solid ${isHistoryEdit ? `${color}1A` : `${color}15`}`,
       }}
     >
       {/* Color accent bar */}
@@ -267,6 +273,11 @@ export function ExerciseCard({
                 </span>
               )}
             </div>
+              {isHistoryEdit && (
+                <p className="text-[11px] leading-relaxed text-text-dim">
+                  Saved session entry. Adjust logged values, failure markers, or set count here.
+                </p>
+              )}
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setShowEquipmentPicker(!showEquipmentPicker)}
@@ -319,11 +330,7 @@ export function ExerciseCard({
             {showMenu && (
               <div
                 className="absolute right-0 top-full z-10 mt-1 w-48 overflow-hidden rounded-2xl py-1 animate-fade-in"
-                style={{
-                  background: "rgba(30,31,36,0.98)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                }}
+                style={menuPanelStyle}
               >
                 <button
                   onClick={() => { onSwap(exerciseIndex); setShowMenu(false); }}
@@ -626,7 +633,7 @@ export function ExerciseCard({
             onClick={() => onAddSet(exerciseIndex)}
             className="flex-1 rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-[13px] font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
           >
-            + Set
+            {isHistoryEdit ? "Add Set" : "+ Set"}
           </button>
 
           {restButtons?.map((btn, i) => (

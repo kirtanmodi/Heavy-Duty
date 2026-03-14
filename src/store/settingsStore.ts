@@ -22,6 +22,13 @@ interface SettingsState {
   removeCustomGymEquipment: (id: string) => void;
   bulkRemoveCustomGymEquipment: (ids: string[]) => void;
   resetGymEquipment: () => void;
+  restoreState: (state: {
+    activeProgram: ProgramId;
+    restTimerSeconds: number;
+    autoStartTimer: boolean;
+    gymEquipment: GymEquipmentProfile;
+    customGymEquipment: CustomGymEquipment[];
+  }) => void;
   clearAll: () => void;
 }
 
@@ -80,6 +87,14 @@ export const useSettingsStore = create<SettingsState>()(
         }),
       resetGymEquipment: () =>
         set({ gymEquipment: buildDefaultGymEquipmentProfile(), customGymEquipment: [] }),
+      restoreState: (state) =>
+        set({
+          activeProgram: state.activeProgram,
+          restTimerSeconds: state.restTimerSeconds,
+          autoStartTimer: state.autoStartTimer,
+          gymEquipment: { ...buildDefaultGymEquipmentProfile(), ...state.gymEquipment },
+          customGymEquipment: state.customGymEquipment,
+        }),
       clearAll: () =>
         set({
           activeProgram: "heavy-duty-complete",

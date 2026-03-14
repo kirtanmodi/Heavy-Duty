@@ -1,16 +1,19 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { WorkoutEntry, ExerciseEntry, DayType } from "../types";
+import { createSessionIso } from "../lib/dates";
+
+export interface ActiveWorkoutState {
+  dayId: string;
+  dayName: string;
+  program: string;
+  exercises: ExerciseEntry[];
+  startedAt: string;
+}
 
 interface WorkoutState {
   history: WorkoutEntry[];
-  activeWorkout: {
-    dayId: string;
-    dayName: string;
-    program: string;
-    exercises: ExerciseEntry[];
-    startedAt: string;
-  } | null;
+  activeWorkout: ActiveWorkoutState | null;
   lastCompletedWorkout: WorkoutEntry | null;
 
   startWorkout: (dayId: string, dayName: string, program: string, exercises: ExerciseEntry[]) => void;
@@ -25,10 +28,27 @@ interface WorkoutState {
   skipExercise: (exerciseIndex: number) => void;
   unskipExercise: (exerciseIndex: number) => void;
   updateHistoryEntry: (workoutId: string, exercises: ExerciseEntry[]) => void;
-  logCardioSession: (dayId: string, dayName: string, program: string, dayType: DayType, activityName?: string) => void;
+  updateWorkoutDate: (workoutId: string, dateKey: string) => void;
+  logCardioSession: (
+    dayId: string,
+    dayName: string,
+    program: string,
+    dayType: DayType,
+    activityName?: string,
+    dateKey?: string,
+  ) => void;
   deleteHistoryEntry: (workoutId: string) => void;
   importHistory: (workouts: WorkoutEntry[]) => void;
+  restoreState: (state: {
+    history: WorkoutEntry[];
+    activeWorkout: ActiveWorkoutState | null;
+    lastCompletedWorkout: WorkoutEntry | null;
+  }) => void;
   clearAll: () => void;
+}
+
+function sortHistory(workouts: WorkoutEntry[]): WorkoutEntry[] {
+  return [...workouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -83,7 +103,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           exercises: active.exercises.filter((e) => e.skipped || e.sets.some((s) => s.reps > 0)),
         };
         set((state) => ({
-          history: [entry, ...state.history],
+          history: sortHistory([entry, ...state.history]),
           activeWorkout: null,
           lastCompletedWorkout: entry,
         }));
@@ -133,10 +153,20 @@ export const useWorkoutStore = create<WorkoutState>()(
         }));
       },
 
-      logCardioSession: (dayId, dayName, program, dayType, activityName?) => {
+      updateWorkoutDate: (workoutId, dateKey) => {
+        set((state) => ({
+          history: sortHistory(
+            state.history.map((w) =>
+              w.id === workoutId ? { ...w, date: createSessionIso(dateKey) } : w,
+            ),
+          ),
+        }));
+      },
+
+      logCardioSession: (dayId, dayName, program, dayType, activityName?, dateKey?) => {
         const entry: WorkoutEntry = {
           id: crypto.randomUUID(),
-          date: new Date().toISOString(),
+          date: dateKey ? createSessionIso(dateKey) : new Date().toISOString(),
           program,
           day: dayName,
           dayId,
@@ -145,7 +175,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           exercises: [],
         };
         set((state) => ({
-          history: [entry, ...state.history],
+          history: sortHistory([entry, ...state.history]),
         }));
       },
 
@@ -155,7 +185,14 @@ export const useWorkoutStore = create<WorkoutState>()(
         }));
       },
 
-      importHistory: (workouts) => set({ history: workouts }),
+      importHistory: (workouts) => set({ history: sortHistory(workouts) }),
+
+      restoreState: (state) =>
+        set({
+          history: sortHistory(state.history),
+          activeWorkout: state.activeWorkout,
+          lastCompletedWorkout: state.lastCompletedWorkout,
+        }),
 
       clearAll: () => set({ history: [], activeWorkout: null, lastCompletedWorkout: null }),
     }),

@@ -2,6 +2,7 @@ import type { WorkoutEntry, ProgramDay, DayType } from "../types";
 import { exerciseGroups, exerciseMap, getEffectiveExercise } from "../data/exercises";
 import { cardioActivities } from "../data/programs";
 import type { CardioActivity } from "../data/programs";
+import { daysBetweenDateKeys, daysSinceIsoDate, getIsoDateKey, getTodayDateKey } from "./dates";
 
 export interface MuscleRecoveryStatus {
   group: string;
@@ -72,10 +73,10 @@ export function getSmartDaySuggestion(
     return {
       type: "lift",
       reason,
-      suggestion: `Consider ${alternative.focus} instead`,
+      suggestion: `Swap to ${alternative.focus}`,
     };
   }
-  return { type: "cardio", reason, suggestion: "Consider cardio instead" };
+  return { type: "cardio", reason, suggestion: "Swap to cardio" };
 }
 
 /**
@@ -121,11 +122,10 @@ export function getGroupSkipHistory(
 export function getMuscleRecoveryStatus(
   history: WorkoutEntry[],
 ): MuscleRecoveryStatus[] {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayDateKey = getTodayDateKey();
 
   // Track most recent date and exercises per group
-  const groupLastDate = new Map<string, Date>();
+  const groupLastDateKey = new Map<string, string>();
   const groupExercises = new Map<string, string[]>();
 
   // Scan last 30 lift entries for performance
@@ -134,7 +134,7 @@ export function getMuscleRecoveryStatus(
     .slice(0, 30);
 
   for (const workout of liftEntries) {
-    const workoutDate = new Date(workout.date);
+    const workoutDateKey = getIsoDateKey(workout.date);
     for (const ex of workout.exercises) {
       if (ex.skipped) continue;
       const def = getEffectiveExercise(ex.id) ?? exerciseMap.get(ex.id);
@@ -142,14 +142,12 @@ export function getMuscleRecoveryStatus(
       for (const muscle of def.primaryMuscles) {
         const group = muscleToGroup.get(muscle);
         if (!group) continue;
-        const existing = groupLastDate.get(group);
-        if (!existing || workoutDate > existing) {
-          groupLastDate.set(group, workoutDate);
+        const existingDateKey = groupLastDateKey.get(group);
+        if (!existingDateKey || workoutDateKey > existingDateKey) {
+          groupLastDateKey.set(group, workoutDateKey);
           groupExercises.set(group, []);
         }
-        if (
-          workoutDate.toDateString() === groupLastDate.get(group)!.toDateString()
-        ) {
+        if (workoutDateKey === groupLastDateKey.get(group)) {
           const exList = groupExercises.get(group)!;
           if (!exList.includes(ex.name)) exList.push(ex.name);
         }
@@ -158,8 +156,8 @@ export function getMuscleRecoveryStatus(
   }
 
   return exerciseGroups.map((g) => {
-    const lastDate = groupLastDate.get(g.label);
-    if (!lastDate) {
+    const lastDateKey = groupLastDateKey.get(g.label);
+    if (!lastDateKey) {
       return {
         group: g.label,
         daysSinceLastTrained: null,
@@ -167,14 +165,7 @@ export function getMuscleRecoveryStatus(
         lastExercises: [],
       };
     }
-    const lastDateStart = new Date(
-      lastDate.getFullYear(),
-      lastDate.getMonth(),
-      lastDate.getDate(),
-    );
-    const daysSince = Math.floor(
-      (todayStart.getTime() - lastDateStart.getTime()) / (1000 * 60 * 60 * 24),
-    );
+    const daysSince = daysBetweenDateKeys(todayDateKey, lastDateKey);
     return {
       group: g.label,
       daysSinceLastTrained: daysSince,
@@ -192,17 +183,7 @@ export interface RestDaySuggestion {
 
 export function getDaysSinceLastActivity(history: WorkoutEntry[]): number {
   if (history.length === 0) return 999;
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const lastDate = new Date(history[0].date);
-  const lastDateStart = new Date(
-    lastDate.getFullYear(),
-    lastDate.getMonth(),
-    lastDate.getDate(),
-  );
-  return Math.floor(
-    (todayStart.getTime() - lastDateStart.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  return daysSinceIsoDate(history[0].date);
 }
 
 export function getRestDaySuggestion(
