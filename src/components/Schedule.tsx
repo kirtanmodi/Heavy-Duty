@@ -73,6 +73,52 @@ function getLoggedSummary(day: ProgramDay, activityName?: string): string {
   return "This date is already logged as cardio.";
 }
 
+function getCycleReason(cycleIndex: number, programDays: ProgramDay[]): string {
+  const total = programDays.length;
+  const day = programDays[cycleIndex];
+  if (!day) return "";
+
+  const prevLift = (() => {
+    for (let i = 1; i < total; i++) {
+      const d = programDays[(cycleIndex - i + total) % total];
+      if (d.type === "lift") return d;
+    }
+    return null;
+  })();
+
+  const nextLift = (() => {
+    for (let i = 1; i < total; i++) {
+      const d = programDays[(cycleIndex + i) % total];
+      if (d.type === "lift") return d;
+    }
+    return null;
+  })();
+
+  if (day.type === "lift") {
+    const liftNum = programDays.filter((d, i) => d.type === "lift" && i <= cycleIndex).length;
+    const liftTotal = programDays.filter((d) => d.type === "lift").length;
+    return `Lift ${liftNum} of ${liftTotal} in your cycle. Day ${cycleIndex + 1} of ${total}.`;
+  }
+
+  if (day.type === "rest" && prevLift && nextLift) {
+    return `Rest between ${prevLift.focus} and ${nextLift.focus}. Muscles need at least 48h before the next lift.`;
+  }
+
+  if (day.type === "rest" && prevLift) {
+    return `Rest after ${prevLift.focus}. This closes your cycle before the next round starts.`;
+  }
+
+  if (day.type === "cardio") {
+    return `Cardio after all 3 lifts. Keeps your heart healthy without taxing recovering muscles.`;
+  }
+
+  if (day.type === "recovery") {
+    return `Active recovery to boost blood flow and speed up healing before the next cycle.`;
+  }
+
+  return `Day ${cycleIndex + 1} of ${total} in your cycle.`;
+}
+
 function DayTypeBadge({ type }: { type: string }) {
   const badge = typeBadge[type] ?? typeBadge.rest;
 
@@ -175,7 +221,7 @@ export function Schedule() {
         ) : null}
       </section>
 
-      {rollingDays.map(({ day, dateKey, source, workout }, index) => {
+      {rollingDays.map(({ day, cycleIndex, dateKey, source, workout }, index) => {
         const leadDays = daysBetweenDateKeys(dateKey, todayDateKey);
         const isLogged = source !== "planned";
         const isNextUp = index === firstPlannedIndex;
@@ -232,6 +278,9 @@ export function Schedule() {
                 </h3>
                 <p className="mt-1 text-sm leading-6 text-text-secondary">
                   {isLogged ? getLoggedSummary(day, workout?.activityName) : getDaySummary(day)}
+                </p>
+                <p className="mt-1.5 text-[12px] leading-5 text-text-dim">
+                  {getCycleReason(cycleIndex, program.days)}
                 </p>
               </div>
 

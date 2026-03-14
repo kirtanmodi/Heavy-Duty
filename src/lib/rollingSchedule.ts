@@ -19,6 +19,14 @@ function getProgramDayIndex(programDays: ProgramDay[], dayId: string): number {
   return programDays.findIndex((day) => day.id === dayId);
 }
 
+/** Any non-lift manual log satisfies any non-lift cycle day (cardio/recovery/rest are interchangeable for cycle advancement). */
+function isNonLiftTypeMatch(cycle: ProgramDay[], cycleIndex: number, workout: WorkoutEntry): boolean {
+  const expected = cycle[cycleIndex];
+  if (!expected || expected.type === "lift") return false;
+  const loggedType = workout.dayType ?? "lift";
+  return loggedType !== "lift";
+}
+
 export function getProgramCycle(programDays: ProgramDay[]): ProgramDay[] {
   return [...programDays];
 }
@@ -57,22 +65,21 @@ export function getLastCompletedCycleDayBeforeDate(
   programDays: ProgramDay[],
   history: WorkoutEntry[],
   startDateKey: string,
-): { day: ProgramDay; index: number } | null {
+): { day: ProgramDay; index: number; dateKey: string } | null {
   const cycle = getProgramCycle(programDays);
   for (const workout of history) {
-    if (getIsoDateKey(workout.date) >= startDateKey) continue;
+    const dateKey = getIsoDateKey(workout.date);
+    if (dateKey >= startDateKey) continue;
     const index = getProgramDayIndex(cycle, workout.dayId);
     if (index !== -1) {
-      return { day: cycle[index], index };
+      return { day: cycle[index], index, dateKey };
     }
   }
   return null;
 }
 
 export function getNextCycleIndex(programDays: ProgramDay[], history: WorkoutEntry[]): number {
-  if (programDays.length === 0) return 0;
-  const lastCompleted = getLastCompletedCycleDayBeforeDate(programDays, history, getTodayDateKey());
-  return lastCompleted ? (lastCompleted.index + 1) % programDays.length : 0;
+  return getNextCycleIndexFromDate(programDays, history, getTodayDateKey());
 }
 
 function getNextCycleIndexFromDate(
@@ -81,8 +88,30 @@ function getNextCycleIndexFromDate(
   startDateKey: string,
 ): number {
   if (programDays.length === 0) return 0;
-  const lastCompleted = getLastCompletedCycleDayBeforeDate(programDays, history, startDateKey);
-  return lastCompleted ? (lastCompleted.index + 1) % programDays.length : 0;
+  const cycle = getProgramCycle(programDays);
+  const anchor = getLastCompletedCycleDayBeforeDate(programDays, history, startDateKey);
+  if (!anchor) return 0;
+
+  let cycleIndex = (anchor.index + 1) % cycle.length;
+
+  // Forward-scan entries between anchor and startDateKey to advance past manual non-lift logs
+  const entriesBetween = history
+    .filter((w) => {
+      const dk = getIsoDateKey(w.date);
+      return dk > anchor.dateKey && dk < startDateKey;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  for (const workout of entriesBetween) {
+    const loggedIndex = getProgramDayIndex(cycle, workout.dayId);
+    if (loggedIndex !== -1) {
+      cycleIndex = (loggedIndex + 1) % cycle.length;
+    } else if (isNonLiftTypeMatch(cycle, cycleIndex, workout)) {
+      cycleIndex = (cycleIndex + 1) % cycle.length;
+    }
+  }
+
+  return cycleIndex;
 }
 
 export function getRollingDayAtOffset(
@@ -104,6 +133,8 @@ export function getRollingDayAtOffset(
       const loggedIndex = getProgramDayIndex(cycle, workout.dayId);
       if (loggedIndex !== -1) {
         cycleIndex = (loggedIndex + 1) % cycle.length;
+      } else if (isNonLiftTypeMatch(cycle, cycleIndex, workout)) {
+        cycleIndex = (cycleIndex + 1) % cycle.length;
       }
       continue;
     }
@@ -138,6 +169,8 @@ export function getUpcomingOpenRollingDays(
       const loggedIndex = getProgramDayIndex(cycle, workout.dayId);
       if (loggedIndex !== -1) {
         cycleIndex = (loggedIndex + 1) % cycle.length;
+      } else if (isNonLiftTypeMatch(cycle, cycleIndex, workout)) {
+        cycleIndex = (cycleIndex + 1) % cycle.length;
       }
       continue;
     }
@@ -183,6 +216,16 @@ export function getUpcomingRollingDays(
           workout,
         });
         cycleIndex = (loggedIndex + 1) % cycle.length;
+      } else if (isNonLiftTypeMatch(cycle, cycleIndex, workout)) {
+        result.push({
+          day: cycle[cycleIndex],
+          cycleIndex,
+          dateOffset,
+          dateKey,
+          source: "logged-program",
+          workout,
+        });
+        cycleIndex = (cycleIndex + 1) % cycle.length;
       } else {
         result.push({
           day: createManualProgramDay(workout, dateKey),

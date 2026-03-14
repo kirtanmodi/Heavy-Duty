@@ -55,23 +55,35 @@ export function getSmartProgramDaySuggestion(
 
   if (recoveringGroups.length === 0) return { type: "lift" };
 
-  // Find an alternative lift day whose groups are ALL recovered
-  const alternative = programDays.find((d) => {
-    if (d.id === programDay.id || d.type !== "lift") return false;
-    const altGroups = getLiftDayGroups(d);
-    return altGroups.every((g) => {
-      const status = recoveryStatuses.find((s) => s.group === g);
-      return !status || status.status !== "recovering";
-    });
-  });
-
   const reason = `${recoveringGroups.join(", ")} still recovering`;
 
-  if (alternative) {
+  // Find alternative lift days ranked by recovery readiness
+  const alternatives = programDays
+    .filter((d) => d.id !== programDay.id && d.type === "lift")
+    .map((d) => {
+      const altGroups = getLiftDayGroups(d);
+      const recovered = altGroups.filter((g) => {
+        const status = recoveryStatuses.find((s) => s.group === g);
+        return !status || status.status !== "recovering";
+      });
+      return { day: d, recovered, total: altGroups.length };
+    })
+    .filter((a) => a.recovered.length > 0)
+    .sort((a, b) => b.recovered.length / b.total - a.recovered.length / a.total);
+
+  const best = alternatives[0];
+
+  if (best && best.recovered.length === best.total) {
+    // Fully recovered alternative
+    return { type: "lift", reason, suggestion: `Swap to ${best.day.focus}` };
+  }
+
+  if (best) {
+    // Partially recovered — still better than cardio
     return {
       type: "lift",
       reason,
-      suggestion: `Swap to ${alternative.focus}`,
+      suggestion: `Try ${best.day.focus} — ${best.recovered.join(", ")} ready`,
     };
   }
 
