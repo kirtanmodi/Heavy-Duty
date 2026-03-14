@@ -4,24 +4,12 @@ import { PageLayout } from "../components/layout/PageLayout";
 import { getProgram } from "../data/programs";
 import { getRandomQuote } from "../data/quotes";
 import { exportJSON, exportCSV, validateImport, mergeImport } from "../lib/export";
-import { getMuscleRecoveryStatus, getDaysSinceLastActivity, getRestDaySuggestion } from "../lib/recovery";
+import { getMuscleRecoveryStatus, getDaysSinceLastActivity, getRestDaySuggestion, getSmartDaySuggestion } from "../lib/recovery";
 import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { DayType, ProgramDay } from "../types";
-import { formatRelativeDateShort } from "../lib/dates";
-
-function daysSinceLastSession(dayId: string, history: { dayId: string; date: string }[]): number | null {
-  for (const w of history) {
-    if (w.dayId === dayId) {
-      const now = new Date();
-      const then = new Date(w.date);
-      return Math.round((now.getTime() - then.getTime()) / 86400000);
-    }
-  }
-  return null;
-}
-
+import { formatRelativeDateShort, daysSinceLastSession } from "../lib/dates";
 
 const CARDIO_ICONS: Record<string, React.ReactNode> = {
   cardio: (
@@ -134,25 +122,39 @@ export function Home() {
       }
     }
 
-    // Build weekday-to-type map from program
-    const programDayByWeekday = new Map<number, DayType>();
+    // Build weekday-to-ProgramDay map from program
+    const programDayByWeekday = new Map<number, ProgramDay>();
     const restWeekdays = new Set<number>();
     for (const pd of program.days) {
-      programDayByWeekday.set(pd.dayOfWeek, pd.type);
+      programDayByWeekday.set(pd.dayOfWeek, pd);
       if (pd.type === "rest") restWeekdays.add(pd.dayOfWeek);
     }
 
+    const recoveryStatuses = getMuscleRecoveryStatus(history);
     const today = now.getDate();
-    const days: { day: number; dayType: DayType | null; isToday: boolean; isRest: boolean; suggestedType: DayType | null }[] = [];
+    const days: { day: number; dayType: DayType | null; isToday: boolean; isRest: boolean; suggestedType: DayType | null; reason?: string }[] = [];
     for (let i = 0; i < startDow; i++) days.push({ day: 0, dayType: null, isToday: false, isRest: false, suggestedType: null });
     for (let d = 1; d <= daysInMonth; d++) {
       const dateObj = new Date(year, month, d);
       const isPast = d < today;
       const dow = dateObj.getDay(); // 0=Sun
       const isRest = isPast && !trainedMap.has(d) && restWeekdays.has(dow);
-      const isFutureOrUnworkedToday = (d > today || (d === today && !trainedMap.has(d)));
-      const suggestedType = isFutureOrUnworkedToday ? (programDayByWeekday.get(dow) ?? null) : null;
-      days.push({ day: d, dayType: trainedMap.get(d) ?? null, isToday: d === today, isRest, suggestedType });
+      const isFutureOrUnworkedToday = d > today || (d === today && !trainedMap.has(d));
+
+      let suggestedType: DayType | null = null;
+      let reason: string | undefined;
+
+      if (isFutureOrUnworkedToday) {
+        const pd = programDayByWeekday.get(dow);
+        if (pd) {
+          const dateOffset = d - today;
+          const smart = getSmartDaySuggestion(dow, dateOffset, program.days, recoveryStatuses);
+          suggestedType = smart.type;
+          reason = smart.reason;
+        }
+      }
+
+      days.push({ day: d, dayType: trainedMap.get(d) ?? null, isToday: d === today, isRest, suggestedType, reason });
     }
 
     const label = now.toLocaleDateString("en-US", { month: "long" });
@@ -446,20 +448,24 @@ export function Home() {
                               ? "bg-accent-blue/60 text-white"
                               : cell.dayType === "rest"
                                 ? "bg-accent-green/40 text-white"
-                                : cell.isToday && cell.suggestedType === "lift"
-                                  ? "ring-2 ring-accent-green/60 text-text-primary"
-                                  : cell.isToday && cell.suggestedType === "cardio"
-                                    ? "ring-2 ring-accent-blue/60 text-text-primary"
-                                    : cell.isToday && cell.suggestedType === "recovery"
-                                      ? "ring-2 ring-accent-blue/40 text-text-primary"
-                                      : cell.isToday
-                                        ? "ring-1 ring-text-muted text-text-primary"
-                                        : cell.suggestedType === "lift"
-                                          ? "ring-1 ring-accent-green/50 text-accent-green/70"
-                                          : cell.suggestedType === "cardio"
-                                            ? "ring-1 ring-accent-blue/50 text-accent-blue/70"
-                                            : cell.suggestedType === "recovery"
-                                              ? "ring-1 ring-accent-blue/30 text-accent-blue/50"
+                                : cell.isToday && cell.reason
+                                  ? "ring-2 ring-accent-orange/60 text-text-primary"
+                                  : cell.isToday && cell.suggestedType === "lift"
+                                    ? "ring-2 ring-accent-green/60 text-text-primary"
+                                    : cell.isToday && cell.suggestedType === "cardio"
+                                      ? "ring-2 ring-accent-blue/60 text-text-primary"
+                                      : cell.isToday && cell.suggestedType === "recovery"
+                                        ? "ring-2 ring-accent-blue/40 text-text-primary"
+                                        : cell.isToday
+                                          ? "ring-1 ring-text-muted text-text-primary"
+                                          : cell.reason
+                                            ? "ring-1 ring-accent-orange/50 text-accent-orange/70"
+                                            : cell.suggestedType === "lift"
+                                              ? "ring-1 ring-accent-green/50 text-accent-green/70"
+                                              : cell.suggestedType === "cardio"
+                                                ? "ring-1 ring-accent-blue/50 text-accent-blue/70"
+                                                : cell.suggestedType === "recovery"
+                                                  ? "ring-1 ring-accent-blue/30 text-accent-blue/50"
                                               : "text-text-dim"
                       }`}
                     >
@@ -489,6 +495,10 @@ export function Home() {
             <div className="flex items-center gap-1">
               <div className="h-2.5 w-2.5 rounded-full ring-1 ring-accent-green/50" />
               <span className="text-[9px] text-text-dim">Planned</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-2.5 w-2.5 rounded-full ring-1 ring-accent-orange/50" />
+              <span className="text-[9px] text-text-dim">Adapted</span>
             </div>
           </div>
           <span className="text-xs text-text-muted">{monthSessionCount} session{monthSessionCount !== 1 ? "s" : ""}</span>

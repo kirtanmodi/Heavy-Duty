@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWorkoutStore } from "../store/workoutStore";
-import { getEffectiveExercise } from "../data/exercises";
+import { getEffectiveExercise, muscleColors, exerciseGroups } from "../data/exercises";
 import { getProgram } from "../data/programs";
+import { getMuscleRecoveryStatus, getLiftDayGroups, getSmartDaySuggestion } from "../lib/recovery";
+import { daysSinceLastSession } from "../lib/dates";
 
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -12,12 +15,21 @@ const typeBadge: Record<string, { bg: string; text: string; label: string }> = {
   rest: { bg: "bg-text-dim/15", text: "text-text-muted", label: "Rest" },
 };
 
+/** Get the primary muscle ID for a group label (for muscleColors lookup) */
+function getGroupPrimaryMuscle(groupLabel: string): string | undefined {
+  const group = exerciseGroups.find((g) => g.label === groupLabel);
+  return group?.muscles[0];
+}
+
 export function Schedule() {
   const navigate = useNavigate();
   const activeWorkout = useWorkoutStore((s) => s.activeWorkout);
+  const history = useWorkoutStore((s) => s.history);
   const program = getProgram("heavy-duty-complete")!;
 
   const todayDow = new Date().getDay();
+
+  const recoveryStatuses = useMemo(() => getMuscleRecoveryStatus(history), [history]);
 
   // Sort days Mon(1) → Sun(0)
   const sortedDays = [...program.days].sort((a, b) => {
@@ -28,10 +40,42 @@ export function Schedule() {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Legend */}
+      <div className="flex items-center gap-4 px-1 text-[10px] text-text-dim">
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-accent-green" />
+          Recovered (4d+)
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-accent-orange" />
+          Recovering (&lt;4d)
+        </span>
+      </div>
+
       {sortedDays.map((day) => {
         const badge = typeBadge[day.type] ?? typeBadge.rest;
         const isToday = day.dayOfWeek === todayDow;
         const isRest = day.type === "rest";
+
+        // Recovery pills: lift days show targeted groups, others show all tracked groups
+        const pillGroups = day.type === "lift"
+          ? getLiftDayGroups(day)
+              .map((g) => recoveryStatuses.find((s) => s.group === g))
+              .filter((s): s is NonNullable<typeof s> => !!s)
+          : recoveryStatuses.filter((s) => s.status !== "never");
+
+        // Staleness
+        const daysAgo = daysSinceLastSession(day.id, history);
+        const stalenessText = daysAgo === null
+          ? "Never done"
+          : daysAgo === 0
+            ? "Done today"
+            : `Last done ${daysAgo}d ago`;
+
+        // Smart warning (lift days only)
+        const smartSuggestion = day.type === "lift"
+          ? getSmartDaySuggestion(day.dayOfWeek, 0, program.days, recoveryStatuses)
+          : null;
 
         return (
           <div
@@ -87,7 +131,48 @@ export function Schedule() {
               <p className="mt-2 text-[11px] text-text-muted">{day.tips}</p>
             )}
 
-            {/* Start button (not for rest days, not when another workout is active) */}
+            {/* Recovery pills */}
+            {pillGroups.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {pillGroups.map((s) => {
+                  const isRecovering = s.status === "recovering";
+                  const muscle = getGroupPrimaryMuscle(s.group);
+                  const baseColor = muscle ? muscleColors[muscle] : undefined;
+                  return (
+                    <span
+                      key={s.group}
+                      className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px]"
+                      style={{
+                        backgroundColor: baseColor
+                          ? `${baseColor}${isRecovering ? "18" : "12"}`
+                          : undefined,
+                      }}
+                    >
+                      <span
+                        className="inline-block h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: isRecovering ? "#f97316" : "#22c55e" }}
+                      />
+                      <span className={isRecovering ? "text-accent-orange/80" : "text-accent-green/80"}>
+                        {s.group}
+                        {s.daysSinceLastTrained !== null && ` ${s.daysSinceLastTrained}d`}
+                      </span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Staleness */}
+            <p className="mt-1.5 text-[10px] text-text-dim">{stalenessText}</p>
+
+            {/* Smart warning (lift days with recovering muscles) */}
+            {smartSuggestion?.reason && smartSuggestion.suggestion && (
+              <p className="mt-1.5 text-[11px] text-accent-orange">
+                {smartSuggestion.reason} — {smartSuggestion.suggestion}
+              </p>
+            )}
+
+            {/* Start button (not for rest days) */}
             {!isRest && !activeWorkout && (
               <button
                 onClick={() => navigate(`/workout/${day.id}`)}

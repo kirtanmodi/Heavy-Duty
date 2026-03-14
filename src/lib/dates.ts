@@ -38,3 +38,15 @@ export function formatDayDate(iso: string): string {
 export function formatMonthYear(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
+
+/** Days since the most recent session matching dayId, or null if never done */
+export function daysSinceLastSession(dayId: string, history: { dayId: string; date: string }[]): number | null {
+  for (const w of history) {
+    if (w.dayId === dayId) {
+      const now = new Date();
+      const then = new Date(w.date);
+      return Math.round((now.getTime() - then.getTime()) / 86400000);
+    }
+  }
+  return null;
+}

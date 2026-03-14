@@ -1,4 +1,4 @@
-import type { WorkoutEntry } from "../types";
+import type { WorkoutEntry, ProgramDay, DayType } from "../types";
 import { exerciseGroups, exerciseMap, getEffectiveExercise } from "../data/exercises";
 import { cardioActivities } from "../data/programs";
 import type { CardioActivity } from "../data/programs";
@@ -15,6 +15,67 @@ for (const g of exerciseGroups) {
   for (const m of g.muscles) {
     muscleToGroup.set(m, g.label);
   }
+}
+
+/** Maps a ProgramDay's exercise IDs to unique muscle group labels. */
+export function getLiftDayGroups(day: ProgramDay): string[] {
+  const groups = new Set<string>();
+  for (const exId of day.exercises) {
+    const def = getEffectiveExercise(exId) ?? exerciseMap.get(exId);
+    if (!def) continue;
+    for (const muscle of def.primaryMuscles) {
+      const group = muscleToGroup.get(muscle);
+      if (group) groups.add(group);
+    }
+  }
+  return [...groups];
+}
+
+export interface SmartSuggestion {
+  type: DayType;
+  reason?: string;
+  suggestion?: string;
+}
+
+export function getSmartDaySuggestion(
+  dow: number,
+  dateOffset: number,
+  programDays: ProgramDay[],
+  recoveryStatuses: MuscleRecoveryStatus[],
+): SmartSuggestion {
+  const programDay = programDays.find((d) => d.dayOfWeek === dow);
+  if (!programDay) return { type: "rest" };
+  if (dateOffset > 2) return { type: programDay.type };
+  if (programDay.type !== "lift") return { type: programDay.type };
+
+  const targetGroups = getLiftDayGroups(programDay);
+  const recoveringGroups = targetGroups.filter((g) => {
+    const status = recoveryStatuses.find((s) => s.group === g);
+    return status?.status === "recovering";
+  });
+
+  if (recoveringGroups.length === 0) return { type: "lift" };
+
+  // Find an alternative lift day whose groups are ALL recovered
+  const alternative = programDays.find((d) => {
+    if (d.id === programDay.id || d.type !== "lift") return false;
+    const altGroups = getLiftDayGroups(d);
+    return altGroups.every((g) => {
+      const status = recoveryStatuses.find((s) => s.group === g);
+      return !status || status.status !== "recovering";
+    });
+  });
+
+  const reason = `${recoveringGroups.join(", ")} still recovering`;
+
+  if (alternative) {
+    return {
+      type: "lift",
+      reason,
+      suggestion: `Consider ${alternative.focus} instead`,
+    };
+  }
+  return { type: "cardio", reason, suggestion: "Consider cardio instead" };
 }
 
 /**
