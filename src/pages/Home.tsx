@@ -49,6 +49,13 @@ const ACTIVITY_ICONS: Record<string, ReactNode> = {
       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  recovery: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
+      <path d="M12 22c5.5 0 10-4.5 10-10S17.5 2 12 2 2 6.5 2 12s4.5 10 10 10z" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2" strokeLinecap="round" />
+      <path d="M9 9h.01M15 9h.01" strokeLinecap="round" />
+    </svg>
+  ),
   rest: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
       <path d="M5 14.5c1.4 3 4.2 4.5 7 4.5 4.4 0 8-3.6 8-8 0-2.8-1.5-5.3-3.8-6.8" strokeLinecap="round" />
@@ -56,12 +63,44 @@ const ACTIVITY_ICONS: Record<string, ReactNode> = {
       <path d="M4 5l1.8 2.7L9 6.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  lift: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
+      <path d="M6.5 6.5v11M17.5 6.5v11M6.5 12h11M4 8v8M20 8v8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  open: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
 };
 
 const MANUAL_ACTIVITY = {
   cardio: { dayId: "manual-cardio", dayName: "Cardio" },
+  recovery: { dayId: "manual-recovery", dayName: "Recovery" },
   rest: { dayId: "manual-rest", dayName: "Rest Day" },
 } as const;
+
+type QuickOptionType = "lift" | "cardio" | "recovery" | "rest" | "open";
+
+interface QuickOption {
+  key: string;
+  label: string;
+  type: QuickOptionType;
+  dayId: string;
+  accentColor: string;
+  icon: ReactNode;
+}
+
+const QUICK_OPTIONS: QuickOption[] = [
+  { key: "hd-monday", label: "Push", type: "lift", dayId: "hd-monday", accentColor: "#FF453A", icon: ACTIVITY_ICONS.lift },
+  { key: "hd-wednesday", label: "Pull", type: "lift", dayId: "hd-wednesday", accentColor: "#0A84FF", icon: ACTIVITY_ICONS.lift },
+  { key: "hd-friday", label: "Legs & Abs", type: "lift", dayId: "hd-friday", accentColor: "#FF9F0A", icon: ACTIVITY_ICONS.lift },
+  { key: "manual-cardio", label: "Cardio", type: "cardio", dayId: "manual-cardio", accentColor: "#0A84FF", icon: ACTIVITY_ICONS.cardio },
+  { key: "manual-recovery", label: "Recovery", type: "recovery", dayId: "manual-recovery", accentColor: "#0A84FF", icon: ACTIVITY_ICONS.recovery },
+  { key: "manual-rest", label: "Rest", type: "rest", dayId: "manual-rest", accentColor: "#30D158", icon: ACTIVITY_ICONS.rest },
+  { key: "open", label: "Open Workout", type: "open", dayId: "open", accentColor: "#FFD60A", icon: ACTIVITY_ICONS.open },
+];
 
 function getLastDoneMeta(day: ProgramDay, history: HistoryPreview[]) {
   const daysSince = daysSinceLastSession(day.id, history);
@@ -104,10 +143,6 @@ function getPlannedDaySummary(day: ProgramDay, hasHistory: boolean) {
     return "Your next planned day is active recovery. Open it when you want the recovery checklist and quick log flow.";
   }
   return "Your cycle lands on a full rest day next. Open it if you want the dedicated rest-day view and logging option.";
-}
-
-function getSuggestedCardTitle(dateKey: string, todayDateKey: string) {
-  return dateKey === todayDateKey ? "Up Next" : "Coming Up";
 }
 
 function getPlannedDayMetric(day: ProgramDay) {
@@ -426,12 +461,10 @@ export function Home() {
     ? (lastSession.day.includes("—") ? lastSession.day.split("—").pop()?.trim() : lastSession.day) ?? lastSession.day
     : null;
   const importMessageTone = importMsg?.includes("restored") ? "text-accent-green" : "text-accent-orange";
-  const suggestedIsToday = suggested?.dateKey === todayDateKey;
-  const quickActionDisabledMessage = activeWorkout
-    ? "Finish or cancel the workout in progress before logging cardio or rest."
-    : isDoneToday
-      ? "Today already has a logged session. Use the calendar below to undo it or fix the date."
-      : null;
+  const filteredOptions = useMemo(
+    () => QUICK_OPTIONS.filter((opt) => !suggested || opt.dayId !== suggested.day.id),
+    [suggested],
+  );
   const selectedCalendarLabel = selectedCalendarCell?.dateKey
     ? formatDayDate(createSessionIso(selectedCalendarCell.dateKey))
     : "";
@@ -449,15 +482,21 @@ export function Home() {
     setCalendarActionError(null);
   };
 
-  const logManualActivity = (type: "cardio" | "rest", dateKey: string) => {
+  const logManualActivity = (type: "cardio" | "recovery" | "rest", dateKey: string) => {
     const config = MANUAL_ACTIVITY[type];
     return logCardioSession(config.dayId, config.dayName, program.name, type, undefined, dateKey);
   };
 
-  const handleQuickActivity = (type: "cardio" | "rest") => {
-    if (quickActionDisabledMessage) return;
-    if (!logManualActivity(type, todayDateKey)) {
-      setCalendarActionError("That day already has a logged session.");
+  const handleOptionTap = (option: QuickOption) => {
+    if (isDoneToday || activeWorkout) return;
+    if (option.type === "lift") {
+      navigate(`/workout/${option.dayId}`);
+    } else if (option.type === "open") {
+      navigate("/workout/open");
+    } else {
+      if (!logManualActivity(option.type, todayDateKey)) {
+        setCalendarActionError("That day already has a logged session.");
+      }
     }
   };
 
@@ -570,24 +609,36 @@ export function Home() {
           </button>
         )}
 
-        {!activeWorkout && suggested && (
-          <div
-            className={`hero-surface card-glow-red flex flex-col gap-4 rounded-[1.8rem] p-5 text-left ${
-              suggestedIsToday ? "" : "opacity-95"
-            }`}
-          >
+        {!activeWorkout && isDoneToday && todayEntries.length > 0 && (
+          <div className="surface-card flex flex-col gap-3 rounded-[1.6rem] p-5 text-left">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-accent-green/12 text-accent-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-5 w-5">
+                  <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="section-label text-accent-green">Done for Today</span>
+                <h2 className="mt-2 font-[var(--font-display)] text-[1.9rem] leading-none tracking-[0.08em] text-text-primary">
+                  {(todayEntries[0].day.includes("—") ? todayEntries[0].day.split("—").pop()?.trim() : todayEntries[0].day) ?? todayEntries[0].day}
+                </h2>
+                <p className="mt-2 text-sm text-text-muted">
+                  Check the calendar below to undo or adjust.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!activeWorkout && !isDoneToday && suggested && (
+          <div className="hero-surface card-glow-red flex flex-col gap-4 rounded-[1.8rem] p-5 text-left">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="section-label text-accent-red">{getSuggestedCardTitle(suggested.dateKey, todayDateKey)}</span>
+                  <span className="section-label text-accent-red">Suggested</span>
                   {suggested.day.type === "lift" && suggestedDaysSince !== null && suggestedDaysSince >= 3 && (
                     <span className="chip border-accent-orange/20 bg-accent-orange/10 text-[11px] font-semibold text-accent-orange">
                       {suggestedDaysSince}d overdue
-                    </span>
-                  )}
-                  {!suggestedIsToday && (
-                    <span className="chip chip-muted text-[11px] text-text-secondary">
-                      {formatDayDate(createSessionIso(suggested.dateKey))}
                     </span>
                   )}
                 </div>
@@ -623,77 +674,49 @@ export function Home() {
                 </p>
               </div>
             )}
-            {suggestedIsToday ? (
-              <button
-                onClick={() => navigate(`/workout/${suggested.day.id}`)}
-                className="flex items-center justify-between rounded-[1.2rem] bg-white/[0.06] px-4 py-3"
-              >
-                <span className="text-sm font-semibold text-white">{getPlannedDayActionLabel(suggested.day)}</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-white">
-                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            ) : (
-              <div className="rounded-[1.2rem] bg-white/[0.06] px-4 py-3">
-                <p className="text-sm font-semibold text-white">This day is queued for later</p>
-                <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-                  You already logged an earlier date in the cycle, so this plan moved to the next open day.
-                </p>
-              </div>
-            )}
+            <button
+              onClick={() => navigate(`/workout/${suggested.day.id}`)}
+              className="flex items-center justify-between rounded-[1.2rem] bg-white/[0.06] px-4 py-3"
+            >
+              <span className="text-sm font-semibold text-white">{getPlannedDayActionLabel(suggested.day)}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-white">
+                <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => handleQuickActivity("cardio")}
-            disabled={!!quickActionDisabledMessage}
-            className={`surface-card-muted flex flex-col rounded-[1.45rem] p-4 text-left transition-opacity ${
-              quickActionDisabledMessage ? "opacity-55" : ""
-            }`}
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-[1rem] bg-accent-blue/12 text-accent-blue">
-              {ACTIVITY_ICONS.cardio}
-            </div>
-            <h3 className="mt-4 text-sm font-semibold text-text-primary">Mark Cardio For Today</h3>
-            <p className="mt-1 text-xs leading-relaxed text-text-muted">
-              Quick log a cardio session without opening the workout screen.
+        {!activeWorkout && (
+          <>
+            <p className="section-label mt-1 text-text-muted">
+              {isDoneToday ? "Already logged — options disabled" : "Other Options"}
             </p>
-            <div className="mt-4 flex items-center justify-between text-xs font-medium text-text-secondary">
-              <span>{quickActionDisabledMessage ? "Use calendar below" : "Save today"}</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <div className="grid grid-cols-2 gap-3">
+              {filteredOptions.map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => handleOptionTap(option)}
+                  disabled={isDoneToday}
+                  className={`surface-card-muted flex flex-col gap-3 rounded-[1.45rem] p-4 text-left transition-opacity ${
+                    isDoneToday ? "opacity-45 pointer-events-none" : ""
+                  }`}
+                >
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-[1rem]"
+                    style={{ background: `${option.accentColor}15`, color: option.accentColor }}
+                  >
+                    {option.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">{option.label}</h3>
+                    <p className="mt-0.5 text-[11px] text-text-muted">
+                      {option.type === "lift" ? "Start workout" : option.type === "open" ? "Freeform session" : "Quick log"}
+                    </p>
+                  </div>
+                </button>
+              ))}
             </div>
-          </button>
-
-          <button
-            onClick={() => handleQuickActivity("rest")}
-            disabled={!!quickActionDisabledMessage}
-            className={`surface-card-muted flex flex-col rounded-[1.45rem] p-4 text-left transition-opacity ${
-              quickActionDisabledMessage ? "opacity-55" : ""
-            }`}
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-[1rem] bg-accent-green/12 text-accent-green">
-              {ACTIVITY_ICONS.rest}
-            </div>
-            <h3 className="mt-4 text-sm font-semibold text-text-primary">Mark Rest For Today</h3>
-            <p className="mt-1 text-xs leading-relaxed text-text-muted">
-              Save a full rest day for today in one tap.
-            </p>
-            <div className="mt-4 flex items-center justify-between text-xs font-medium text-text-secondary">
-              <span>{quickActionDisabledMessage ? "Use calendar below" : "Save today"}</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </button>
-        </div>
-
-        {quickActionDisabledMessage && (
-          <div className="rounded-[1.2rem] border border-white/[0.06] bg-white/[0.03] px-4 py-3">
-            <p className="text-sm leading-relaxed text-text-muted">{quickActionDisabledMessage}</p>
-          </div>
+          </>
         )}
       </section>
 
