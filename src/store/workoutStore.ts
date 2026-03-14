@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { WorkoutEntry, ExerciseEntry, DayType } from "../types";
-import { createSessionIso } from "../lib/dates";
+import { createSessionIso, formatDateKey, getIsoDateKey } from "../lib/dates";
 
 export interface ActiveWorkoutState {
   dayId: string;
@@ -20,7 +20,7 @@ interface WorkoutState {
   updateExercise: (exerciseIndex: number, exercise: ExerciseEntry) => void;
   reorderExercises: (exercises: ExerciseEntry[]) => void;
   replaceActiveWorkoutExercises: (exercises: ExerciseEntry[]) => void;
-  finishWorkout: () => void;
+  finishWorkout: () => boolean;
   cancelWorkout: () => void;
   addExerciseToWorkout: (exercise: ExerciseEntry) => void;
   insertExerciseAtIndex: (exercise: ExerciseEntry, index: number) => void;
@@ -28,7 +28,7 @@ interface WorkoutState {
   skipExercise: (exerciseIndex: number) => void;
   unskipExercise: (exerciseIndex: number) => void;
   updateHistoryEntry: (workoutId: string, exercises: ExerciseEntry[]) => void;
-  updateWorkoutDate: (workoutId: string, dateKey: string) => void;
+  updateWorkoutDate: (workoutId: string, dateKey: string) => boolean;
   logCardioSession: (
     dayId: string,
     dayName: string,
@@ -36,7 +36,7 @@ interface WorkoutState {
     dayType: DayType,
     activityName?: string,
     dateKey?: string,
-  ) => void;
+  ) => boolean;
   deleteHistoryEntry: (workoutId: string) => void;
   importHistory: (workouts: WorkoutEntry[]) => void;
   restoreState: (state: {
@@ -49,6 +49,16 @@ interface WorkoutState {
 
 function sortHistory(workouts: WorkoutEntry[]): WorkoutEntry[] {
   return [...workouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function hasWorkoutOnDate(
+  workouts: WorkoutEntry[],
+  dateKey: string,
+  excludeWorkoutId?: string,
+): boolean {
+  return workouts.some(
+    (workout) => workout.id !== excludeWorkoutId && getIsoDateKey(workout.date) === dateKey,
+  );
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -91,7 +101,9 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       finishWorkout: () => {
         const active = get().activeWorkout;
-        if (!active) return;
+        if (!active) return false;
+        const todayDateKey = formatDateKey(new Date());
+        if (hasWorkoutOnDate(get().history, todayDateKey)) return false;
         const entry: WorkoutEntry = {
           id: crypto.randomUUID(),
           date: new Date().toISOString(),
@@ -107,6 +119,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           activeWorkout: null,
           lastCompletedWorkout: entry,
         }));
+        return true;
       },
 
       cancelWorkout: () => set({ activeWorkout: null }),
@@ -154,6 +167,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       updateWorkoutDate: (workoutId, dateKey) => {
+        if (hasWorkoutOnDate(get().history, dateKey, workoutId)) return false;
         set((state) => ({
           history: sortHistory(
             state.history.map((w) =>
@@ -161,9 +175,12 @@ export const useWorkoutStore = create<WorkoutState>()(
             ),
           ),
         }));
+        return true;
       },
 
       logCardioSession: (dayId, dayName, program, dayType, activityName?, dateKey?) => {
+        const sessionDateKey = dateKey ?? formatDateKey(new Date());
+        if (hasWorkoutOnDate(get().history, sessionDateKey)) return false;
         const entry: WorkoutEntry = {
           id: crypto.randomUUID(),
           date: dateKey ? createSessionIso(dateKey) : new Date().toISOString(),
@@ -177,6 +194,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         set((state) => ({
           history: sortHistory([entry, ...state.history]),
         }));
+        return true;
       },
 
       deleteHistoryEntry: (workoutId) => {
