@@ -49,17 +49,23 @@ export function exportJSON(
 }
 
 export function exportCSV(workouts: WorkoutEntry[]): void {
-  const rows: string[] = ["Date,Day,Exercise,Set,Weight (kg),Reps,To Failure,Skipped"];
+  const rows: string[] = ["Date,Day,Type,Exercise,Set,Weight (kg),Reps,To Failure,Skipped"];
 
   for (const w of workouts) {
+    const dayType = w.dayType ?? "lift";
+    if (w.exercises.length === 0) {
+      // Cardio/recovery sessions with no exercises
+      rows.push(csvRow([w.date, w.day, dayType, "", "", "", "", "", ""]));
+      continue;
+    }
     for (const ex of w.exercises) {
       if (ex.skipped) {
-        rows.push(csvRow([w.date, w.day, ex.name, "", "", "", "", "Yes"]));
+        rows.push(csvRow([w.date, w.day, dayType, ex.name, "", "", "", "", "Yes"]));
         continue;
       }
       for (let i = 0; i < ex.sets.length; i++) {
         const s = ex.sets[i];
-        rows.push(csvRow([w.date, w.day, ex.name, String(i + 1), String(s.weight), String(s.reps), s.toFailure ? "Yes" : "No", "No"]));
+        rows.push(csvRow([w.date, w.day, dayType, ex.name, String(i + 1), String(s.weight), String(s.reps), s.toFailure ? "Yes" : "No", "No"]));
       }
     }
   }
