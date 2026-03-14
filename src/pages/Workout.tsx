@@ -9,7 +9,8 @@ import { cardioActivities, programs } from "../data/programs";
 import { useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { createMentzerSets, getOverloadSuggestion } from "../lib/overload";
-import { getMuscleRecoveryStatus } from "../lib/recovery";
+import { getMuscleRecoveryStatus, getGroupSkipHistory } from "../lib/recovery";
+import { exerciseGroups } from "../data/exercises";
 import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, LiftFocus, SetEntry } from "../types";
@@ -722,31 +723,41 @@ export function Workout() {
         {/* Muscle Recovery Banner */}
         {(() => {
           const recoveryStatuses = getMuscleRecoveryStatus(history);
-          const targetMuscles = new Set<string>();
-          for (const ex of activeWorkout.exercises) {
-            const def = getEffectiveExercise(ex.id);
-            if (def) {
-              for (const m of def.primaryMuscles) {
-                const group = recoveryStatuses.find((r) =>
-                  r.group === "Chest" && ["chest", "upper-chest"].includes(m) ||
-                  r.group === "Back" && ["lats", "mid-back", "lower-back"].includes(m) ||
-                  r.group === "Shoulders" && ["front-delts", "side-delts", "rear-delts"].includes(m) ||
-                  r.group === "Arms" && ["biceps", "triceps", "forearms"].includes(m) ||
-                  r.group === "Traps" && m === "traps" ||
-                  r.group === "Legs" && ["quads", "hamstrings", "glutes", "calves"].includes(m) ||
-                  r.group === "Abs" && m === "core"
-                );
-                if (group) targetMuscles.add(group.group);
-              }
+
+          // Build muscle-to-group lookup from exerciseGroups
+          const muscleToGroupMap = new Map<string, string>();
+          for (const g of exerciseGroups) {
+            for (const m of g.muscles) {
+              muscleToGroupMap.set(m, g.label);
             }
           }
+
+          // Find which groups are targeted by this workout + map group → exercise indices
+          const targetMuscles = new Set<string>();
+          const groupExerciseIndices = new Map<string, number[]>();
+          for (let i = 0; i < activeWorkout.exercises.length; i++) {
+            const ex = activeWorkout.exercises[i];
+            if (ex.skipped) continue;
+            const def = getEffectiveExercise(ex.id);
+            if (!def) continue;
+            for (const m of def.primaryMuscles) {
+              const group = muscleToGroupMap.get(m);
+              if (!group) continue;
+              targetMuscles.add(group);
+              const indices = groupExerciseIndices.get(group) ?? [];
+              if (!indices.includes(i)) indices.push(i);
+              groupExerciseIndices.set(group, indices);
+            }
+          }
+
           const recovering = recoveryStatuses.filter(
             (r) => targetMuscles.has(r.group) && r.status === "recovering" && r.daysSinceLastTrained !== null,
           );
           if (recovering.length === 0) return null;
+
           return (
             <section
-              className="flex flex-col gap-2 rounded-2xl px-4 py-3.5"
+              className="flex flex-col gap-2.5 rounded-2xl px-4 py-3.5"
               style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.12)" }}
             >
               <div className="flex items-center gap-2">
@@ -755,11 +766,48 @@ export function Workout() {
                 </svg>
                 <span className="text-xs font-semibold text-accent-yellow">Recovery Notice</span>
               </div>
-              {recovering.map((r) => (
-                <p key={r.group} className="text-xs leading-relaxed text-text-secondary">
-                  <span className="font-medium text-text-primary">{r.group}</span> was trained {r.daysSinceLastTrained}d ago. Mentzer recommends 4-7 days rest for growth.
-                </p>
-              ))}
+              {recovering.map((r) => {
+                const skipHistory = getGroupSkipHistory(r.group, history);
+                const indices = groupExerciseIndices.get(r.group) ?? [];
+                const exerciseNames = indices.map((i) => activeWorkout.exercises[i].name);
+
+                return (
+                  <div key={r.group} className="flex flex-col gap-2">
+                    <p className="text-xs leading-relaxed text-text-secondary">
+                      <span className="font-medium text-text-primary">{r.group}</span> was trained {r.daysSinceLastTrained}d ago. Mentzer recommends 4-7 days rest for growth.
+                    </p>
+
+                    {skipHistory.consecutiveSkips >= 2 ? (
+                      <p className="text-[11px] leading-relaxed text-accent-red">
+                        {r.group} has been skipped {skipHistory.consecutiveSkips} sessions in a row. Train it today for balanced progress.
+                      </p>
+                    ) : skipHistory.consecutiveSkips === 1 ? (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-[11px] leading-relaxed text-accent-orange">
+                          {r.group} was also skipped last session. Skipping again may slow progress.
+                        </p>
+                        {indices.length > 0 && (
+                          <button
+                            onClick={() => indices.forEach((i) => skipExercise(i))}
+                            className="self-start rounded-lg border border-accent-yellow/20 bg-accent-yellow/8 px-3 py-1.5 text-[11px] font-medium text-accent-yellow transition-colors active:bg-accent-yellow/15"
+                          >
+                            Skip {r.group} anyway ({exerciseNames.length} exercise{exerciseNames.length !== 1 ? "s" : ""})
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      indices.length > 0 && (
+                        <button
+                          onClick={() => indices.forEach((i) => skipExercise(i))}
+                          className="self-start rounded-lg border border-accent-yellow/20 bg-accent-yellow/8 px-3 py-1.5 text-[11px] font-medium text-accent-yellow transition-colors active:bg-accent-yellow/15"
+                        >
+                          Skip {r.group} this week ({exerciseNames.length} exercise{exerciseNames.length !== 1 ? "s" : ""})
+                        </button>
+                      )
+                    )}
+                  </div>
+                );
+              })}
             </section>
           );
         })()}
