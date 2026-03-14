@@ -5,19 +5,7 @@ import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, SetEntry } from "../types";
-
-function formatRelativeDate(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
+import { formatRelativeDate } from "../lib/dates";
 
 export function HistoryEdit() {
   const { workoutId } = useParams<{ workoutId: string }>();

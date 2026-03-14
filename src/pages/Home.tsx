@@ -9,18 +9,7 @@ import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { DayType, ProgramDay } from "../types";
-
-function formatRelativeDate(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
+import { formatRelativeDateShort } from "../lib/dates";
 
 function daysSinceLastSession(dayId: string, history: { dayId: string; date: string }[]): number | null {
   for (const w of history) {
@@ -54,7 +43,7 @@ function LastDoneLabel({ day, history }: { day: ProgramDay; history: { dayId: st
   if (daysSince === 0) return <span className="text-xs text-accent-green">Done today</span>;
   return (
     <span className={`text-xs ${daysSince >= 4 ? "text-accent-orange" : "text-text-muted"}`}>
-      {formatRelativeDate(history.find((w) => w.dayId === day.id)!.date)}
+      {formatRelativeDateShort(history.find((w) => w.dayId === day.id)!.date)}
     </span>
   );
 }
@@ -413,7 +402,7 @@ export function Home() {
           <div className="flex items-baseline justify-between gap-1">
             <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">Last Session</span>
             {lastSession && (
-              <span className="text-[10px] text-text-dim">{formatRelativeDate(lastSession.date)}</span>
+              <span className="text-[10px] text-text-dim">{formatRelativeDateShort(lastSession.date)}</span>
             )}
           </div>
           {lastSession ? (

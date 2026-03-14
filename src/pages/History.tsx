@@ -4,18 +4,7 @@ import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
 import { programs } from "../data/programs";
 import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
-
-function formatRelativeDate(iso: string): string {
-  const date = new Date(iso);
-  const day = date.toLocaleDateString("en-US", { weekday: "short" });
-  const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `${day} · ${dateStr}`;
-}
-
-function formatMonthYear(iso: string): string {
-  const date = new Date(iso);
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-}
+import { formatDayDate, formatMonthYear } from "../lib/dates";
 
 function calcStats(workout: WorkoutEntry) {
   let totalSets = 0;
@@ -324,7 +313,7 @@ export function History() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-[11px] text-text-muted">{formatRelativeDate(workout.date)}</p>
+                                <p className="text-[11px] text-text-muted">{formatDayDate(workout.date)}</p>
                               </div>
                               <svg
                                 viewBox="0 0 24 24"

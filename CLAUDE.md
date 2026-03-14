@@ -44,11 +44,14 @@ src/
 │   ├── stats.ts         # Workout stats (volume, sets, progress comparison)
 │   ├── charts.ts        # Exercise session aggregation, 1RM estimation (Epley), PR extraction
 │   ├── curatedWorkout.ts # Gym equipment profile + curated workout builder per lift focus (returns CurateResult)
+│   ├── dates.ts         # Shared date formatting (relative dates, day·date, month/year)
+│   ├── records.ts       # Per-set PR detection (weight, reps, volume) against history
 │   ├── recovery.ts      # Muscle recovery status (per-group days since trained) + rest day activity suggestions
 │   └── export.ts        # JSON/CSV export (includes dayType column), import validation + merge logic
 ├── hooks/
 │   ├── useTimer.ts      # Countdown timer (rest between sets)
-│   └── useOverload.ts   # Connects overload logic to workout history
+│   ├── useOverload.ts   # Connects overload logic to workout history
+│   └── useElapsedTimer.ts # Elapsed time since workout start (M:SS format)
 ├── pages/
 │   ├── Home.tsx            # Monthly calendar (color-coded by day type), bento stats grid, muscle recovery card, rest day suggestions, resume banner, backup/export
 │   ├── Workout.tsx         # Active workout logging (program days + open/freeform + gym curation + cardio/recovery logging + recovery warnings)
@@ -97,6 +100,7 @@ src/
 - **Stepper inputs** — `StepperInput` component (`src/components/StepperInput.tsx`) wraps number inputs with `[-]` / `[+]` buttons. Long-press for rapid increment via `useRef`-based interval. Weight step respects `exercise.weightIncrement`; rep step is always 1. Tappable "prev:" hints auto-fill from last session.
 - **Data export & backup** — collapsible "Backup & Export" section on Home page. `lib/export.ts` handles JSON export (full backup: workouts + exercises + settings), CSV export (flat: one row per set, includes `dayType` column), and import with validation + deduplication by workout ID. Import uses `workoutStore.importHistory()`.
 - **Progress charts & PR dashboard** — `/progress` route with `recharts` library. Two-level exercise picker: muscle group tabs (All/Chest/Back/Shoulders/Arms/Traps/Legs/Abs — only groups with tracked data shown) filter a grouped or flat exercise list below. Each exercise pill shows session count. Active exercise header displays name, muscles, equipment, and type. Color-coded PR badges use the exercise's muscle accent color (colored top stripe + icon). Pill-style 1RM/Volume chart toggle. `lib/charts.ts` provides pure aggregation functions. `groupColors` map in Progress.tsx assigns per-group colors; `muscleToGroup` map links muscle IDs to `exerciseGroups` labels.
+- **Shared date formatting** — `lib/dates.ts` provides `formatRelativeDate` ("Today"/"3 days ago"), `formatRelativeDateShort` ("3d ago"), `formatDayDate` ("Mon · Mar 14"), and `formatMonthYear` ("March 2026"). Used by Home, History, and HistoryEdit pages — avoid duplicating date logic in page components.
 - **Mobile-first PWA** — max-width 460px, safe-area insets, portrait orientation, standalone display. Bottom nav hides on workout route.
 
 ### Curation Templates
