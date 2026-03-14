@@ -430,14 +430,14 @@ export function ExerciseCard({
         {/* Set inputs */}
         <div className="flex flex-col gap-2">
           {bwMode ? (
-            <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem_2rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
+            <div className="grid grid-cols-[2rem_minmax(0,1fr)_2.5rem_1.5rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
               <span className="text-center">#</span>
               <span>Reps</span>
               <span className="text-center">Fail</span>
               <span />
             </div>
           ) : (
-            <div className="grid grid-cols-[2.5rem_minmax(4rem,1fr)_minmax(3.5rem,1fr)_2.5rem_2rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
+            <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem_1.5rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
               <span className="text-center">#</span>
               <span>Kg</span>
               <span>Reps</span>
@@ -454,7 +454,7 @@ export function ExerciseCard({
             return bwMode ? (
               <div key={setIndex} className="flex flex-col gap-1">
                 <div
-                  className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem_2rem] items-start gap-1 rounded-xl transition-all"
+                  className="grid grid-cols-[2rem_minmax(0,1fr)_2.5rem_1.5rem] items-start gap-1 rounded-xl transition-all"
                   style={completed ? { background: `${color}08` } : {}}
                 >
                   <div className="flex h-11 flex-col items-center justify-center">
@@ -524,7 +524,7 @@ export function ExerciseCard({
             ) : (
               <div key={setIndex} className="flex flex-col gap-1">
                 <div
-                  className="grid grid-cols-[2.5rem_minmax(4rem,1fr)_minmax(3.5rem,1fr)_2.5rem_2rem] items-start gap-1 rounded-xl transition-all"
+                  className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem_1.5rem] items-start gap-1 rounded-xl transition-all"
                   style={completed ? { background: `${color}08` } : {}}
                 >
                   <div className="flex h-11 flex-col items-center justify-center">
