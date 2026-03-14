@@ -63,7 +63,7 @@ All data is client-side. Three Zustand stores persist to localStorage:
 
 | Store | Key | Purpose |
 |-------|-----|---------|
-| `workoutStore` | `hd_workouts` | Workout history, active workout, last completed workout. Actions: `restoreState`, `updateWorkoutDate`, `sortHistory` |
+| `workoutStore` | `hd_workouts` | Workout history, active workout, last completed workout. Mutation actions (`finishWorkout`, `logCardioSession`, `updateWorkoutDate`) return `boolean` — `false` if a workout already exists on the target date |
 | `exerciseStore` | `hd_exercises` | Custom exercises, name overrides, bodyweight/weighted preference, equipment overrides. Actions: `restoreState`, `clearAll` |
 | `settingsStore` | `hd_settings` | Program selection, rest timer, auto-start timer, gym equipment profile, custom gym equipment. Action: `restoreState` (merges gym equipment over defaults) |
 
