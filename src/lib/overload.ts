@@ -1,12 +1,10 @@
 import type { Exercise, SetEntry, OverloadSuggestion } from '../types'
 
-/** Extract working sets (to-failure) from last session, falling back to the last set */
 function getWorkingSets(lastSets: SetEntry[]): SetEntry[] {
   const failureSets = lastSets.filter(s => s.toFailure)
   return failureSets.length > 0 ? failureSets : [lastSets[lastSets.length - 1]]
 }
 
-/** Create Mentzer-style sets: Set 1 = warm-up at 50% weight, Set 2 = working set to failure */
 export function createMentzerSets(suggestion: OverloadSuggestion, exercise: Exercise): SetEntry[] {
   const workingWeight = suggestion.suggestedWeight ?? 0
   const isBodyweightOnly = exercise.equipment === 'bodyweight+' && workingWeight === 0
@@ -43,7 +41,6 @@ export function getOverloadSuggestion(
     }
   }
 
-  // Focus on working sets (to-failure) for progression decisions
   const workingSets = getWorkingSets(lastSets)
   const lastWeight = workingSets[0].weight
   const lastRepsStr = lastSets.map((s, i) => `Set ${i + 1}: ${s.reps}`).join(', ')

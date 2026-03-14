@@ -88,7 +88,6 @@ function PRBadge({ pr, color }: { pr: PRRecord; color: string }) {
   );
 }
 
-// Map muscle groups from exercise data to exercise group labels
 const muscleToGroup = new Map<string, string>();
 for (const g of exerciseGroups) {
   for (const m of g.muscles) {
@@ -124,7 +123,6 @@ export function Progress() {
 
   const tracked = useMemo(() => getTrackedExercises(history), [history]);
 
-  // Group exercises by muscle category
   const groupedExercises = useMemo(() => {
     const groups = new Map<
       string,
@@ -135,7 +133,6 @@ export function Progress() {
       if (!groups.has(group)) groups.set(group, []);
       groups.get(group)!.push(ex);
     }
-    // Sort groups by exerciseGroups order
     const ordered: {
       label: string;
       exercises: { id: string; name: string; sessionCount: number }[];
@@ -150,14 +147,12 @@ export function Progress() {
     return ordered;
   }, [tracked]);
 
-  // Filter exercises by selected group
   const visibleExercises = useMemo(() => {
     if (selectedGroup === "All") return tracked;
     const group = groupedExercises.find((g) => g.label === selectedGroup);
     return group?.exercises ?? [];
   }, [selectedGroup, tracked, groupedExercises]);
 
-  // Auto-select first exercise in visible list
   const activeId =
     selectedId &&
     visibleExercises.some((ex) => ex.id === selectedId)

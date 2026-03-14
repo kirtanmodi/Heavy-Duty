@@ -240,13 +240,11 @@ export function Workout() {
     return { id: exercise.id, name: exercise.name, sets };
   }, [history]);
 
-  // Reset interaction flag when a new session starts
   if (activeWorkout?.startedAt !== sessionStartRef.current) {
     sessionStartRef.current = activeWorkout?.startedAt;
     setHasSessionSetInteraction(false);
   }
 
-  // Derive conflict: active workout exists for a different day
   const hasDayConflict = !!(activeWorkout && activeWorkout.dayId !== dayId && activeWorkout.dayId !== (isOpen ? "open" : dayId) && !discardedConflict);
 
   useEffect(() => {
@@ -272,7 +270,6 @@ export function Workout() {
     startWorkout(day.id, day.name, program.name, exercises);
   }, [isOpen, activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name, seedExerciseEntry]);
 
-  // Build flat list of exercise groups (one per exercise)
   const buildGroups = (): ExerciseGroup[] => {
     if (!activeWorkout) return [];
     return activeWorkout.exercises.map((_, i) => ({ index: i }));
@@ -280,7 +277,6 @@ export function Workout() {
 
   const groups = buildGroups();
 
-  // Progress calculation (exclude skipped exercises)
   const totalSets = activeWorkout?.exercises.filter(e => !e.skipped).reduce((sum, e) => sum + e.sets.length, 0) ?? 0;
   const completedSets = activeWorkout?.exercises.filter(e => !e.skipped).reduce(
     (sum, e) => sum + e.sets.filter((s) => s.weight > 0 || s.reps > 0).length,

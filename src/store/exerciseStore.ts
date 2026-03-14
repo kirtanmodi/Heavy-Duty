@@ -63,8 +63,8 @@ export const useExerciseStore = create<ExerciseState>()(
 
       clearEquipmentOverride: (id) =>
         set((state) => {
-          const { [id]: _removed, ...rest } = state.equipmentOverride
-          void _removed
+          const { [id]: _, ...rest } = state.equipmentOverride
+          void _
           return { equipmentOverride: rest }
         }),
     }),

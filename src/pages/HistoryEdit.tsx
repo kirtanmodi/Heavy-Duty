@@ -23,8 +23,6 @@ export function HistoryEdit() {
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // --- Handlers ---
-
   const handleSetChange = (exIdx: number, setIdx: number, field: keyof SetEntry, value: number | boolean) => {
     setExercises((prev) =>
       prev.map((e, i) => {

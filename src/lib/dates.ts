@@ -1,5 +1,3 @@
-// Shared date formatting utilities
-
 function diffDays(iso: string): number {
   const date = new Date(iso);
   const now = new Date();

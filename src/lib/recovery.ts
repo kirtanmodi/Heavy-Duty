@@ -23,11 +23,9 @@ export function getMuscleRecoveryStatus(
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // Track most recent date and exercises per group
   const groupLastDate = new Map<string, Date>();
   const groupExercises = new Map<string, string[]>();
 
-  // Scan last 30 lift entries for performance
   const liftEntries = history
     .filter((w) => (w.dayType ?? "lift") === "lift")
     .slice(0, 30);
@@ -107,9 +105,7 @@ export function getDaysSinceLastActivity(history: WorkoutEntry[]): number {
 export function getRestDaySuggestion(
   daysSinceLastActivity: number,
 ): RestDaySuggestion {
-  // Saturday recovery activities = gentle movement
   const recoveryActivities = cardioActivities["hd-saturday"] ?? [];
-  // Tuesday zone 2 = light cardio
   const lightCardioActivities = cardioActivities["hd-tuesday"] ?? [];
 
   if (daysSinceLastActivity === 0) {
@@ -128,7 +124,6 @@ export function getRestDaySuggestion(
     };
   }
 
-  // 2+ days
   return {
     type: "light-cardio",
     message: "Time to move! Even 15-20 min of light cardio keeps you on track.",

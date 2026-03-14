@@ -54,7 +54,6 @@ export function exportCSV(workouts: WorkoutEntry[]): void {
   for (const w of workouts) {
     const dayType = w.dayType ?? "lift";
     if (w.exercises.length === 0) {
-      // Cardio/recovery sessions with no exercises
       rows.push(csvRow([w.date, w.day, dayType, "", "", "", "", "", ""]));
       continue;
     }

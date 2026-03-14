@@ -18,7 +18,6 @@ export function WorkoutSummary() {
   const prev = findPrevSession(lastWorkout, history);
   const progress = calcProgress(lastWorkout, prev);
 
-  // Compute duration
   const duration = (() => {
     if (!lastWorkout.startedAt) return null;
     const start = new Date(lastWorkout.startedAt).getTime();

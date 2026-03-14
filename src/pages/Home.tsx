@@ -76,7 +76,6 @@ export function Home() {
     [program.days],
   );
 
-  // Smart suggest: rank lifting workouts by staleness (most overdue first)
   const rankedLifts = useMemo(() => {
     const scored = liftDays.map((day) => {
       const daysSince = daysSinceLastSession(day.id, history);
@@ -116,7 +115,6 @@ export function Home() {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
 
-    // Monday-based offset (0=Mon, 6=Sun)
     const startDow = (firstDay.getDay() + 6) % 7;
 
     const trainedMap = new Map<number, DayType>();
@@ -126,7 +124,6 @@ export function Home() {
       if (d.getFullYear() === year && d.getMonth() === month) {
         const dayType = w.dayType ?? "lift";
         const existing = trainedMap.get(d.getDate());
-        // lift takes priority over other types on same day
         if (!existing || dayType === "lift") {
           trainedMap.set(d.getDate(), dayType);
         }
@@ -134,7 +131,6 @@ export function Home() {
       }
     }
 
-    // Build weekday-to-rest map from program
     const restWeekdays = new Set<number>();
     for (const pd of program.days) {
       if (pd.type === "rest") restWeekdays.add(pd.dayOfWeek);
@@ -504,7 +500,6 @@ export function Home() {
           const isDoneToday = history.some(
             (w) => w.date.slice(0, 10) === now.toISOString().slice(0, 10),
           );
-          // Show on rest/recovery days OR when no activity in 2+ days
           const daysSinceActivity = getDaysSinceLastActivity(history);
           const showNudge = (isRestOrRecoveryDay && !isDoneToday) || daysSinceActivity >= 2;
           if (!showNudge) return null;

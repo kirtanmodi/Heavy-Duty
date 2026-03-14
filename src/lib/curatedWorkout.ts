@@ -70,7 +70,7 @@ export const defaultGymEquipmentProfile = gymEquipmentOptions.reduce((profile, o
   return profile
 }, {} as GymEquipmentProfile)
 
-// Mentzer Heavy Duty workout templates — each slot picks the best available exercise
+// Workout templates per lift focus
 const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
   Push: [
     {
@@ -220,7 +220,7 @@ function pickCandidate(
   if (available.length === 0) return null
   if (!shuffle) return available[0].exerciseId
 
-  // Prefer candidates not in the avoid list so shuffle produces visible changes
+  // Prefer candidates not in the avoid list
   const preferred = available.filter((c) => !avoid.includes(c.exerciseId))
   const pool = preferred.length > 0 ? preferred : available
   return pool[Math.floor(Math.random() * pool.length)].exerciseId

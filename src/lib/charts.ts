@@ -1,6 +1,5 @@
 import type { WorkoutEntry } from "../types";
 
-// Epley formula: estimated 1RM = weight × (1 + reps / 30)
 export function estimate1RM(weight: number, reps: number): number {
   if (weight <= 0 || reps <= 0) return 0;
   if (reps === 1) return weight;
@@ -100,7 +99,6 @@ export function getExercisePRs(
   return [bestWeight, best1RM, bestVolume].filter((p): p is PRRecord => p !== null);
 }
 
-// Get all unique exercises from history
 export function getTrackedExercises(
   history: WorkoutEntry[],
 ): { id: string; name: string; sessionCount: number }[] {

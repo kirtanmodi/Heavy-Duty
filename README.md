@@ -19,7 +19,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Auto-save & resume** — workout data persists automatically on every change. If the app closes mid-workout, a resume banner appears on the home page
 - **Exercise reorder** — move exercises up/down during an active workout
 - **Bodyweight mode** — exercises like hanging leg raises default to reps-only tracking, with a toggle to add external weight
-- **Cardio & rest day tracking** — log cardio and recovery sessions with a "Mark as Done" button. Color-coded calendar: green for lifts, blue for cardio, subtle dots for rest days
+- **Cardio & rest day tracking** — browse activity suggestions, tap to select one, then "Mark as Done" to log the session. Sunday rest activities included. Color-coded calendar: green for lifts, blue for cardio, subtle dots for rest days
 - **Muscle recovery status** — per-muscle-group recovery tracking based on Mentzer's 4-day recovery rule. Home page shows color-coded pills (orange = recovering, green = ready)
 - **Rest day suggestions** — context-aware activity nudges on rest/recovery days or after 2+ days of inactivity
 - **Recovery warnings** — workout page warns when targeted muscle groups are still recovering

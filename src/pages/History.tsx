@@ -3,42 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
 import { programs } from "../data/programs";
+import { calcStats, findPrevSession, calcProgress } from "../lib/stats";
 import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
 import { formatDayDate, formatMonthYear } from "../lib/dates";
-
-function calcStats(workout: WorkoutEntry) {
-  let totalSets = 0;
-  let totalVolume = 0;
-  let totalExercises = 0;
-  for (const ex of workout.exercises) {
-    if (ex.skipped) continue;
-    totalExercises++;
-    totalSets += ex.sets.length;
-    for (const s of ex.sets) totalVolume += s.weight * s.reps;
-  }
-  return { totalExercises, totalSets, totalVolume };
-}
-
-function findPrevSession(workout: WorkoutEntry, history: WorkoutEntry[]): WorkoutEntry | null {
-  const idx = history.indexOf(workout);
-  for (let i = idx + 1; i < history.length; i++) {
-    if (history[i].dayId === workout.dayId) return history[i];
-  }
-  return null;
-}
-
-function calcProgress(current: WorkoutEntry, prev: WorkoutEntry | null) {
-  if (!prev) return null;
-  const curVol = calcStats(current).totalVolume;
-  const prevVol = calcStats(prev).totalVolume;
-  if (prevVol === 0) return null;
-  const delta = curVol - prevVol;
-  const pct = (delta / prevVol) * 100;
-  return {
-    volumePercent: pct,
-    type: delta > 0 ? "increase" : delta < 0 ? "decrease" : "same",
-  } as const;
-}
 
 function getPrevExerciseSets(exerciseId: string, prevSession: WorkoutEntry | null): SetEntry[] | null {
   if (!prevSession) return null;
