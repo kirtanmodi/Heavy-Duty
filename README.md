@@ -22,7 +22,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Cardio & rest day tracking** — log cardio and recovery sessions with a "Mark as Done" button. Color-coded calendar: green for lifts, blue for cardio, subtle dots for rest days
 - **Muscle recovery status** — per-muscle-group recovery tracking based on Mentzer's 4-day recovery rule. Home page shows color-coded pills (orange = recovering, green = ready)
 - **Rest day suggestions** — context-aware activity nudges on rest/recovery days or after 2+ days of inactivity
-- **Recovery warnings** — workout page warns when targeted muscle groups are still recovering
+- **Recovery warnings** — workout page warns when targeted muscle groups are still recovering, with "Skip [Group] this week" buttons to bulk-skip all exercises for a recovering group. Anti-chronic-skip safeguard escalates from yellow (first skip) to amber warning (second consecutive) to red block (third+) to prevent muscle groups from being neglected
 - **Bento stats dashboard** — streak, total workouts, last session focus, muscle recovery status, rest day suggestions, and M–S color-coded training calendar on the home page
 - **Per-exercise tracking** — home page shows last-done date for every exercise in each day card
 - **History filtering** — filter past workouts by exercise; tap any exercise tag to narrow results

@@ -10,11 +10,51 @@ export interface MuscleRecoveryStatus {
   lastExercises: string[];
 }
 
-const muscleToGroup = new Map<string, string>();
+export const muscleToGroup = new Map<string, string>();
 for (const g of exerciseGroups) {
   for (const m of g.muscles) {
     muscleToGroup.set(m, g.label);
   }
+}
+
+/**
+ * Counts how many consecutive past sessions (that targeted a muscle group)
+ * had ALL exercises for that group skipped.
+ * Returns a map of group label → consecutive skip count.
+ */
+export function getGroupSkipHistory(
+  history: WorkoutEntry[],
+): Map<string, number> {
+  const result = new Map<string, number>();
+  const liftEntries = history.filter((w) => (w.dayType ?? "lift") === "lift");
+
+  for (const g of exerciseGroups) {
+    let consecutiveSkips = 0;
+
+    for (const workout of liftEntries) {
+      // Find exercises in this workout that target this group
+      const groupExercises = workout.exercises.filter((ex) => {
+        const def = exerciseMap.get(ex.id);
+        if (!def) return false;
+        return def.primaryMuscles.some((m) => muscleToGroup.get(m) === g.label);
+      });
+
+      // Skip workouts that didn't target this group at all
+      if (groupExercises.length === 0) continue;
+
+      // Check if ALL exercises for this group were skipped
+      const allSkipped = groupExercises.every((ex) => ex.skipped);
+      if (allSkipped) {
+        consecutiveSkips++;
+      } else {
+        break; // Found a session where the group was actually trained
+      }
+    }
+
+    result.set(g.label, consecutiveSkips);
+  }
+
+  return result;
 }
 
 export function getMuscleRecoveryStatus(

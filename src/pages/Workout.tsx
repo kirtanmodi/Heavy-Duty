@@ -9,7 +9,7 @@ import { cardioActivities, programs } from "../data/programs";
 import { useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { createMentzerSets, getOverloadSuggestion } from "../lib/overload";
-import { getMuscleRecoveryStatus } from "../lib/recovery";
+import { getMuscleRecoveryStatus, getGroupSkipHistory, muscleToGroup } from "../lib/recovery";
 import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, LiftFocus, ProgramDay, Program, SetEntry, WorkoutEntry } from "../types";
@@ -769,31 +769,34 @@ export function Workout() {
         {/* Muscle Recovery Banner */}
         {(() => {
           const recoveryStatuses = getMuscleRecoveryStatus(history);
+          const skipHistory = getGroupSkipHistory(history);
           const targetMuscles = new Set<string>();
-          for (const ex of activeWorkout.exercises) {
+          // Map group → exercise indices for bulk skip
+          const groupExerciseIndices = new Map<string, number[]>();
+
+          for (let i = 0; i < activeWorkout.exercises.length; i++) {
+            const ex = activeWorkout.exercises[i];
+            if (ex.skipped) continue;
             const def = getEffectiveExercise(ex.id);
-            if (def) {
-              for (const m of def.primaryMuscles) {
-                const group = recoveryStatuses.find((r) =>
-                  r.group === "Chest" && ["chest", "upper-chest"].includes(m) ||
-                  r.group === "Back" && ["lats", "mid-back", "lower-back"].includes(m) ||
-                  r.group === "Shoulders" && ["front-delts", "side-delts", "rear-delts"].includes(m) ||
-                  r.group === "Arms" && ["biceps", "triceps", "forearms"].includes(m) ||
-                  r.group === "Traps" && m === "traps" ||
-                  r.group === "Legs" && ["quads", "hamstrings", "glutes", "calves"].includes(m) ||
-                  r.group === "Abs" && m === "core"
-                );
-                if (group) targetMuscles.add(group.group);
-              }
+            if (!def) continue;
+            for (const m of def.primaryMuscles) {
+              const group = muscleToGroup.get(m);
+              if (!group) continue;
+              targetMuscles.add(group);
+              const indices = groupExerciseIndices.get(group) ?? [];
+              if (!indices.includes(i)) indices.push(i);
+              groupExerciseIndices.set(group, indices);
             }
           }
+
           const recovering = recoveryStatuses.filter(
             (r) => targetMuscles.has(r.group) && r.status === "recovering" && r.daysSinceLastTrained !== null,
           );
           if (recovering.length === 0) return null;
+
           return (
             <section
-              className="flex flex-col gap-2 rounded-2xl px-4 py-3.5"
+              className="flex flex-col gap-3 rounded-2xl px-4 py-3.5"
               style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.12)" }}
             >
               <div className="flex items-center gap-2">
@@ -802,11 +805,54 @@ export function Workout() {
                 </svg>
                 <span className="text-xs font-semibold text-accent-yellow">Recovery Notice</span>
               </div>
-              {recovering.map((r) => (
-                <p key={r.group} className="text-xs leading-relaxed text-text-secondary">
-                  <span className="font-medium text-text-primary">{r.group}</span> was trained {r.daysSinceLastTrained}d ago. Mentzer recommends 4-7 days rest for growth.
-                </p>
-              ))}
+              {recovering.map((r) => {
+                const consecutiveSkips = skipHistory.get(r.group) ?? 0;
+                const exerciseIndices = groupExerciseIndices.get(r.group) ?? [];
+                const exerciseCount = exerciseIndices.length;
+
+                return (
+                  <div key={r.group} className="flex flex-col gap-2">
+                    <p className="text-xs leading-relaxed text-text-secondary">
+                      <span className="font-medium text-text-primary">{r.group}</span> was trained {r.daysSinceLastTrained}d ago. Mentzer recommends 4-7 days rest for growth.
+                    </p>
+
+                    {consecutiveSkips >= 2 ? (
+                      /* Blocked — 2+ consecutive skips */
+                      <p className="text-[11px] font-medium leading-snug text-accent-red">
+                        {r.group} has been skipped {consecutiveSkips} sessions in a row. Train it today for balanced progress.
+                      </p>
+                    ) : consecutiveSkips === 1 ? (
+                      /* Warning — 1 consecutive skip */
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-[11px] leading-snug text-accent-orange">
+                          {r.group} was also skipped last session. Skipping again may slow progress.
+                        </p>
+                        <button
+                          onClick={() => {
+                            // Skip all exercises targeting this group (highest index first to preserve indices)
+                            const sorted = [...exerciseIndices].sort((a, b) => b - a);
+                            for (const idx of sorted) skipExercise(idx);
+                          }}
+                          className="self-start rounded-lg border border-accent-orange/25 bg-accent-orange/10 px-3 py-1.5 text-[11px] font-semibold text-accent-orange transition-colors active:bg-accent-orange/20"
+                        >
+                          Skip anyway ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
+                        </button>
+                      </div>
+                    ) : (
+                      /* Normal — 0 consecutive skips */
+                      <button
+                        onClick={() => {
+                          const sorted = [...exerciseIndices].sort((a, b) => b - a);
+                          for (const idx of sorted) skipExercise(idx);
+                        }}
+                        className="self-start rounded-lg border border-accent-yellow/25 bg-accent-yellow/10 px-3 py-1.5 text-[11px] font-semibold text-accent-yellow transition-colors active:bg-accent-yellow/20"
+                      >
+                        Skip {r.group} this week ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </section>
           );
         })()}
