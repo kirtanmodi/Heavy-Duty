@@ -83,6 +83,38 @@ export function getMuscleRecoveryStatus(
   });
 }
 
+export function getGroupSkipHistory(
+  group: string,
+  history: WorkoutEntry[],
+): { consecutiveSkips: number } {
+  const groupDef = exerciseGroups.find((g) => g.label === group);
+  if (!groupDef) return { consecutiveSkips: 0 };
+
+  const groupMuscles = new Set(groupDef.muscles as readonly string[]);
+
+  // Find lift sessions that contain exercises targeting this muscle group
+  const liftEntries = history.filter((w) => (w.dayType ?? "lift") === "lift");
+
+  let consecutiveSkips = 0;
+  for (const workout of liftEntries) {
+    const groupExercises = workout.exercises.filter((ex) => {
+      const def = exerciseMap.get(ex.id);
+      return def && def.primaryMuscles.some((m) => groupMuscles.has(m));
+    });
+
+    if (groupExercises.length === 0) continue; // session didn't target this group
+
+    const allSkipped = groupExercises.every((ex) => ex.skipped);
+    if (allSkipped) {
+      consecutiveSkips++;
+    } else {
+      break; // found a session where the group was trained — stop counting
+    }
+  }
+
+  return { consecutiveSkips };
+}
+
 export interface RestDaySuggestion {
   type: "active-recovery" | "light-cardio" | "full-rest";
   message: string;
