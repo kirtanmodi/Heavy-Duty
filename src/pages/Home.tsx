@@ -790,9 +790,18 @@ export function Home() {
         <div className="surface-card rounded-[1.6rem] p-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-text-primary">{monthLabel}</h3>
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              {monthSessionCount === 0 ? "No sessions yet" : `${monthSessionCount} logged`}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                {monthSessionCount === 0 ? "No sessions yet" : `${monthSessionCount} logged`}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate("/progress", { state: { tab: "schedule" } })}
+                className="chip text-[11px] font-semibold text-accent-blue"
+              >
+                Schedule &rarr;
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 grid grid-cols-7 gap-2">

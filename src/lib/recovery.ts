@@ -204,10 +204,10 @@ export function getDaysSinceLastActivity(history: WorkoutEntry[]): number {
 export function getRestDaySuggestion(
   daysSinceLastActivity: number,
 ): RestDaySuggestion {
-  // Saturday recovery activities = gentle movement
+  // Recovery activities = gentle movement
   const recoveryActivities = cardioActivities["hd-saturday"] ?? [];
-  // Tuesday zone 2 = light cardio
-  const lightCardioActivities = cardioActivities["hd-tuesday"] ?? [];
+  // Light cardio options
+  const lightCardioActivities = cardioActivities["hd-cardio"] ?? [];
 
   if (daysSinceLastActivity === 0) {
     return {

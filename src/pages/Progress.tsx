@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -293,7 +294,10 @@ function ExerciseChip({
 
 export function Progress() {
   const history = useWorkoutStore((s) => s.history);
-  const [view, setView] = useState<"charts" | "schedule">("charts");
+  const location = useLocation();
+  const [view, setView] = useState<"charts" | "schedule">(
+    (location.state as { tab?: string } | null)?.tab === "schedule" ? "schedule" : "charts"
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [chartMode, setChartMode] = useState<"1rm" | "volume">("1rm");
