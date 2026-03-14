@@ -55,6 +55,7 @@ export interface WorkoutEntry {
   day: string;
   dayId: string;
   dayType?: DayType;
+  activityName?: string;
   startedAt?: string;
   exercises: ExerciseEntry[];
 }
