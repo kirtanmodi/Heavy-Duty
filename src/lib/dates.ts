@@ -48,6 +48,8 @@ export function daysSinceIsoDate(iso: string, todayDateKey = getTodayDateKey()):
 /** "Today", "Yesterday", "3 days ago", then "Wed, Mar 14" */
 export function formatRelativeDate(iso: string): string {
   const days = daysSinceIsoDate(iso);
+  if (days === -1) return "Tomorrow";
+  if (days < -1) return `In ${Math.abs(days)} days`;
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days} days ago`;
@@ -57,6 +59,8 @@ export function formatRelativeDate(iso: string): string {
 /** "Today", "Yesterday", "3d ago", then "Mar 14" */
 export function formatRelativeDateShort(iso: string): string {
   const days = daysSinceIsoDate(iso);
+  if (days === -1) return "Tomorrow";
+  if (days < -1) return `In ${Math.abs(days)}d`;
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days}d ago`;
@@ -78,8 +82,9 @@ export function formatMonthYear(iso: string): string {
 
 /** Days since the most recent session matching dayId, or null if never done */
 export function daysSinceLastSession(dayId: string, history: { dayId: string; date: string }[]): number | null {
+  const todayDateKey = getTodayDateKey();
   for (const w of history) {
-    if (w.dayId === dayId) {
+    if (w.dayId === dayId && getIsoDateKey(w.date) <= todayDateKey) {
       return daysSinceIsoDate(w.date);
     }
   }

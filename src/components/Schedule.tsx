@@ -65,6 +65,14 @@ function getDaySummary(day: ProgramDay): string {
   return day.description ?? day.focus;
 }
 
+function getLoggedSummary(day: ProgramDay, activityName?: string): string {
+  if (activityName) return `Already logged: ${activityName}.`;
+  if (day.type === "lift") return "This date already has a logged lift session.";
+  if (day.type === "rest") return "This date is already marked as rest.";
+  if (day.type === "recovery") return "This date is already logged as recovery.";
+  return "This date is already logged as cardio.";
+}
+
 function DayTypeBadge({ type }: { type: string }) {
   const badge = typeBadge[type] ?? typeBadge.rest;
 
@@ -130,6 +138,10 @@ export function Schedule() {
     () => getUpcomingRollingDays(program.days, history, program.days.length, firstProjectedDateKey),
     [program.days, history, firstProjectedDateKey],
   );
+  const firstPlannedIndex = useMemo(
+    () => rollingDays.findIndex((slot) => slot.source === "planned"),
+    [rollingDays],
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -163,25 +175,28 @@ export function Schedule() {
         ) : null}
       </section>
 
-      {rollingDays.map(({ day, dateKey, dateOffset }, index) => {
+      {rollingDays.map(({ day, dateKey, source, workout }, index) => {
         const leadDays = daysBetweenDateKeys(dateKey, todayDateKey);
-        const isNextUp = dateOffset === 0;
+        const isLogged = source !== "planned";
+        const isNextUp = index === firstPlannedIndex;
         const isRest = day.type === "rest";
         const daysAgo = daysSinceLastSession(day.id, history);
         const stalenessText =
-          daysAgo === null ? "Never done" : daysAgo === 0 ? "Done today" : `Last done ${daysAgo}d ago`;
+          isLogged ? "Already logged" : daysAgo === null ? "Never done" : daysAgo === 0 ? "Done today" : `Last done ${daysAgo}d ago`;
         const pillGroups =
           day.type === "lift"
             ? getLiftDayGroups(day)
                 .map((group) => recoveryStatuses.find((status) => status.group === group))
                 .filter((status): status is NonNullable<typeof status> => !!status)
             : recoveryStatuses.filter((status) => status.status !== "never");
-        const smartSuggestion = getSmartProgramDaySuggestion(
-          day,
-          program.days,
-          recoveryStatuses,
-          leadDays <= 2,
-        );
+        const smartSuggestion = isLogged
+          ? null
+          : getSmartProgramDaySuggestion(
+              day,
+              program.days,
+              recoveryStatuses,
+              leadDays <= 2,
+            );
         const liftExercises =
           day.type === "lift"
             ? day.exercises
@@ -206,12 +221,17 @@ export function Schedule() {
                       Next Up
                     </span>
                   ) : null}
+                  {isLogged ? (
+                    <span className="chip chip-muted min-h-0 px-2 py-1 text-[10px] font-semibold text-text-secondary">
+                      Logged
+                    </span>
+                  ) : null}
                 </div>
                 <h3 className="mt-3 text-[1.1rem] font-semibold tracking-[-0.02em] text-text-primary">
                   {day.focus}
                 </h3>
                 <p className="mt-1 text-sm leading-6 text-text-secondary">
-                  {getDaySummary(day)}
+                  {isLogged ? getLoggedSummary(day, workout?.activityName) : getDaySummary(day)}
                 </p>
               </div>
 
@@ -223,7 +243,7 @@ export function Schedule() {
                 {stalenessText}
               </span>
               <span className="chip chip-muted text-[11px] text-text-secondary">
-                {leadDays === 0 ? "Starts now" : leadDays === 1 ? "Tomorrow" : `In ${leadDays}d`}
+                {leadDays === 0 ? (isLogged ? "Today" : "Starts now") : leadDays === 1 ? "Tomorrow" : `In ${leadDays}d`}
               </span>
               {day.type === "lift" ? (
                 <span className="chip chip-muted text-[11px] text-text-secondary">
@@ -304,7 +324,7 @@ export function Schedule() {
               </div>
             ) : null}
 
-            {smartSuggestion?.reason && smartSuggestion.suggestion ? (
+            {!isLogged && smartSuggestion?.reason && smartSuggestion.suggestion ? (
               <div className="mt-4 rounded-[1.25rem] border border-accent-orange/20 bg-accent-orange/10 px-3.5 py-3">
                 <p className="text-[12px] font-semibold text-accent-orange">Recovery suggestion</p>
                 <p className="mt-1 text-sm leading-6 text-text-secondary">
@@ -323,7 +343,7 @@ export function Schedule() {
                     Finish or cancel the active session first.
                   </p>
                 </div>
-              ) : (
+              ) : !isLogged && leadDays === 0 ? (
                 <button
                   type="button"
                   onClick={() => navigate(`/workout/${day.id}`)}
@@ -331,6 +351,20 @@ export function Schedule() {
                 >
                   Start Workout
                 </button>
+              ) : isLogged ? (
+                <div className="surface-card-muted mt-4 rounded-[1.25rem] p-3.5">
+                  <p className="text-sm font-semibold text-text-primary">Already logged</p>
+                  <p className="mt-1 text-sm leading-6 text-text-secondary">
+                    This day is already taken, so the next open training day moved further down the list.
+                  </p>
+                </div>
+              ) : (
+                <div className="surface-card-muted mt-4 rounded-[1.25rem] p-3.5">
+                  <p className="text-sm font-semibold text-text-primary">Scheduled later</p>
+                  <p className="mt-1 text-sm leading-6 text-text-secondary">
+                    This is the next planned slot for {formatDayDate(createSessionIso(dateKey))}.
+                  </p>
+                </div>
               )
             ) : null}
           </section>

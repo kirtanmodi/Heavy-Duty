@@ -67,12 +67,23 @@ function CardioRecoveryView({
   const activities = cardioActivities[day.id] ?? [];
   const todayDateKey = formatDateKey(new Date());
   const isDoneToday = history.some(
-    (w) => w.dayId === day.id && getIsoDateKey(w.date) === todayDateKey,
+    (w) => getIsoDateKey(w.date) === todayDateKey,
   );
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
+  const [logError, setLogError] = useState<string | null>(null);
 
   const handleMarkDone = () => {
-    useWorkoutStore.getState().logCardioSession(day.id, day.name, program.name, day.type, selectedActivity ?? undefined);
+    const didLog = useWorkoutStore.getState().logCardioSession(
+      day.id,
+      day.name,
+      program.name,
+      day.type,
+      selectedActivity ?? undefined,
+    );
+    if (!didLog) {
+      setLogError("This date already has a logged session.");
+      return;
+    }
     navigate("/");
   };
 
@@ -175,6 +186,7 @@ function CardioRecoveryView({
             {selectedActivity ? `Done: ${selectedActivity}` : "Mark as Done"}
           </button>
         )}
+        {logError && <p className="text-sm text-accent-orange">{logError}</p>}
         <button
           onClick={() => navigate("/")}
           className="w-full rounded-2xl border border-white/[0.1] bg-transparent py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
@@ -218,12 +230,15 @@ export function Workout() {
     () => isOpen && (!activeWorkout || activeWorkout.exercises.length === 0),
   );
   const [curationFeedback, setCurationFeedback] = useState<string | null>(null);
+  const [sessionSaveError, setSessionSaveError] = useState<string | null>(null);
   const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
   const leavingRef = useRef(false);
   const sessionStartRef = useRef(activeWorkout?.startedAt);
   const restPresets = [60, 90, 120, 180, 300];
   const program = programs[0];
   const day = program.days.find((d) => d.id === dayId);
+  const todayDateKey = formatDateKey(new Date());
+  const todayHasCompletedSession = history.some((workout) => getIsoDateKey(workout.date) === todayDateKey);
   const themeColor = isOpen
     ? "#FFAA00"
     : day && day.type !== "lift"
@@ -256,6 +271,7 @@ export function Workout() {
     if (isOpen) {
       if (activeWorkout && activeWorkout.dayId === "open") return;
       if (activeWorkout) return; // conflict — handled by hasDayConflict UI
+      if (todayHasCompletedSession) return;
       startWorkout("open", "Open Workout", "Freeform", []);
       return;
     }
@@ -263,6 +279,7 @@ export function Workout() {
     if (!day || day.type !== "lift") return;
     if (activeWorkout && activeWorkout.dayId === dayId) return;
     if (activeWorkout) return; // conflict — handled by hasDayConflict UI
+    if (todayHasCompletedSession) return;
 
     const lastWorkoutForDay = history.find((w) => w.dayId === dayId);
     const exerciseIds = lastWorkoutForDay
@@ -272,7 +289,7 @@ export function Workout() {
     const exercises = exerciseIds.map(seedExerciseEntry);
 
     startWorkout(day.id, day.name, program.name, exercises);
-  }, [isOpen, activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name, seedExerciseEntry]);
+  }, [isOpen, activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name, seedExerciseEntry, todayHasCompletedSession]);
 
   // Build flat list of exercise groups (one per exercise)
   const buildGroups = (): ExerciseGroup[] => {
@@ -335,8 +352,12 @@ export function Workout() {
   };
 
   const handleFinish = () => {
+    const didFinish = finishWorkout();
+    if (!didFinish) {
+      setSessionSaveError("This date already has a logged session. Move or undo that day from the calendar first.");
+      return;
+    }
     leavingRef.current = true;
-    finishWorkout();
     navigate("/workout-summary");
   };
 
@@ -461,6 +482,19 @@ export function Workout() {
 
   if (!isOpen && day && day.type !== "lift") {
     return <CardioRecoveryView day={day} program={program} themeColor={themeColor} history={history} />;
+  }
+
+  if (todayHasCompletedSession && !activeWorkout) {
+    return (
+      <PageLayout withBottomNavPadding={false}>
+        <div className="flex flex-col gap-3 pt-20 text-center">
+          <p className="text-base font-semibold text-text-primary">Today already has a logged session</p>
+          <p className="px-6 text-sm leading-relaxed text-text-muted">
+            One day can only hold one workout, cardio, or rest entry. Use the Home calendar to undo that day or move it.
+          </p>
+        </div>
+      </PageLayout>
+    );
   }
 
   if (!activeWorkout) {
@@ -946,20 +980,23 @@ export function Workout() {
           paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
         }}
       >
-        <div className="mx-auto flex max-w-[460px] items-center justify-between px-5 py-3">
-          <span className="text-[13px] font-medium tabular-nums text-text-secondary">
-            {completedSets}/{totalSets} sets
-          </span>
-          <button
-            onClick={handleFinish}
-            className="rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-[0.97]"
-            style={{
-              background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
-              boxShadow: `0 4px 16px ${themeColor}25`,
-            }}
-          >
-            Finish
-          </button>
+        <div className="mx-auto flex max-w-[460px] flex-col gap-2 px-5 py-3">
+          {sessionSaveError && <p className="text-sm text-accent-orange">{sessionSaveError}</p>}
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-medium tabular-nums text-text-secondary">
+              {completedSets}/{totalSets} sets
+            </span>
+            <button
+              onClick={handleFinish}
+              className="rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-[0.97]"
+              style={{
+                background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
+                boxShadow: `0 4px 16px ${themeColor}25`,
+              }}
+            >
+              Finish
+            </button>
+          </div>
         </div>
       </div>
     </>

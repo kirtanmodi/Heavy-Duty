@@ -10,7 +10,7 @@ import {
   getRestDaySuggestion,
   getSmartProgramDaySuggestion,
 } from "../lib/recovery";
-import { getRollingDayAtOffset, getUpcomingRollingDays } from "../lib/rollingSchedule";
+import { getRollingDayAtOffset, getUpcomingOpenRollingDays } from "../lib/rollingSchedule";
 import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { useWorkoutStore } from "../store/workoutStore";
@@ -68,7 +68,10 @@ function getLastDoneMeta(day: ProgramDay, history: HistoryPreview[]) {
   if (daysSince === null) return { label: "Never done", tone: "quiet" as const };
   if (daysSince === 0) return { label: "Done today", tone: "ready" as const };
 
-  const entry = history.find((workout) => workout.dayId === day.id);
+  const todayDateKey = formatDateKey(new Date());
+  const entry = history.find(
+    (workout) => workout.dayId === day.id && getIsoDateKey(workout.date) <= todayDateKey,
+  );
   return {
     label: entry ? formatRelativeDateShort(entry.date) : `${daysSince}d ago`,
     tone: daysSince >= 4 ? "warning" as const : "muted" as const,
@@ -101,6 +104,10 @@ function getPlannedDaySummary(day: ProgramDay, hasHistory: boolean) {
     return "Your next planned day is active recovery. Open it when you want the recovery checklist and quick log flow.";
   }
   return "Your cycle lands on a full rest day next. Open it if you want the dedicated rest-day view and logging option.";
+}
+
+function getSuggestedCardTitle(dateKey: string, todayDateKey: string) {
+  return dateKey === todayDateKey ? "Up Next" : "Coming Up";
 }
 
 function getPlannedDayMetric(day: ProgramDay) {
@@ -217,7 +224,7 @@ export function Home() {
   );
   const suggestedStartDateKey = todayEntries.length > 0 ? addDaysToDateKey(todayDateKey, 1) : todayDateKey;
   const suggested = useMemo(
-    () => getUpcomingRollingDays(program.days, history, 1, suggestedStartDateKey)[0] ?? null,
+    () => getUpcomingOpenRollingDays(program.days, history, 1, suggestedStartDateKey)[0] ?? null,
     [program.days, history, suggestedStartDateKey],
   );
   const suggestedSmart = useMemo(
@@ -296,7 +303,7 @@ export function Home() {
       let suggestion: string | undefined;
 
       if (isFutureOrUnworkedToday) {
-        const plannedDay = getRollingDayAtOffset(program.days, history, futureSuggestionOffset);
+        const plannedDay = getRollingDayAtOffset(program.days, history, futureSuggestionOffset, todayDateKey);
         if (plannedDay) {
           const smart = getSmartProgramDaySuggestion(
             plannedDay,
@@ -331,7 +338,7 @@ export function Home() {
     return { monthSessionCount: sessions, monthLabel: label, calendarDays: days };
   }, [history, program.days, recoveryStatuses, todayDateKey]);
 
-  const lastSession = history.length > 0 ? history[0] : null;
+  const lastSession = history.find((workout) => getIsoDateKey(workout.date) <= todayDateKey) ?? null;
   const suggestedMeta = suggested ? getLastDoneMeta(suggested.day, history) : null;
   const suggestedDaysSince = suggested ? daysSinceLastSession(suggested.day.id, history) : null;
   const trainedRecovery = recoveryStatuses.filter((status) => status.status !== "never");
@@ -419,6 +426,7 @@ export function Home() {
     ? (lastSession.day.includes("—") ? lastSession.day.split("—").pop()?.trim() : lastSession.day) ?? lastSession.day
     : null;
   const importMessageTone = importMsg?.includes("restored") ? "text-accent-green" : "text-accent-orange";
+  const suggestedIsToday = suggested?.dateKey === todayDateKey;
   const quickActionDisabledMessage = activeWorkout
     ? "Finish or cancel the workout in progress before logging cardio or rest."
     : isDoneToday
@@ -435,7 +443,7 @@ export function Home() {
   };
 
   const openCalendarActions = (cell: CalendarCell) => {
-    if (cell.day === 0 || cell.isFuture || !cell.dateKey) return;
+    if (cell.day === 0 || !cell.dateKey) return;
     setSelectedCalendarCell(cell);
     setCalendarDateDraft(cell.dateKey);
     setCalendarActionError(null);
@@ -443,17 +451,22 @@ export function Home() {
 
   const logManualActivity = (type: "cardio" | "rest", dateKey: string) => {
     const config = MANUAL_ACTIVITY[type];
-    logCardioSession(config.dayId, config.dayName, program.name, type, undefined, dateKey);
+    return logCardioSession(config.dayId, config.dayName, program.name, type, undefined, dateKey);
   };
 
   const handleQuickActivity = (type: "cardio" | "rest") => {
     if (quickActionDisabledMessage) return;
-    logManualActivity(type, todayDateKey);
+    if (!logManualActivity(type, todayDateKey)) {
+      setCalendarActionError("That day already has a logged session.");
+    }
   };
 
   const handleCalendarActivity = (type: "cardio" | "rest") => {
     if (!selectedCalendarCell?.dateKey || activeWorkout) return;
-    logManualActivity(type, selectedCalendarCell.dateKey);
+    if (!logManualActivity(type, selectedCalendarCell.dateKey)) {
+      setCalendarActionError("That day already has a logged session.");
+      return;
+    }
     closeCalendarActions();
   };
 
@@ -469,10 +482,6 @@ export function Home() {
       setCalendarActionError("Pick a date.");
       return;
     }
-    if (calendarDateDraft > todayDateKey) {
-      setCalendarActionError("Pick today or an earlier date.");
-      return;
-    }
     if (calendarDateDraft === selectedCalendarCell.dateKey) {
       closeCalendarActions();
       return;
@@ -485,7 +494,10 @@ export function Home() {
       setCalendarActionError("Pick an empty date.");
       return;
     }
-    updateWorkoutDate(selectedCalendarCell.workout.id, calendarDateDraft);
+    if (!updateWorkoutDate(selectedCalendarCell.workout.id, calendarDateDraft)) {
+      setCalendarActionError("Pick an empty date.");
+      return;
+    }
     closeCalendarActions();
   };
 
@@ -559,17 +571,23 @@ export function Home() {
         )}
 
         {!activeWorkout && suggested && (
-          <button
-            onClick={() => navigate(`/workout/${suggested.day.id}`)}
-            className="hero-surface card-glow-red flex flex-col gap-4 rounded-[1.8rem] p-5 text-left"
+          <div
+            className={`hero-surface card-glow-red flex flex-col gap-4 rounded-[1.8rem] p-5 text-left ${
+              suggestedIsToday ? "" : "opacity-95"
+            }`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="section-label text-accent-red">Up Next</span>
+                  <span className="section-label text-accent-red">{getSuggestedCardTitle(suggested.dateKey, todayDateKey)}</span>
                   {suggested.day.type === "lift" && suggestedDaysSince !== null && suggestedDaysSince >= 3 && (
                     <span className="chip border-accent-orange/20 bg-accent-orange/10 text-[11px] font-semibold text-accent-orange">
                       {suggestedDaysSince}d overdue
+                    </span>
+                  )}
+                  {!suggestedIsToday && (
+                    <span className="chip chip-muted text-[11px] text-text-secondary">
+                      {formatDayDate(createSessionIso(suggested.dateKey))}
                     </span>
                   )}
                 </div>
@@ -605,13 +623,25 @@ export function Home() {
                 </p>
               </div>
             )}
-            <div className="flex items-center justify-between rounded-[1.2rem] bg-white/[0.06] px-4 py-3">
-              <span className="text-sm font-semibold text-white">{getPlannedDayActionLabel(suggested.day)}</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-white">
-                <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </button>
+            {suggestedIsToday ? (
+              <button
+                onClick={() => navigate(`/workout/${suggested.day.id}`)}
+                className="flex items-center justify-between rounded-[1.2rem] bg-white/[0.06] px-4 py-3"
+              >
+                <span className="text-sm font-semibold text-white">{getPlannedDayActionLabel(suggested.day)}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-white">
+                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            ) : (
+              <div className="rounded-[1.2rem] bg-white/[0.06] px-4 py-3">
+                <p className="text-sm font-semibold text-white">This day is queued for later</p>
+                <p className="mt-1 text-xs leading-relaxed text-text-secondary">
+                  You already logged an earlier date in the cycle, so this plan moved to the next open day.
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         <div className="grid grid-cols-2 gap-3">
@@ -757,7 +787,6 @@ export function Home() {
                   <div className="flex flex-col items-center">
                     <button
                       type="button"
-                      disabled={cell.isFuture}
                       onClick={() => openCalendarActions(cell)}
                       className={`flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${getCalendarCellClass(cell)}`}
                     >

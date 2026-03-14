@@ -97,7 +97,10 @@ export function getGroupSkipHistory(
   history: WorkoutEntry[],
 ): Map<string, number> {
   const result = new Map<string, number>();
-  const liftEntries = history.filter((w) => (w.dayType ?? "lift") === "lift");
+  const todayDateKey = getTodayDateKey();
+  const liftEntries = history.filter(
+    (w) => (w.dayType ?? "lift") === "lift" && getIsoDateKey(w.date) <= todayDateKey,
+  );
 
   for (const g of exerciseGroups) {
     let consecutiveSkips = 0;
@@ -139,7 +142,7 @@ export function getMuscleRecoveryStatus(
 
   // Scan last 30 lift entries for performance
   const liftEntries = history
-    .filter((w) => (w.dayType ?? "lift") === "lift")
+    .filter((w) => (w.dayType ?? "lift") === "lift" && getIsoDateKey(w.date) <= todayDateKey)
     .slice(0, 30);
 
   for (const workout of liftEntries) {
@@ -192,7 +195,10 @@ export interface RestDaySuggestion {
 
 export function getDaysSinceLastActivity(history: WorkoutEntry[]): number {
   if (history.length === 0) return 999;
-  return daysSinceIsoDate(history[0].date);
+  const todayDateKey = getTodayDateKey();
+  const lastPastOrToday = history.find((workout) => getIsoDateKey(workout.date) <= todayDateKey);
+  if (!lastPastOrToday) return 999;
+  return daysSinceIsoDate(lastPastOrToday.date);
 }
 
 export function getRestDaySuggestion(
