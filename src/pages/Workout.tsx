@@ -78,6 +78,7 @@ export function Workout() {
   const [curationFeedback, setCurationFeedback] = useState<string | null>(null);
   const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
   const leavingRef = useRef(false);
+  const sessionStartRef = useRef(activeWorkout?.startedAt);
   const restPresets = [60, 90, 120, 180, 300];
   const program = programs[0];
   const day = program.days.find((d) => d.id === dayId);
@@ -95,9 +96,11 @@ export function Workout() {
     return { id: exercise.id, name: exercise.name, sets };
   }, [history]);
 
-  useEffect(() => {
+  // Reset interaction flag when a new session starts
+  if (activeWorkout?.startedAt !== sessionStartRef.current) {
+    sessionStartRef.current = activeWorkout?.startedAt;
     setHasSessionSetInteraction(false);
-  }, [activeWorkout?.startedAt]);
+  }
 
   // Derive conflict: active workout exists for a different day
   const hasDayConflict = !!(activeWorkout && activeWorkout.dayId !== dayId && activeWorkout.dayId !== (isOpen ? "open" : dayId) && !discardedConflict);

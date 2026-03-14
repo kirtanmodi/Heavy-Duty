@@ -351,13 +351,16 @@ export function MyGym() {
     resetGymEquipment,
   } = useSettingsStore();
 
-  // Reset bulk state when exiting bulk mode
-  useEffect(() => {
-    if (!bulkMode) {
-      setBulkSelected(new Set());
-      setConfirmBulkDelete(false);
-    }
-  }, [bulkMode]);
+  const exitBulkMode = () => {
+    setBulkMode(false);
+    setBulkSelected(new Set());
+    setConfirmBulkDelete(false);
+  };
+
+  const handleRemoveCustom = (id: string) => {
+    removeCustomGymEquipment(id);
+    if (customGymEquipment.length <= 1) exitBulkMode();
+  };
 
   // Auto-reset confirm after timeout
   useEffect(() => {
@@ -366,12 +369,6 @@ export function MyGym() {
     return () => clearTimeout(id);
   }, [confirmBulkDelete]);
 
-  // Exit bulk mode if no custom equipment
-  useEffect(() => {
-    if (customGymEquipment.length === 0) setBulkMode(false);
-  }, [customGymEquipment.length]);
-
-  // Group static equipment by category
   const groupedStatic = gymEquipmentOptions.reduce(
     (acc, opt) => {
       if (!acc[opt.category]) acc[opt.category] = [];
@@ -405,7 +402,7 @@ export function MyGym() {
     if (bulkSelected.size === 0) return;
     if (confirmBulkDelete) {
       bulkRemoveCustomGymEquipment(Array.from(bulkSelected));
-      setBulkMode(false);
+      exitBulkMode();
     } else {
       setConfirmBulkDelete(true);
     }
@@ -538,7 +535,7 @@ export function MyGym() {
             </span>
             {/* Bulk mode toggle */}
             <button
-              onClick={() => setBulkMode(!bulkMode)}
+              onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
               className={`ml-auto text-[10px] font-semibold uppercase tracking-wider transition-colors active:opacity-70 ${
                 bulkMode ? "text-accent-red" : "text-accent-yellow"
               }`}
@@ -589,7 +586,7 @@ export function MyGym() {
                   color={categoryColors[item.category] || categoryColors.Custom}
                   onToggle={() => setGymEquipmentAvailability(item.id, !gymEquipment[item.id])}
                   isCustom
-                  onRemove={() => removeCustomGymEquipment(item.id)}
+                  onRemove={() => handleRemoveCustom(item.id)}
                   onEdit={() => setShowSheet({ mode: "edit", item })}
                   bulkMode={bulkMode}
                   bulkSelected={bulkSelected.has(item.id)}
