@@ -418,7 +418,7 @@ export function Home() {
   const lastSessionTitle = lastSession
     ? (lastSession.day.includes("—") ? lastSession.day.split("—").pop()?.trim() : lastSession.day) ?? lastSession.day
     : null;
-  const importMessageTone = importMsg?.startsWith("Imported") ? "text-accent-green" : "text-accent-orange";
+  const importMessageTone = importMsg?.includes("restored") ? "text-accent-green" : "text-accent-orange";
   const quickActionDisabledMessage = activeWorkout
     ? "Finish or cancel the workout in progress before logging cardio or rest."
     : isDoneToday
