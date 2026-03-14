@@ -133,7 +133,11 @@ export function History() {
 
   const liftingDays = programs[0].days.filter((d) => d.type === "lift");
   const filteredHistory = useMemo(() => {
-    let filtered = activeFilter === "all" ? history : history.filter((w) => w.dayId === activeFilter);
+    let filtered = activeFilter === "all"
+      ? history
+      : activeFilter === "cardio-all"
+        ? history.filter((w) => (w.dayType ?? "lift") !== "lift")
+        : history.filter((w) => w.dayId === activeFilter);
     if (exerciseFilter) {
       filtered = filtered.filter((w) => w.exercises.some((e) => e.id === exerciseFilter));
     }
@@ -220,6 +224,16 @@ export function History() {
               }`}
             >
               Open
+            </button>
+          )}
+          {history.some((w) => (w.dayType ?? "lift") !== "lift") && (
+            <button
+              onClick={() => setActiveFilter("cardio-all")}
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                activeFilter === "cardio-all" ? "btn-primary text-white" : "border border-border-card bg-bg-card text-text-muted active:text-text-secondary"
+              }`}
+            >
+              Cardio & Recovery
             </button>
           )}
         </div>
@@ -331,11 +345,13 @@ export function History() {
                           {isCardioEntry ? (
                             <div className="flex items-center gap-2 px-4 pb-3.5 text-[11px]">
                               <span
-                                className="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
-                                style={{ background: `var(--color-${color})/0.12`, color: `var(--color-${color})` }}
+                                className={`rounded-md bg-${color}/12 text-${color} px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider`}
                               >
                                 {workout.dayType}
                               </span>
+                              {workout.activityName && (
+                                <span className="text-[11px] text-text-secondary">{workout.activityName}</span>
+                              )}
                             </div>
                           ) : (
                             <div className="flex items-center gap-4 px-4 pb-3.5 text-[11px]">

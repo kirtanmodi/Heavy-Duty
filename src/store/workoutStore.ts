@@ -25,7 +25,7 @@ interface WorkoutState {
   skipExercise: (exerciseIndex: number) => void;
   unskipExercise: (exerciseIndex: number) => void;
   updateHistoryEntry: (workoutId: string, exercises: ExerciseEntry[]) => void;
-  logCardioSession: (dayId: string, dayName: string, program: string, dayType: DayType) => void;
+  logCardioSession: (dayId: string, dayName: string, program: string, dayType: DayType, activityName?: string) => void;
   deleteHistoryEntry: (workoutId: string) => void;
   importHistory: (workouts: WorkoutEntry[]) => void;
   clearAll: () => void;
@@ -133,7 +133,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         }));
       },
 
-      logCardioSession: (dayId, dayName, program, dayType) => {
+      logCardioSession: (dayId, dayName, program, dayType, activityName?) => {
         const entry: WorkoutEntry = {
           id: crypto.randomUUID(),
           date: new Date().toISOString(),
@@ -141,6 +141,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           day: dayName,
           dayId,
           dayType,
+          ...(activityName ? { activityName } : {}),
           exercises: [],
         };
         set((state) => ({

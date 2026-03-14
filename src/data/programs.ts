@@ -141,6 +141,13 @@ export const cardioActivities: Record<string, CardioActivity[]> = {
     { name: 'Banded pull-aparts', note: '3×20 light band, scapular health' },
     { name: 'Deep squat hold', note: '60-90s bodyweight, ankle/hip mobility' },
   ],
+  'hd-sunday': [
+    { name: 'Sleep in', note: 'Aim for 8-9 hours total' },
+    { name: 'Gentle stretching', note: '10-15 min, nothing intense' },
+    { name: 'Meditation / breathing', note: '10-20 min box breathing or body scan' },
+    { name: 'Leisure walk', note: '15-20 min easy pace, enjoy the outdoors' },
+    { name: 'Meal prep', note: 'High-protein meals for the week ahead' },
+  ],
 }
 
 export function getProgram(id: string): Program | undefined {

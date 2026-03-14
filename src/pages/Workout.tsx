@@ -12,7 +12,7 @@ import { createMentzerSets, getOverloadSuggestion } from "../lib/overload";
 import { getMuscleRecoveryStatus } from "../lib/recovery";
 import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
-import type { Exercise, ExerciseEntry, LiftFocus, SetEntry } from "../types";
+import type { Exercise, ExerciseEntry, LiftFocus, ProgramDay, Program, SetEntry, WorkoutEntry } from "../types";
 
 interface ExerciseGroup {
   index: number;
@@ -22,6 +22,12 @@ const focusColors: Record<string, string> = {
   Push: "#E50914",
   Pull: "#4488FF",
   "Legs & Abs": "#FF8844",
+};
+
+const dayTypeColors: Record<string, string> = {
+  cardio: "#4488FF",
+  recovery: "#4488FF",
+  rest: "#46D369",
 };
 
 function formatDuration(seconds: number): string {
@@ -43,6 +49,139 @@ function areSetsEqual(a: SetEntry[], b: SetEntry[]): boolean {
       && set.toFailure === other.toFailure
       && set.tempo === other.tempo;
   });
+}
+
+function CardioRecoveryView({
+  day,
+  program,
+  themeColor,
+  history,
+}: {
+  day: ProgramDay;
+  program: Program;
+  themeColor: string;
+  history: WorkoutEntry[];
+}) {
+  const navigate = useNavigate();
+  const activities = cardioActivities[day.id] ?? [];
+  const isDoneToday = history.some(
+    (w) => w.dayId === day.id && w.date.slice(0, 10) === new Date().toISOString().slice(0, 10),
+  );
+  const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
+
+  const handleMarkDone = () => {
+    useWorkoutStore.getState().logCardioSession(day.id, day.name, program.name, day.type, selectedActivity ?? undefined);
+    navigate("/");
+  };
+
+  return (
+    <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
+      <header className="flex items-start justify-between gap-4 pt-1">
+        <div className="flex flex-col gap-1">
+          <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{day.type}</p>
+          <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{day.focus}</h1>
+        </div>
+        {isDoneToday && (
+          <div className="flex items-center gap-1.5 rounded-full bg-accent-green/15 px-3 py-1.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 text-accent-green">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            <span className="text-[11px] font-semibold text-accent-green">Done Today</span>
+          </div>
+        )}
+      </header>
+
+      <section
+        className="flex flex-col gap-5 overflow-hidden rounded-2xl p-6"
+        style={{
+          background: `linear-gradient(135deg, ${themeColor}08 0%, transparent 60%)`,
+          border: `1px solid ${themeColor}15`,
+        }}
+      >
+        {day.description && <p className="text-sm leading-relaxed text-text-secondary">{day.description}</p>}
+        {day.duration && (
+          <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-4 py-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" style={{ color: themeColor }}>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <span className="text-sm font-medium text-text-secondary">{day.duration}</span>
+          </div>
+        )}
+        {day.tips && (
+          <div className="flex flex-col gap-1.5">
+            <h3 className="text-[10px] font-bold tracking-widest uppercase" style={{ color: themeColor }}>Tips</h3>
+            <p className="text-sm leading-relaxed text-text-secondary">{day.tips}</p>
+          </div>
+        )}
+      </section>
+
+      {/* Activity suggestions — tap to select */}
+      {activities.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-[10px] font-bold tracking-widest text-text-muted uppercase">Pick an Activity</h2>
+          <div className="flex flex-col gap-1.5">
+            {activities.map((activity, idx) => {
+              const isSelected = selectedActivity === activity.name;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedActivity(isSelected ? null : activity.name)}
+                  className={`flex items-start gap-3 rounded-xl px-4 py-3 text-left transition-all ${
+                    isSelected
+                      ? "ring-1"
+                      : "bg-bg-card card-surface"
+                  }`}
+                  style={isSelected ? {
+                    background: `${themeColor}10`,
+                    border: `1px solid ${themeColor}40`,
+                  } : undefined}
+                >
+                  <span
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold tabular-nums"
+                    style={{ background: `${themeColor}15`, color: themeColor }}
+                  >
+                    {isSelected ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-3 w-3">
+                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : (
+                      idx + 1
+                    )}
+                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-text-primary">{activity.name}</span>
+                    <span className="text-xs leading-snug text-text-muted">{activity.note}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <div className="flex flex-col gap-2.5">
+        {!isDoneToday && (
+          <button
+            onClick={handleMarkDone}
+            className="w-full rounded-2xl py-4 text-sm font-bold tracking-wide text-white transition-all active:scale-[0.98]"
+            style={{
+              background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
+              boxShadow: `0 4px 16px ${themeColor}30`,
+            }}
+          >
+            {selectedActivity ? `Done: ${selectedActivity}` : "Mark as Done"}
+          </button>
+        )}
+        <button
+          onClick={() => navigate("/")}
+          className="w-full rounded-2xl border border-white/[0.1] bg-transparent py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+        >
+          Go Back
+        </button>
+      </div>
+    </PageLayout>
+  );
 }
 
 export function Workout() {
@@ -83,7 +222,11 @@ export function Workout() {
   const restPresets = [60, 90, 120, 180, 300];
   const program = programs[0];
   const day = program.days.find((d) => d.id === dayId);
-  const themeColor = isOpen ? "#FFAA00" : (focusColors[day?.focus ?? ""] ?? "#FFAA00");
+  const themeColor = isOpen
+    ? "#FFAA00"
+    : day && day.type !== "lift"
+      ? dayTypeColors[day.type] ?? "#FFAA00"
+      : focusColors[day?.focus ?? ""] ?? "#FFAA00";
   const liftFocus = !isOpen && day?.type === "lift" && isLiftFocus(day.focus) ? day.focus : null;
 
   const seedExerciseEntry = useCallback((exerciseId: string): ExerciseEntry => {
@@ -315,106 +458,7 @@ export function Workout() {
   }
 
   if (!isOpen && day && day.type !== "lift") {
-    const activities = cardioActivities[day.id] ?? [];
-    const isDoneToday = history.some(
-      (w) => w.dayId === day.id && w.date.slice(0, 10) === new Date().toISOString().slice(0, 10),
-    );
-
-    const handleMarkDone = () => {
-      useWorkoutStore.getState().logCardioSession(day.id, day.name, program.name, day.type);
-      navigate("/");
-    };
-
-    return (
-      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
-        <header className="flex items-start justify-between gap-4 pt-1">
-          <div className="flex flex-col gap-1">
-            <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{day.type}</p>
-            <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{day.focus}</h1>
-          </div>
-          {isDoneToday && (
-            <div className="flex items-center gap-1.5 rounded-full bg-accent-green/15 px-3 py-1.5">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 text-accent-green">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              <span className="text-[11px] font-semibold text-accent-green">Done Today</span>
-            </div>
-          )}
-        </header>
-
-        <section
-          className="flex flex-col gap-5 overflow-hidden rounded-2xl p-6"
-          style={{
-            background: `linear-gradient(135deg, ${themeColor}08 0%, transparent 60%)`,
-            border: `1px solid ${themeColor}15`,
-          }}
-        >
-          {day.description && <p className="text-sm leading-relaxed text-text-secondary">{day.description}</p>}
-          {day.duration && (
-            <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-4 py-3">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" style={{ color: themeColor }}>
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
-              <span className="text-sm font-medium text-text-secondary">{day.duration}</span>
-            </div>
-          )}
-          {day.tips && (
-            <div className="flex flex-col gap-1.5">
-              <h3 className="text-[10px] font-bold tracking-widest uppercase" style={{ color: themeColor }}>Tips</h3>
-              <p className="text-sm leading-relaxed text-text-secondary">{day.tips}</p>
-            </div>
-          )}
-        </section>
-
-        {/* Activity suggestions */}
-        {activities.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-[10px] font-bold tracking-widest text-text-muted uppercase">Pick an Activity</h2>
-            <div className="flex flex-col gap-1.5">
-              {activities.map((activity, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-start gap-3 rounded-xl bg-bg-card px-4 py-3 card-surface"
-                >
-                  <span
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold tabular-nums"
-                    style={{ background: `${themeColor}15`, color: themeColor }}
-                  >
-                    {idx + 1}
-                  </span>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium text-text-primary">{activity.name}</span>
-                    <span className="text-xs leading-snug text-text-muted">{activity.note}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="flex flex-col gap-2.5">
-          {!isDoneToday && (
-            <button
-              onClick={handleMarkDone}
-              className="w-full rounded-2xl py-4 text-sm font-bold tracking-wide text-white transition-all active:scale-[0.98]"
-              style={{
-                background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
-                boxShadow: `0 4px 16px ${themeColor}30`,
-              }}
-            >
-              Mark as Done
-            </button>
-          )}
-          <button
-            onClick={() => navigate("/")}
-            className="w-full rounded-2xl border border-white/[0.1] bg-transparent py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-          >
-            Go Back
-          </button>
-        </div>
-      </PageLayout>
-    );
+    return <CardioRecoveryView day={day} program={program} themeColor={themeColor} history={history} />;
   }
 
   if (!activeWorkout) {

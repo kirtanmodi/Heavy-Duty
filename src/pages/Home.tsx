@@ -440,9 +440,11 @@ export function Home() {
                             ? "bg-accent-blue text-white"
                             : cell.dayType === "recovery"
                               ? "bg-accent-blue/60 text-white"
-                              : cell.isToday
-                                ? "ring-1 ring-text-muted text-text-primary"
-                                : "text-text-dim"
+                              : cell.dayType === "rest"
+                                ? "bg-accent-green/40 text-white"
+                                : cell.isToday
+                                  ? "ring-1 ring-text-muted text-text-primary"
+                                  : "text-text-dim"
                       }`}
                     >
                       {cell.day}
