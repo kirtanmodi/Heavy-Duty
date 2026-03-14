@@ -8,6 +8,11 @@ export function formatDateKey(date: Date): string {
   return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
 }
 
+export function parseDateKey(dateKey: string): Date {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function dateKeyToUtcTime(dateKey: string): number {
   const [year, month, day] = dateKey.split("-").map(Number);
   return Date.UTC(year, month - 1, day);
@@ -18,12 +23,18 @@ export function getIsoDateKey(iso: string): string {
 }
 
 export function createSessionIso(dateKey: string): string {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0, 0).toISOString();
+  const date = parseDateKey(dateKey);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0).toISOString();
 }
 
 export function getTodayDateKey(now = new Date()): string {
   return formatDateKey(now);
+}
+
+export function addDaysToDateKey(dateKey: string, days: number): string {
+  const date = parseDateKey(dateKey);
+  date.setDate(date.getDate() + days);
+  return formatDateKey(date);
 }
 
 export function daysBetweenDateKeys(laterDateKey: string, earlierDateKey: string): number {

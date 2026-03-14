@@ -4,12 +4,27 @@ import { PageLayout } from "../components/layout/PageLayout";
 import { getProgram } from "../data/programs";
 import { getRandomQuote } from "../data/quotes";
 import { exportJSON, exportCSV, validateImport } from "../lib/export";
-import { getMuscleRecoveryStatus, getDaysSinceLastActivity, getRestDaySuggestion, getSmartDaySuggestion } from "../lib/recovery";
+import {
+  getMuscleRecoveryStatus,
+  getDaysSinceLastActivity,
+  getRestDaySuggestion,
+  getSmartProgramDaySuggestion,
+} from "../lib/recovery";
+import { getRollingDayAtOffset, getUpcomingRollingDays } from "../lib/rollingSchedule";
 import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { DayType, ProgramDay, WorkoutEntry } from "../types";
-import { createSessionIso, formatDateKey, formatDayDate, formatRelativeDateShort, getIsoDateKey, daysSinceLastSession } from "../lib/dates";
+import {
+  addDaysToDateKey,
+  createSessionIso,
+  daysBetweenDateKeys,
+  formatDateKey,
+  formatDayDate,
+  formatRelativeDateShort,
+  getIsoDateKey,
+  daysSinceLastSession,
+} from "../lib/dates";
 
 type HistoryPreview = { dayId: string; date: string };
 type LastDoneTone = "ready" | "warning" | "muted" | "quiet";
@@ -71,6 +86,34 @@ function getLastDoneToneClass(tone: LastDoneTone) {
     default:
       return "border-white/[0.06] bg-white/[0.03] text-text-muted";
   }
+}
+
+function getPlannedDaySummary(day: ProgramDay, hasHistory: boolean) {
+  if (day.type === "lift") {
+    return hasHistory
+      ? "The cycle now advances from your history, so this is the next lifting day on deck."
+      : "A clean place to start, with the seeded Mentzer warm-up and working set already ready.";
+  }
+  if (day.type === "cardio") {
+    return "This cardio block is next in your cycle. Open it to log the session and keep the rotation moving.";
+  }
+  if (day.type === "recovery") {
+    return "Your next planned day is active recovery. Open it when you want the recovery checklist and quick log flow.";
+  }
+  return "Your cycle lands on a full rest day next. Open it if you want the dedicated rest-day view and logging option.";
+}
+
+function getPlannedDayMetric(day: ProgramDay) {
+  if (day.type === "lift") return `${day.exercises.length} exercises`;
+  if (day.duration) return day.duration;
+  return day.type === "rest" ? "Full rest" : day.focus;
+}
+
+function getPlannedDayActionLabel(day: ProgramDay) {
+  if (day.type === "lift") return "Start Workout";
+  if (day.type === "cardio") return "Open Cardio Day";
+  if (day.type === "recovery") return "Open Recovery Day";
+  return "Open Rest Day";
 }
 
 function getCalendarCellClass(cell: CalendarCell) {
@@ -166,21 +209,29 @@ export function Home() {
   const [calendarActionError, setCalendarActionError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const liftDays = useMemo(() => program.days.filter((d) => d.type === "lift"), [program.days]);
   const recoveryStatuses = useMemo(() => getMuscleRecoveryStatus(history), [history]);
   const todayDateKey = formatDateKey(new Date());
-
-  // Smart suggest: rank lifting workouts by staleness (most overdue first)
-  const rankedLifts = useMemo(() => {
-    const scored = liftDays.map((day) => {
-      const daysSince = daysSinceLastSession(day.id, history);
-      return { day, daysSince, sortKey: daysSince === null ? Infinity : daysSince };
-    });
-    scored.sort((a, b) => b.sortKey - a.sortKey);
-    return scored;
-  }, [liftDays, history]);
-
-  const suggested = rankedLifts[0];
+  const todayEntries = useMemo(
+    () => history.filter((workout) => getIsoDateKey(workout.date) === todayDateKey),
+    [history, todayDateKey],
+  );
+  const suggestedStartDateKey = todayEntries.length > 0 ? addDaysToDateKey(todayDateKey, 1) : todayDateKey;
+  const suggested = useMemo(
+    () => getUpcomingRollingDays(program.days, history, 1, suggestedStartDateKey)[0] ?? null,
+    [program.days, history, suggestedStartDateKey],
+  );
+  const suggestedSmart = useMemo(
+    () =>
+      suggested
+        ? getSmartProgramDaySuggestion(
+            suggested.day,
+            program.days,
+            recoveryStatuses,
+            daysBetweenDateKeys(suggested.dateKey, todayDateKey) <= 2,
+          )
+        : null,
+    [program.days, recoveryStatuses, suggested, todayDateKey],
+  );
 
   const quote = useMemo(() => getRandomQuote(), []);
 
@@ -223,16 +274,8 @@ export function Home() {
       }
     }
 
-    // Build weekday-to-ProgramDay map from program
-    const programDayByWeekday = new Map<number, ProgramDay>();
-    const restWeekdays = new Set<number>();
-    for (const pd of program.days) {
-      programDayByWeekday.set(pd.dayOfWeek, pd);
-      if (pd.type === "rest") restWeekdays.add(pd.dayOfWeek);
-    }
-
-    const today = now.getDate();
     const days: CalendarCell[] = [];
+    let futureSuggestionOffset = 0;
     for (let i = 0; i < startDow; i++) {
       days.push({ day: 0, dayType: null, isToday: false, isRest: false, isFuture: false, suggestedType: null });
     }
@@ -244,25 +287,28 @@ export function Home() {
       const primaryEntry = liftEntry ?? entries[0];
       const dayType = primaryEntry ? (primaryEntry.dayType ?? "lift") : null;
       const entryKind: CalendarEntryKind = entries.length === 0 ? "empty" : liftEntry ? "lift" : "nonLift";
-      const isPast = dateKey < todayDateKey;
       const isFuture = dateKey > todayDateKey;
-      const dow = dateObj.getDay(); // 0=Sun
-      const isRest = isPast && entries.length === 0 && restWeekdays.has(dow);
       const isFutureOrUnworkedToday = entries.length === 0 && dateKey >= todayDateKey;
+      const leadDays = daysBetweenDateKeys(dateKey, todayDateKey);
 
       let suggestedType: DayType | null = null;
       let reason: string | undefined;
       let suggestion: string | undefined;
 
       if (isFutureOrUnworkedToday) {
-        const pd = programDayByWeekday.get(dow);
-        if (pd) {
-          const dateOffset = d - today;
-          const smart = getSmartDaySuggestion(dow, dateOffset, program.days, recoveryStatuses);
+        const plannedDay = getRollingDayAtOffset(program.days, history, futureSuggestionOffset);
+        if (plannedDay) {
+          const smart = getSmartProgramDaySuggestion(
+            plannedDay,
+            program.days,
+            recoveryStatuses,
+            leadDays <= 2,
+          );
           suggestedType = smart.type;
           reason = smart.reason;
           suggestion = smart.suggestion;
         }
+        futureSuggestionOffset++;
       }
 
       days.push({
@@ -270,7 +316,7 @@ export function Home() {
         dateKey,
         dayType,
         isToday: dateKey === todayDateKey,
-        isRest,
+        isRest: false,
         isFuture,
         suggestedType,
         reason,
@@ -287,11 +333,8 @@ export function Home() {
 
   const lastSession = history.length > 0 ? history[0] : null;
   const suggestedMeta = suggested ? getLastDoneMeta(suggested.day, history) : null;
+  const suggestedDaysSince = suggested ? daysSinceLastSession(suggested.day.id, history) : null;
   const trainedRecovery = recoveryStatuses.filter((status) => status.status !== "never");
-  const todayEntries = useMemo(
-    () => history.filter((workout) => getIsoDateKey(workout.date) === todayDateKey),
-    [history, todayDateKey],
-  );
 
   const handleExportJSON = () => {
     const workoutState = useWorkoutStore.getState();
@@ -360,10 +403,9 @@ export function Home() {
     month: "short",
     day: "numeric",
   });
-  const todayDow = new Date().getDay();
-  const todayProgram = program.days.find((day) => day.dayOfWeek === todayDow);
   const isDoneToday = todayEntries.length > 0;
-  const isRestOrRecoveryDay = todayProgram && (todayProgram.type === "rest" || todayProgram.type === "recovery");
+  const todayPlannedDay = !isDoneToday ? getRollingDayAtOffset(program.days, history, 0) : null;
+  const isRestOrRecoveryDay = !!todayPlannedDay && (todayPlannedDay.type === "rest" || todayPlannedDay.type === "recovery");
   const daysSinceActivity = getDaysSinceLastActivity(history);
   const showRestSuggestion = (isRestOrRecoveryDay && !isDoneToday) || daysSinceActivity >= 2;
   const restSuggestion = getRestDaySuggestion(daysSinceActivity);
@@ -478,7 +520,7 @@ export function Home() {
         <SectionHeading
           eyebrow="Quick Start"
           title={activeWorkout ? "Resume or log today" : "Workout, cardio, or rest"}
-          description="Keep one main workout action at the top, plus simple cardio and rest logs for today."
+          description="The main card follows your rolling cycle, with simple cardio and rest logs still one tap away."
         />
 
         {activeWorkout && (
@@ -525,9 +567,9 @@ export function Home() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="section-label text-accent-red">Up Next</span>
-                  {suggested.daysSince !== null && suggested.daysSince >= 3 && (
+                  {suggested.day.type === "lift" && suggestedDaysSince !== null && suggestedDaysSince >= 3 && (
                     <span className="chip border-accent-orange/20 bg-accent-orange/10 text-[11px] font-semibold text-accent-orange">
-                      {suggested.daysSince}d overdue
+                      {suggestedDaysSince}d overdue
                     </span>
                   )}
                 </div>
@@ -535,26 +577,36 @@ export function Home() {
                   {suggested.day.focus}
                 </h2>
                 <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-text-secondary">
-                  {history.length === 0
-                    ? "A clean place to start, with the seeded Mentzer warm-up and working set already ready."
-                    : "Your most overdue lifting day, ready to start with the same logging flow you already use."}
+                  {getPlannedDaySummary(suggested.day, history.length > 0)}
                 </p>
               </div>
               <div className="rounded-[1.15rem] bg-black/12 px-3 py-2 text-right">
                 <span className="section-label block text-[0.58rem] text-text-secondary/85">Plan</span>
                 <span className="mt-1 block text-sm font-semibold text-text-primary">
-                  {suggested.day.exercises.length} exercises
+                  {getPlannedDayMetric(suggested.day)}
                 </span>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <span className="chip text-xs text-text-secondary">Mentzer protocol</span>
+              {suggested.day.type === "lift" && (
+                <span className="chip text-xs text-text-secondary">Mentzer protocol</span>
+              )}
               {suggestedMeta && (
                 <span className={`chip text-xs ${getLastDoneToneClass(suggestedMeta.tone)}`}>{suggestedMeta.label}</span>
               )}
             </div>
+            {suggestedSmart?.reason && suggestedSmart.suggestion && (
+              <div className="rounded-[1.2rem] border border-accent-orange/20 bg-accent-orange/10 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-orange">
+                  Recovery Suggestion
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+                  {suggestedSmart.reason}. {suggestedSmart.suggestion}.
+                </p>
+              </div>
+            )}
             <div className="flex items-center justify-between rounded-[1.2rem] bg-white/[0.06] px-4 py-3">
-              <span className="text-sm font-semibold text-white">Start Workout</span>
+              <span className="text-sm font-semibold text-white">{getPlannedDayActionLabel(suggested.day)}</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-white">
                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -746,7 +798,7 @@ export function Home() {
           </div>
 
           <p className="mt-4 text-sm leading-relaxed text-text-muted">
-            Tap an empty date to log cardio or rest. Logged cardio or rest days can be undone here, and logged lift days can be moved to the right date.
+            Tap an empty date to log cardio or rest. Logged cardio or rest days can be undone here, logged lift days can be moved to the right date, and future rings now advance from your history-based cycle.
           </p>
         </div>
       </section>

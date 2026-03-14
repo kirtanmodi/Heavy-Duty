@@ -2,12 +2,19 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { exerciseGroups, getEffectiveExercise, muscleColors } from "../data/exercises";
 import { getProgram } from "../data/programs";
-import { daysSinceLastSession } from "../lib/dates";
-import { getLiftDayGroups, getMuscleRecoveryStatus, getSmartDaySuggestion } from "../lib/recovery";
+import {
+  addDaysToDateKey,
+  createSessionIso,
+  daysBetweenDateKeys,
+  daysSinceLastSession,
+  formatDateKey,
+  formatDayDate,
+  getIsoDateKey,
+} from "../lib/dates";
+import { getLiftDayGroups, getMuscleRecoveryStatus, getSmartProgramDaySuggestion } from "../lib/recovery";
+import { getUpcomingRollingDays } from "../lib/rollingSchedule";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { ProgramDay } from "../types";
-
-const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const typeBadge: Record<
   string,
@@ -113,24 +120,27 @@ export function Schedule() {
   const activeWorkout = useWorkoutStore((state) => state.activeWorkout);
   const history = useWorkoutStore((state) => state.history);
   const program = getProgram("heavy-duty-complete")!;
-  const todayDow = new Date().getDay();
+  const todayDateKey = formatDateKey(new Date());
+  const firstProjectedDateKey = history.some((entry) => getIsoDateKey(entry.date) === todayDateKey)
+    ? addDaysToDateKey(todayDateKey, 1)
+    : todayDateKey;
 
   const recoveryStatuses = useMemo(() => getMuscleRecoveryStatus(history), [history]);
-
-  const sortedDays = [...program.days].sort((a, b) => {
-    const aKey = a.dayOfWeek === 0 ? 7 : a.dayOfWeek;
-    const bKey = b.dayOfWeek === 0 ? 7 : b.dayOfWeek;
-    return aKey - bKey;
-  });
+  const rollingDays = useMemo(
+    () => getUpcomingRollingDays(program.days, history, program.days.length, firstProjectedDateKey),
+    [program.days, history, firstProjectedDateKey],
+  );
 
   return (
     <div className="flex flex-col gap-3">
       <section className="surface-card rounded-[1.75rem] p-4 animate-fade-up">
-        <p className="section-label">Week View</p>
+        <p className="section-label">Rolling Cycle</p>
         <h2 className="mt-2 text-[1.05rem] font-semibold text-text-primary">
           {program.name}
         </h2>
-        <p className="section-caption mt-1 max-w-[24rem]">{program.description}</p>
+        <p className="section-caption mt-1 max-w-[24rem]">
+          Upcoming days now advance from your workout history instead of snapping back to Monday-Sunday.
+        </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="chip chip-muted text-[11px] text-text-secondary">
@@ -153,8 +163,9 @@ export function Schedule() {
         ) : null}
       </section>
 
-      {sortedDays.map((day, index) => {
-        const isToday = day.dayOfWeek === todayDow;
+      {rollingDays.map(({ day, dateKey, dateOffset }, index) => {
+        const leadDays = daysBetweenDateKeys(dateKey, todayDateKey);
+        const isNextUp = dateOffset === 0;
         const isRest = day.type === "rest";
         const daysAgo = daysSinceLastSession(day.id, history);
         const stalenessText =
@@ -165,10 +176,12 @@ export function Schedule() {
                 .map((group) => recoveryStatuses.find((status) => status.group === group))
                 .filter((status): status is NonNullable<typeof status> => !!status)
             : recoveryStatuses.filter((status) => status.status !== "never");
-        const smartSuggestion =
-          day.type === "lift"
-            ? getSmartDaySuggestion(day.dayOfWeek, 0, program.days, recoveryStatuses)
-            : null;
+        const smartSuggestion = getSmartProgramDaySuggestion(
+          day,
+          program.days,
+          recoveryStatuses,
+          leadDays <= 2,
+        );
         const liftExercises =
           day.type === "lift"
             ? day.exercises
@@ -178,19 +191,19 @@ export function Schedule() {
 
         return (
           <section
-            key={day.id}
-            className={`surface-card rounded-[1.75rem] p-4 animate-fade-up ${isToday ? "ring-1 ring-accent-red/40" : ""}`}
+            key={`${day.id}-${dateKey}`}
+            className={`surface-card rounded-[1.75rem] p-4 animate-fade-up ${isNextUp ? "ring-1 ring-accent-red/40" : ""}`}
             style={{ animationDelay: `${index * 35}ms` }}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[15px] font-semibold text-text-primary">
-                    {dayNames[day.dayOfWeek]}
+                    {formatDayDate(createSessionIso(dateKey))}
                   </span>
-                  {isToday ? (
+                  {isNextUp ? (
                     <span className="chip chip-muted min-h-0 px-2 py-1 text-[10px] font-semibold text-accent-red">
-                      Today
+                      Next Up
                     </span>
                   ) : null}
                 </div>
@@ -208,6 +221,9 @@ export function Schedule() {
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="chip chip-muted text-[11px] text-text-secondary">
                 {stalenessText}
+              </span>
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                {leadDays === 0 ? "Starts now" : leadDays === 1 ? "Tomorrow" : `In ${leadDays}d`}
               </span>
               {day.type === "lift" ? (
                 <span className="chip chip-muted text-[11px] text-text-secondary">

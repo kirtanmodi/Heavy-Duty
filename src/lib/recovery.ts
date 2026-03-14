@@ -38,16 +38,14 @@ export interface SmartSuggestion {
   suggestion?: string;
 }
 
-export function getSmartDaySuggestion(
-  dow: number,
-  dateOffset: number,
+export function getSmartProgramDaySuggestion(
+  programDay: ProgramDay | undefined,
   programDays: ProgramDay[],
   recoveryStatuses: MuscleRecoveryStatus[],
+  enableAdaptation = true,
 ): SmartSuggestion {
-  const programDay = programDays.find((d) => d.dayOfWeek === dow);
   if (!programDay) return { type: "rest" };
-  if (dateOffset > 2) return { type: programDay.type };
-  if (programDay.type !== "lift") return { type: programDay.type };
+  if (!enableAdaptation || programDay.type !== "lift") return { type: programDay.type };
 
   const targetGroups = getLiftDayGroups(programDay);
   const recoveringGroups = targetGroups.filter((g) => {
@@ -76,7 +74,18 @@ export function getSmartDaySuggestion(
       suggestion: `Swap to ${alternative.focus}`,
     };
   }
+
   return { type: "cardio", reason, suggestion: "Swap to cardio" };
+}
+
+export function getSmartDaySuggestion(
+  dow: number,
+  dateOffset: number,
+  programDays: ProgramDay[],
+  recoveryStatuses: MuscleRecoveryStatus[],
+): SmartSuggestion {
+  const programDay = programDays.find((d) => d.dayOfWeek === dow);
+  return getSmartProgramDaySuggestion(programDay, programDays, recoveryStatuses, dateOffset <= 2);
 }
 
 /**

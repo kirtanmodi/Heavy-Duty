@@ -6,43 +6,47 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 
 ## Features
 
-- **Weekly program** — 7-day Heavy Duty schedule with push/pull/legs, cardio, and rest days
+- **Rolling program cycle** — Heavy Duty schedule (push/pull/legs, cardio, rest) that advances from your last completed workout instead of snapping to fixed weekdays
 - **Mentzer warm-up/working set protocol** — each exercise gets 2 sets: a warm-up at 50% weight and a working set to failure, both at 4-1-4 tempo. Set labels ("W-up" / "Work") shown inline
 - **Progressive overload** — automatic suggestions to increase weight, add reps, or deload based on working-set (to-failure) performance
 - **Equipment switching** — tap the equipment badge on any exercise to swap between barbell, dumbbells, cable, machine, or bodyweight. Overrides persist per exercise
-- **Gym equipment curation** — configure your gym's available machines and free weights, then auto-build an optimal workout for each lift focus (Push: 6 exercises, Pull: 6, Legs & Abs: 5). Matches Mentzer's original Heavy Duty prescription. "Try Another Split" shuffles the selection for variety, preferring exercises not already in the workout. Shows which slots were skipped when equipment is missing. Locked after first logged set to protect data
-- **My Gym page** — dedicated equipment management page to toggle machines, free weights, and cardio equipment. Add, edit, and remove custom equipment. Select all/deselect all per category. Bulk select mode with multi-delete
+- **Gym equipment curation** — configure your gym's available machines and free weights, then auto-build an optimal workout for each lift focus (Push: 6 exercises, Pull: 6, Legs & Abs: 5). "Try Another Split" shuffles the selection for variety. Shows which slots were skipped when equipment is missing. Locked after first logged set to protect data
+- **My Gym page** — dedicated equipment management: toggle built-in items, add/edit/remove custom equipment, select all/deselect all per category, bulk select with multi-delete
 - **Open workout** — freeform sessions where you pick any exercises, no predefined program structure
-- **Exercise management** — swap, add, remove, or insert exercises at any position during an active workout or when editing past sessions. Create custom exercises directly from the exercise picker
-- **Auto replace** — instantly swap an exercise for a random alternative targeting the same muscle group via the 3-dot menu, no manual browsing needed
-- **Skip/alternate exercises** — skip an exercise for the current session so it returns next time, enabling alternation (e.g. leg press ↔ squats)
-- **Auto-save & resume** — workout data persists automatically on every change. If the app closes mid-workout, a resume banner appears on the home page
-- **Exercise reorder** — move exercises up/down during an active workout
-- **Bodyweight mode** — exercises like hanging leg raises default to reps-only tracking, with a toggle to add external weight
-- **Cardio & rest day tracking** — log cardio and recovery sessions with a "Mark as Done" button. Color-coded calendar: green for lifts, blue for cardio, subtle dots for rest days
-- **Muscle recovery status** — per-muscle-group recovery tracking based on Mentzer's 4-day recovery rule, correctly resolving custom and swapped exercises. Home page shows color-coded pills (orange = recovering, green = ready)
+- **Exercise management** — swap, add, remove, or insert exercises at any position during active workouts or when editing past sessions. Create custom exercises from the picker. Auto-replace instantly swaps for a same-muscle-group alternative
+- **Skip/alternate exercises** — skip an exercise for the current session so it returns next time, enabling alternation (e.g. leg press ↔ squats). Anti-chronic-skip safeguard (yellow → amber → red block)
+- **Auto-save & resume** — workout data persists automatically. Resume banner appears on home page if app closes mid-workout
+- **Interactive calendar** — color-coded by session type (green=lift, blue=cardio, recovery, rest). Tap cells to quick-log cardio/rest for any date, undo non-lift logs, or move lift workouts to different dates via date picker. Future rings project from the rolling cycle
+- **Quick cardio/rest logging** — log cardio or rest sessions directly from the home page without navigating to the workout screen. Supports backdating
+- **Muscle recovery status** — per-muscle-group recovery tracking (Mentzer 4-day rule), resolves custom/swapped exercises. Color-coded pills (orange=recovering, green=ready). Workout page warns when targeting recovering muscles with bulk-skip buttons
+- **Smart day suggestions** — upcoming rolling-cycle days adapt to recovery state: suggests alternative lift days or cardio when target muscles are still recovering. Recovery suggestion banner shown on the home hero card
 - **Rest day suggestions** — context-aware activity nudges on rest/recovery days or after 2+ days of inactivity
-- **Recovery warnings** — workout page warns when targeted muscle groups are still recovering, with "Skip [Group] this week" buttons to bulk-skip all exercises for a recovering group. Anti-chronic-skip safeguard escalates from yellow (first skip) to amber warning (second consecutive) to red block (third+) to prevent muscle groups from being neglected
-- **Smart calendar** — M–S color-coded training calendar on the home page. Solid circles for completed workouts (green=lift, blue=cardio), outlined rings for planned future days. Near-future days (today + 2) are recovery-aware: if targeted muscles are still recovering, the ring turns amber ("Adapted") and the app suggests an alternative. Legend explains all indicators
-- **Bento stats dashboard** — streak, total workouts, last session focus, muscle recovery status, and rest day suggestions on the home page
-- **Per-exercise tracking** — home page shows last-done date for every exercise in each day card
-- **History filtering** — filter past workouts by exercise; tap any exercise tag to narrow results
-- **History editing** — full editing of past workouts with the same card UI as active workouts: swap/add/remove exercises, modify sets/reps/weight, or delete entire sessions. Cardio/recovery entries display type badges
-- **Rest timer** — configurable countdown timer with preset durations, auto-starts on set completion (toggleable)
-- **Stepper inputs** — ±buttons on weight/rep fields with exercise-specific increments and long-press rapid adjust. Tappable "prev:" hints auto-fill from last session
-- **Progress charts & schedule** — Charts/Schedule toggle. Muscle-group-categorized exercise picker (Chest, Back, Shoulders, Arms, Traps, Legs, Abs tabs), per-exercise estimated 1RM trend lines, volume bar charts, and color-coded PR dashboard (best weight, est. 1RM, best volume) powered by Recharts. Schedule tab shows the full weekly program (Mon–Sun) with exercises, rep ranges, recovery pills per muscle group (green=recovered, orange=recovering), staleness indicators, smart warnings for recovering muscles with alternative suggestions, and start buttons
-- **Data export & backup** — full JSON backup (workouts + exercises + settings), CSV export (one row per set, includes day type column), and import with deduplication
-- **Offline-ready PWA** — installable, works without internet, data persists in localStorage
+- **Progress charts & PR dashboard** — Charts/Schedule toggle. Muscle-group-categorized exercise picker, per-exercise 1RM trends, volume bars, color-coded PR badges. Schedule tab shows the rolling cycle with date labels, lead-time chips, recovery pills, staleness indicators, smart warnings, and start buttons
+- **History** — filter by exercise or day type, inline editing (swap/add/remove exercises, modify sets/reps/weight), delete sessions. Cards show type badges and session stats
+- **Full-state backup/restore** — JSON export captures all app state (workout history, active workout, exercise overrides, settings, gym equipment). CSV export (one row per set). Import validates field-by-field, supports v1 legacy format migration
+- **PWA install** — native install prompt (Chrome/Edge) with iOS fallback instructions, app shortcuts (Open Workout, Progress, History), offline-ready via service worker
+- **Rest timer** — configurable countdown with presets, auto-starts on set completion (toggleable)
+- **Stepper inputs** — ±buttons with exercise-specific increments, long-press rapid adjust, tappable "prev:" hints from last session
 
 ## Tech Stack
 
 - React 19, TypeScript (strict), Vite 7
-- Tailwind CSS v4 (dark theme, custom design tokens)
+- Tailwind CSS v4 (dark theme, Apple HIG system colors, surface utility classes)
 - Zustand (persisted to localStorage)
 - React Router DOM v7
-- Recharts (progress charts)
-- PWA via vite-plugin-pwa
+- Recharts (progress charts), Framer Motion (animations)
+- PWA via vite-plugin-pwa (auto-update, maskable icons, app shortcuts)
 - Deployed to Netlify
+
+## Design System
+
+Dark theme only, defined in `src/index.css` via Tailwind v4 `@theme` tokens:
+
+- **Fonts**: Bebas Neue (headings), Outfit (body)
+- **Colors**: Apple HIG system accent palette (#FF453A red, #FF9F0A orange, #FFD60A yellow, #30D158 green, #0A84FF blue)
+- **Backgrounds**: Multi-layer radial gradients with subtle grid texture overlay (no images)
+- **Surfaces**: `surface-card`, `surface-card-muted`, `hero-surface`, `sheet-surface`, `floating-nav` (glass blur)
+- **Components**: `btn-primary` (gradient), `btn-secondary`, `btn-ghost`, `chip`, `section-label`, `input-shell`, `touch-target` (44px min), `segmented-surface`
 
 ## Development
 
@@ -59,8 +63,10 @@ All data is client-side. Three Zustand stores persist to localStorage:
 
 | Store | Key | Purpose |
 |-------|-----|---------|
-| `workoutStore` | `hd_workouts` | Workout history + active workout session |
-| `exerciseStore` | `hd_exercises` | Custom exercises, name overrides, bodyweight/weighted preference, equipment overrides |
-| `settingsStore` | `hd_settings` | Program selection, rest timer duration, auto-start timer toggle, gym equipment profile, custom gym equipment |
+| `workoutStore` | `hd_workouts` | Workout history, active workout, last completed workout. Actions: `restoreState`, `updateWorkoutDate`, `sortHistory` |
+| `exerciseStore` | `hd_exercises` | Custom exercises, name overrides, bodyweight/weighted preference, equipment overrides. Actions: `restoreState`, `clearAll` |
+| `settingsStore` | `hd_settings` | Program selection, rest timer, auto-start timer, gym equipment profile, custom gym equipment. Action: `restoreState` (merges gym equipment over defaults) |
 
-Exercise and program definitions are static in `src/data/`. Currently ships with one program (`heavy-duty-complete`) with lift, cardio, recovery, and rest days, and ~49 exercises covering chest, back, shoulders, arms, traps, legs, lower back, hips, and core. Shared utilities in `src/lib/`: gym equipment curation (`curatedWorkout.ts`), muscle recovery tracking and smart day suggestions (`recovery.ts`), date formatting and session staleness (`dates.ts`), per-set PR detection (`records.ts`).
+Date handling uses a **date-key abstraction** (`YYYY-MM-DD` strings) in `lib/dates.ts` for timezone-safe day-boundary arithmetic. All day comparisons use UTC-based math; session timestamps pin to noon local time via `createSessionIso()`.
+
+Exercise and program definitions are static in `src/data/`. Currently ships with one program (`heavy-duty-complete`) with lift, cardio, recovery, and rest days, and ~49 exercises. Shared utilities in `src/lib/`: rolling cycle projection (`rollingSchedule.ts`), gym equipment curation (`curatedWorkout.ts`), muscle recovery tracking and smart day suggestions (`recovery.ts`), date-key primitives and formatting (`dates.ts`), full-state backup/restore with v1 migration (`export.ts`), per-set PR detection (`records.ts`).
