@@ -72,7 +72,7 @@ export function StepperInput({
           onMouseDown={() => startLongPressWithRef(-1)}
           onMouseUp={clearTimers}
           onMouseLeave={clearTimers}
-          className="touch-target flex h-11 w-8 shrink-0 items-center justify-center border-r border-white/[0.06] bg-white/[0.02] text-text-muted transition-colors active:bg-white/[0.08]"
+          className="touch-target flex h-11 w-6 shrink-0 items-center justify-center border-r border-white/[0.06] bg-white/[0.02] text-text-muted transition-colors active:bg-white/[0.08]"
           aria-label="Decrease"
         >
           <svg
@@ -97,7 +97,7 @@ export function StepperInput({
             onChange(parsed);
           }}
           onFocus={selectAllOnFocus}
-          className="input-focus h-11 w-full min-w-0 border-0 bg-transparent px-1 text-center text-[15px] font-semibold tabular-nums text-white outline-none"
+          className="input-focus h-11 w-full min-w-0 border-0 bg-transparent px-0 text-center text-[13px] font-semibold tabular-nums text-white outline-none"
           placeholder={placeholder}
         />
         <button
@@ -108,7 +108,7 @@ export function StepperInput({
           onMouseDown={() => startLongPressWithRef(1)}
           onMouseUp={clearTimers}
           onMouseLeave={clearTimers}
-          className="touch-target flex h-11 w-8 shrink-0 items-center justify-center border-l border-white/[0.06] bg-white/[0.02] text-text-muted transition-colors active:bg-white/[0.08]"
+          className="touch-target flex h-11 w-6 shrink-0 items-center justify-center border-l border-white/[0.06] bg-white/[0.02] text-text-muted transition-colors active:bg-white/[0.08]"
           aria-label="Increase"
         >
           <svg
