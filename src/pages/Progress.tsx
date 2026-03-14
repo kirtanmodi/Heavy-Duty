@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from "recharts";
 import { PageLayout } from "../components/layout/PageLayout";
+import { Schedule } from "../components/Schedule";
 import {
   getTrackedExercises,
   getExerciseSessions,
@@ -118,6 +119,7 @@ const groupColors: Record<string, string> = {
 
 export function Progress() {
   const history = useWorkoutStore((s) => s.history);
+  const [view, setView] = useState<"charts" | "schedule">("charts");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [chartMode, setChartMode] = useState<"1rm" | "volume">("1rm");
@@ -194,24 +196,42 @@ export function Progress() {
             Progress
           </h1>
         </header>
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-bg-card p-8 text-center">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            className="h-10 w-10 text-text-dim"
+        <div className="flex gap-1 rounded-xl bg-bg-input p-1">
+          <button
+            onClick={() => setView("charts")}
+            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "charts" ? "bg-bg-card text-text-primary" : "text-text-muted"}`}
           >
-            <path
-              d="M3 3v18h18M7 16l4-4 4 4 5-5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <p className="text-sm text-text-secondary">
-            Complete some workouts to see your progress here.
-          </p>
+            Charts
+          </button>
+          <button
+            onClick={() => setView("schedule")}
+            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "schedule" ? "bg-bg-card text-text-primary" : "text-text-muted"}`}
+          >
+            Schedule
+          </button>
         </div>
+        {view === "charts" ? (
+          <div className="flex flex-col items-center gap-3 rounded-2xl bg-bg-card p-8 text-center">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="h-10 w-10 text-text-dim"
+            >
+              <path
+                d="M3 3v18h18M7 16l4-4 4 4 5-5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <p className="text-sm text-text-secondary">
+              Complete some workouts to see your progress here.
+            </p>
+          </div>
+        ) : (
+          <Schedule />
+        )}
       </PageLayout>
     );
   }
@@ -223,6 +243,26 @@ export function Progress() {
           Progress
         </h1>
       </header>
+
+      {/* Charts / Schedule toggle */}
+      <div className="flex gap-1 rounded-xl bg-bg-input p-1">
+        <button
+          onClick={() => setView("charts")}
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "charts" ? "bg-bg-card text-text-primary" : "text-text-muted"}`}
+        >
+          Charts
+        </button>
+        <button
+          onClick={() => setView("schedule")}
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "schedule" ? "bg-bg-card text-text-primary" : "text-text-muted"}`}
+        >
+          Schedule
+        </button>
+      </div>
+
+      {view === "schedule" ? (
+        <Schedule />
+      ) : (<>
 
       {/* Muscle group tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
@@ -533,6 +573,7 @@ export function Progress() {
             </div>
           ))}
       </div>
+      </>)}
     </PageLayout>
   );
 }

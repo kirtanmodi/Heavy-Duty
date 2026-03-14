@@ -20,16 +20,16 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Exercise reorder** — move exercises up/down during an active workout
 - **Bodyweight mode** — exercises like hanging leg raises default to reps-only tracking, with a toggle to add external weight
 - **Cardio & rest day tracking** — log cardio and recovery sessions with a "Mark as Done" button. Color-coded calendar: green for lifts, blue for cardio, subtle dots for rest days
-- **Muscle recovery status** — per-muscle-group recovery tracking based on Mentzer's 4-day recovery rule. Home page shows color-coded pills (orange = recovering, green = ready)
+- **Muscle recovery status** — per-muscle-group recovery tracking based on Mentzer's 4-day recovery rule, correctly resolving custom and swapped exercises. Home page shows color-coded pills (orange = recovering, green = ready)
 - **Rest day suggestions** — context-aware activity nudges on rest/recovery days or after 2+ days of inactivity
 - **Recovery warnings** — workout page warns when targeted muscle groups are still recovering, with "Skip [Group] this week" buttons to bulk-skip all exercises for a recovering group. Anti-chronic-skip safeguard escalates from yellow (first skip) to amber warning (second consecutive) to red block (third+) to prevent muscle groups from being neglected
-- **Bento stats dashboard** — streak, total workouts, last session focus, muscle recovery status, rest day suggestions, and M–S color-coded training calendar on the home page
+- **Bento stats dashboard** — streak, total workouts, last session focus, muscle recovery status, rest day suggestions, and M–S color-coded training calendar with planned day indicators and legend on the home page
 - **Per-exercise tracking** — home page shows last-done date for every exercise in each day card
 - **History filtering** — filter past workouts by exercise; tap any exercise tag to narrow results
 - **History editing** — full editing of past workouts with the same card UI as active workouts: swap/add/remove exercises, modify sets/reps/weight, or delete entire sessions. Cardio/recovery entries display type badges
 - **Rest timer** — configurable countdown timer with preset durations, auto-starts on set completion (toggleable)
 - **Stepper inputs** — ±buttons on weight/rep fields with exercise-specific increments and long-press rapid adjust. Tappable "prev:" hints auto-fill from last session
-- **Progress charts** — muscle-group-categorized exercise picker (Chest, Back, Shoulders, Arms, Traps, Legs, Abs tabs), per-exercise estimated 1RM trend lines, volume bar charts, and color-coded PR dashboard (best weight, est. 1RM, best volume) powered by Recharts
+- **Progress charts & schedule** — Charts/Schedule toggle. Muscle-group-categorized exercise picker (Chest, Back, Shoulders, Arms, Traps, Legs, Abs tabs), per-exercise estimated 1RM trend lines, volume bar charts, and color-coded PR dashboard (best weight, est. 1RM, best volume) powered by Recharts. Schedule tab shows the full weekly program (Mon–Sun) with exercises, rep ranges, and start buttons
 - **Data export & backup** — full JSON backup (workouts + exercises + settings), CSV export (one row per set, includes day type column), and import with deduplication
 - **Offline-ready PWA** — installable, works without internet, data persists in localStorage
 

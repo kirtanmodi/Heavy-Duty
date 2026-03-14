@@ -1,5 +1,5 @@
 import type { WorkoutEntry } from "../types";
-import { exerciseGroups, exerciseMap } from "../data/exercises";
+import { exerciseGroups, exerciseMap, getEffectiveExercise } from "../data/exercises";
 import { cardioActivities } from "../data/programs";
 import type { CardioActivity } from "../data/programs";
 
@@ -34,7 +34,7 @@ export function getGroupSkipHistory(
     for (const workout of liftEntries) {
       // Find exercises in this workout that target this group
       const groupExercises = workout.exercises.filter((ex) => {
-        const def = exerciseMap.get(ex.id);
+        const def = getEffectiveExercise(ex.id) ?? exerciseMap.get(ex.id);
         if (!def) return false;
         return def.primaryMuscles.some((m) => muscleToGroup.get(m) === g.label);
       });
@@ -76,7 +76,7 @@ export function getMuscleRecoveryStatus(
     const workoutDate = new Date(workout.date);
     for (const ex of workout.exercises) {
       if (ex.skipped) continue;
-      const def = exerciseMap.get(ex.id);
+      const def = getEffectiveExercise(ex.id) ?? exerciseMap.get(ex.id);
       if (!def) continue;
       for (const muscle of def.primaryMuscles) {
         const group = muscleToGroup.get(muscle);

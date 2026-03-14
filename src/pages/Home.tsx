@@ -134,21 +134,25 @@ export function Home() {
       }
     }
 
-    // Build weekday-to-rest map from program
+    // Build weekday-to-type map from program
+    const programDayByWeekday = new Map<number, DayType>();
     const restWeekdays = new Set<number>();
     for (const pd of program.days) {
+      programDayByWeekday.set(pd.dayOfWeek, pd.type);
       if (pd.type === "rest") restWeekdays.add(pd.dayOfWeek);
     }
 
     const today = now.getDate();
-    const days: { day: number; dayType: DayType | null; isToday: boolean; isRest: boolean }[] = [];
-    for (let i = 0; i < startDow; i++) days.push({ day: 0, dayType: null, isToday: false, isRest: false });
+    const days: { day: number; dayType: DayType | null; isToday: boolean; isRest: boolean; suggestedType: DayType | null }[] = [];
+    for (let i = 0; i < startDow; i++) days.push({ day: 0, dayType: null, isToday: false, isRest: false, suggestedType: null });
     for (let d = 1; d <= daysInMonth; d++) {
       const dateObj = new Date(year, month, d);
       const isPast = d < today;
       const dow = dateObj.getDay(); // 0=Sun
       const isRest = isPast && !trainedMap.has(d) && restWeekdays.has(dow);
-      days.push({ day: d, dayType: trainedMap.get(d) ?? null, isToday: d === today, isRest });
+      const isFutureOrUnworkedToday = (d > today || (d === today && !trainedMap.has(d)));
+      const suggestedType = isFutureOrUnworkedToday ? (programDayByWeekday.get(dow) ?? null) : null;
+      days.push({ day: d, dayType: trainedMap.get(d) ?? null, isToday: d === today, isRest, suggestedType });
     }
 
     const label = now.toLocaleDateString("en-US", { month: "long" });
@@ -442,9 +446,21 @@ export function Home() {
                               ? "bg-accent-blue/60 text-white"
                               : cell.dayType === "rest"
                                 ? "bg-accent-green/40 text-white"
-                                : cell.isToday
-                                  ? "ring-1 ring-text-muted text-text-primary"
-                                  : "text-text-dim"
+                                : cell.isToday && cell.suggestedType === "lift"
+                                  ? "ring-2 ring-accent-green/60 text-text-primary"
+                                  : cell.isToday && cell.suggestedType === "cardio"
+                                    ? "ring-2 ring-accent-blue/60 text-text-primary"
+                                    : cell.isToday && cell.suggestedType === "recovery"
+                                      ? "ring-2 ring-accent-blue/40 text-text-primary"
+                                      : cell.isToday
+                                        ? "ring-1 ring-text-muted text-text-primary"
+                                        : cell.suggestedType === "lift"
+                                          ? "ring-1 ring-accent-green/50 text-accent-green/70"
+                                          : cell.suggestedType === "cardio"
+                                            ? "ring-1 ring-accent-blue/50 text-accent-blue/70"
+                                            : cell.suggestedType === "recovery"
+                                              ? "ring-1 ring-accent-blue/30 text-accent-blue/50"
+                                              : "text-text-dim"
                       }`}
                     >
                       {cell.day}
@@ -456,6 +472,24 @@ export function Home() {
                 )}
               </div>
             ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
+            <div className="flex items-center gap-1">
+              <div className="h-2.5 w-2.5 rounded-full bg-accent-green" />
+              <span className="text-[9px] text-text-dim">Lift</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-2.5 w-2.5 rounded-full bg-accent-blue" />
+              <span className="text-[9px] text-text-dim">Cardio</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-2.5 w-2.5 rounded-full bg-accent-blue/60" />
+              <span className="text-[9px] text-text-dim">Recovery</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-2.5 w-2.5 rounded-full ring-1 ring-accent-green/50" />
+              <span className="text-[9px] text-text-dim">Planned</span>
+            </div>
           </div>
           <span className="text-xs text-text-muted">{monthSessionCount} session{monthSessionCount !== 1 ? "s" : ""}</span>
         </div>
