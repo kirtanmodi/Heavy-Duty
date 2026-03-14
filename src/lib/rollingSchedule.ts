@@ -1,5 +1,5 @@
 import type { ProgramDay, WorkoutEntry } from "../types";
-import { addDaysToDateKey, getIsoDateKey, getTodayDateKey, parseDateKey } from "./dates";
+import { addDaysToDateKey, daysBetweenDateKeys, getIsoDateKey, getTodayDateKey, parseDateKey } from "./dates";
 
 export interface RollingProgramDay {
   day: ProgramDay;
@@ -25,6 +25,111 @@ function isNonLiftTypeMatch(cycle: ProgramDay[], cycleIndex: number, workout: Wo
   if (!expected || expected.type === "lift") return false;
   const loggedType = workout.dayType ?? "lift";
   return loggedType !== "lift";
+}
+
+/**
+ * Skip redundant non-lift cycle days when 48h+ have already passed since the last lift.
+ * Returns the advanced cycleIndex pointing to the next lift day.
+ */
+function skipRedundantRestDays(cycle: ProgramDay[], cycleIndex: number, dateKey: string, history: WorkoutEntry[]): number {
+  if (cycle[cycleIndex]?.type === "lift") return cycleIndex;
+
+  // Find the most recent lift date
+  const lastLiftDateKey = (() => {
+    for (const w of history) {
+      if ((w.dayType ?? "lift") === "lift") {
+        const dk = getIsoDateKey(w.date);
+        if (dk <= dateKey) return dk;
+      }
+    }
+    return null;
+  })();
+
+  if (!lastLiftDateKey) return cycleIndex;
+
+  const daysSinceLift = daysBetweenDateKeys(dateKey, lastLiftDateKey);
+  if (daysSinceLift < 2) return cycleIndex;
+
+  // Already 48h+ since last lift — skip non-lift days to reach the next lift
+  let idx = cycleIndex;
+  for (let i = 0; i < cycle.length; i++) {
+    if (cycle[idx].type === "lift") return idx;
+    idx = (idx + 1) % cycle.length;
+  }
+  return cycleIndex;
+}
+
+function getCycleDistance(cycleLength: number, fromIndex: number, toIndex: number): number {
+  return toIndex >= fromIndex ? toIndex - fromIndex : cycleLength - fromIndex + toIndex;
+}
+
+function getLastLoggedLiftDateKey(history: WorkoutEntry[], dateKey: string): string | null {
+  for (const workout of history) {
+    if ((workout.dayType ?? "lift") !== "lift") continue;
+    const workoutDateKey = getIsoDateKey(workout.date);
+    if (workoutDateKey <= dateKey) return workoutDateKey;
+  }
+  return null;
+}
+
+function getMostStaleLiftDayIndex(
+  cycle: ProgramDay[],
+  cycleIndex: number,
+  dateKey: string,
+  history: WorkoutEntry[],
+): number | null {
+  const lastDoneByLiftDay = new Map<string, string>();
+  const liftDayIds = new Set(cycle.filter((day) => day.type === "lift").map((day) => day.id));
+
+  for (const workout of history) {
+    if ((workout.dayType ?? "lift") !== "lift") continue;
+    if (!liftDayIds.has(workout.dayId)) continue;
+
+    const workoutDateKey = getIsoDateKey(workout.date);
+    if (workoutDateKey > dateKey) continue;
+
+    const existing = lastDoneByLiftDay.get(workout.dayId);
+    if (!existing || workoutDateKey > existing) {
+      lastDoneByLiftDay.set(workout.dayId, workoutDateKey);
+    }
+  }
+
+  const candidates = cycle
+    .map((day, index) => ({ day, index }))
+    .filter(({ day }) => day.type === "lift")
+    .map(({ day, index }) => ({
+      index,
+      lastDoneDateKey: lastDoneByLiftDay.get(day.id) ?? null,
+      distance: getCycleDistance(cycle.length, cycleIndex, index),
+    }))
+    .sort((a, b) => {
+      if (a.lastDoneDateKey === null && b.lastDoneDateKey !== null) return -1;
+      if (a.lastDoneDateKey !== null && b.lastDoneDateKey === null) return 1;
+      if (a.lastDoneDateKey !== b.lastDoneDateKey) {
+        return (a.lastDoneDateKey ?? "").localeCompare(b.lastDoneDateKey ?? "");
+      }
+      return a.distance - b.distance;
+    });
+
+  return candidates[0]?.index ?? null;
+}
+
+function resolveStartingCycleIndex(
+  cycle: ProgramDay[],
+  cycleIndex: number,
+  startDateKey: string,
+  history: WorkoutEntry[],
+): number {
+  if (cycle[cycleIndex]?.type === "lift") return cycleIndex;
+
+  const lastLiftDateKey = getLastLoggedLiftDateKey(history, startDateKey);
+  if (!lastLiftDateKey) return cycleIndex;
+
+  const daysSinceLift = daysBetweenDateKeys(startDateKey, lastLiftDateKey);
+  if (daysSinceLift < 2) return cycleIndex;
+
+  return getMostStaleLiftDayIndex(cycle, cycleIndex, startDateKey, history)
+    ?? skipRedundantRestDays(cycle, cycleIndex, startDateKey, history);
 }
 
 export function getProgramCycle(programDays: ProgramDay[]): ProgramDay[] {
@@ -111,6 +216,9 @@ function getNextCycleIndexFromDate(
     }
   }
 
+  // After a long gap, pick the stalest lift instead of rewinding to a recently-done one.
+  cycleIndex = resolveStartingCycleIndex(cycle, cycleIndex, startDateKey, history);
+
   return cycleIndex;
 }
 
@@ -139,6 +247,7 @@ export function getRollingDayAtOffset(
       continue;
     }
 
+    cycleIndex = skipRedundantRestDays(cycle, cycleIndex, dateKey, history);
     const day = cycle[cycleIndex] ?? null;
     if (!day) return null;
     if (openDaysSeen === offset) return day;
@@ -175,6 +284,7 @@ export function getUpcomingOpenRollingDays(
       continue;
     }
 
+    cycleIndex = skipRedundantRestDays(cycle, cycleIndex, dateKey, history);
     result.push({
       day: cycle[cycleIndex],
       cycleIndex,
@@ -239,6 +349,7 @@ export function getUpcomingRollingDays(
       continue;
     }
 
+    cycleIndex = skipRedundantRestDays(cycle, cycleIndex, dateKey, history);
     result.push({
       day: cycle[cycleIndex],
       cycleIndex,

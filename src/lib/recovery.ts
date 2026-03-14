@@ -74,20 +74,18 @@ export function getSmartProgramDaySuggestion(
   const best = alternatives[0];
 
   if (best && best.recovered.length === best.total) {
-    // Fully recovered alternative
-    return { type: "lift", reason, suggestion: `Swap to ${best.day.focus}` };
+    return { type: "lift", reason, suggestion: `Do ${best.day.focus} instead — fully recovered` };
   }
 
   if (best) {
-    // Partially recovered — still better than cardio
     return {
       type: "lift",
       reason,
-      suggestion: `Try ${best.day.focus} — ${best.recovered.join(", ")} ready`,
+      suggestion: `Do ${best.day.focus} instead — ${best.recovered.join(", ")} recovered`,
     };
   }
 
-  return { type: "cardio", reason, suggestion: "Swap to cardio" };
+  return { type: "cardio", reason, suggestion: "Do cardio instead" };
 }
 
 export function getSmartDaySuggestion(
