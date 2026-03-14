@@ -9,6 +9,7 @@ import { cardioActivities, programs } from "../data/programs";
 import { useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { createMentzerSets, getOverloadSuggestion } from "../lib/overload";
+import { getMuscleRecoveryStatus } from "../lib/recovery";
 import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, LiftFocus, SetEntry } from "../types";
@@ -315,6 +316,14 @@ export function Workout() {
 
   if (!isOpen && day && day.type !== "lift") {
     const activities = cardioActivities[day.id] ?? [];
+    const isDoneToday = history.some(
+      (w) => w.dayId === day.id && w.date.slice(0, 10) === new Date().toISOString().slice(0, 10),
+    );
+
+    const handleMarkDone = () => {
+      useWorkoutStore.getState().logCardioSession(day.id, day.name, program.name, day.type);
+      navigate("/");
+    };
 
     return (
       <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
@@ -323,6 +332,14 @@ export function Workout() {
             <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{day.type}</p>
             <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{day.focus}</h1>
           </div>
+          {isDoneToday && (
+            <div className="flex items-center gap-1.5 rounded-full bg-accent-green/15 px-3 py-1.5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 text-accent-green">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              <span className="text-[11px] font-semibold text-accent-green">Done Today</span>
+            </div>
+          )}
         </header>
 
         <section
@@ -376,16 +393,26 @@ export function Workout() {
           </section>
         )}
 
-        <button
-          onClick={() => navigate("/")}
-          className="w-full rounded-2xl py-4 text-sm font-bold tracking-wide text-white transition-all active:scale-[0.98]"
-          style={{
-            background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
-            boxShadow: `0 4px 16px ${themeColor}30`,
-          }}
-        >
-          Done
-        </button>
+        <div className="flex flex-col gap-2.5">
+          {!isDoneToday && (
+            <button
+              onClick={handleMarkDone}
+              className="w-full rounded-2xl py-4 text-sm font-bold tracking-wide text-white transition-all active:scale-[0.98]"
+              style={{
+                background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
+                boxShadow: `0 4px 16px ${themeColor}30`,
+              }}
+            >
+              Mark as Done
+            </button>
+          )}
+          <button
+            onClick={() => navigate("/")}
+            className="w-full rounded-2xl border border-white/[0.1] bg-transparent py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+          >
+            Go Back
+          </button>
+        </div>
       </PageLayout>
     );
   }
@@ -694,6 +721,51 @@ export function Workout() {
             )}
           </section>
         )}
+
+        {/* Muscle Recovery Banner */}
+        {(() => {
+          const recoveryStatuses = getMuscleRecoveryStatus(history);
+          const targetMuscles = new Set<string>();
+          for (const ex of activeWorkout.exercises) {
+            const def = getEffectiveExercise(ex.id);
+            if (def) {
+              for (const m of def.primaryMuscles) {
+                const group = recoveryStatuses.find((r) =>
+                  r.group === "Chest" && ["chest", "upper-chest"].includes(m) ||
+                  r.group === "Back" && ["lats", "mid-back", "lower-back"].includes(m) ||
+                  r.group === "Shoulders" && ["front-delts", "side-delts", "rear-delts"].includes(m) ||
+                  r.group === "Arms" && ["biceps", "triceps", "forearms"].includes(m) ||
+                  r.group === "Traps" && m === "traps" ||
+                  r.group === "Legs" && ["quads", "hamstrings", "glutes", "calves"].includes(m) ||
+                  r.group === "Abs" && m === "core"
+                );
+                if (group) targetMuscles.add(group.group);
+              }
+            }
+          }
+          const recovering = recoveryStatuses.filter(
+            (r) => targetMuscles.has(r.group) && r.status === "recovering" && r.daysSinceLastTrained !== null,
+          );
+          if (recovering.length === 0) return null;
+          return (
+            <section
+              className="flex flex-col gap-2 rounded-2xl px-4 py-3.5"
+              style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.12)" }}
+            >
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-accent-yellow">
+                  <path d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                </svg>
+                <span className="text-xs font-semibold text-accent-yellow">Recovery Notice</span>
+              </div>
+              {recovering.map((r) => (
+                <p key={r.group} className="text-xs leading-relaxed text-text-secondary">
+                  <span className="font-medium text-text-primary">{r.group}</span> was trained {r.daysSinceLastTrained}d ago. Mentzer recommends 4-7 days rest for growth.
+                </p>
+              ))}
+            </section>
+          );
+        })()}
 
         {activeWorkout.exercises.length === 0 && (
           <section className="rounded-2xl bg-white/[0.03] p-6 text-center text-sm text-text-secondary" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>

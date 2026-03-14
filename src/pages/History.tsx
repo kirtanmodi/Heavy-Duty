@@ -108,8 +108,16 @@ const dayColors: Record<string, string> = {
   open: "accent-yellow",
 };
 
-function getDayColor(dayId: string): string {
-  return dayColors[dayId] || "accent-yellow";
+const dayTypeColors: Record<string, string> = {
+  cardio: "accent-blue",
+  recovery: "accent-blue",
+  rest: "accent-green",
+};
+
+function getDayColor(workout: WorkoutEntry): string {
+  const dayType = workout.dayType ?? "lift";
+  if (dayType !== "lift") return dayTypeColors[dayType] || "accent-yellow";
+  return dayColors[workout.dayId] || "accent-yellow";
 }
 
 export function History() {
@@ -271,7 +279,8 @@ export function History() {
                   const stats = calcStats(workout);
                   const prev = findPrevSession(workout, history);
                   const progress = calcProgress(workout, prev);
-                  const color = getDayColor(workout.dayId);
+                  const color = getDayColor(workout);
+                  const isCardioEntry = (workout.dayType ?? "lift") !== "lift";
 
                   return (
                     <div key={workout.id} className="relative animate-fade-up" style={{ animationDelay: `${index * 40}ms` }}>
@@ -319,21 +328,33 @@ export function History() {
                           </div>
 
                           {/* Inline stats */}
-                          <div className="flex items-center gap-4 px-4 pb-3.5 text-[11px]">
-                            <span className="tabular-nums text-text-secondary">
-                              <span className="font-semibold text-text-primary">{stats.totalExercises}</span> exercises
-                            </span>
-                            <span className="text-text-dim">·</span>
-                            <span className="tabular-nums text-text-secondary">
-                              <span className="font-semibold text-text-primary">{stats.totalSets}</span> sets
-                            </span>
-                            <span className="text-text-dim">·</span>
-                            <span className="tabular-nums text-text-secondary">
-                              <span className="font-semibold text-text-primary">{formatVolume(stats.totalVolume)}</span>kg
-                            </span>
-                          </div>
+                          {isCardioEntry ? (
+                            <div className="flex items-center gap-2 px-4 pb-3.5 text-[11px]">
+                              <span
+                                className="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                                style={{ background: `var(--color-${color})/0.12`, color: `var(--color-${color})` }}
+                              >
+                                {workout.dayType}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-4 px-4 pb-3.5 text-[11px]">
+                              <span className="tabular-nums text-text-secondary">
+                                <span className="font-semibold text-text-primary">{stats.totalExercises}</span> exercises
+                              </span>
+                              <span className="text-text-dim">·</span>
+                              <span className="tabular-nums text-text-secondary">
+                                <span className="font-semibold text-text-primary">{stats.totalSets}</span> sets
+                              </span>
+                              <span className="text-text-dim">·</span>
+                              <span className="tabular-nums text-text-secondary">
+                                <span className="font-semibold text-text-primary">{formatVolume(stats.totalVolume)}</span>kg
+                              </span>
+                            </div>
+                          )}
 
                           {/* Exercise name pills */}
+                          {workout.exercises.length > 0 && (
                           <div className="flex flex-wrap gap-1 border-t border-border px-4 py-2.5">
                             {workout.exercises.map((ex) => (
                               <span
@@ -354,6 +375,7 @@ export function History() {
                               </span>
                             ))}
                           </div>
+                          )}
                         </button>
 
                         {/* Expanded detail */}

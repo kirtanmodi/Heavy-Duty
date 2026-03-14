@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { WorkoutEntry, ExerciseEntry } from "../types";
+import type { WorkoutEntry, ExerciseEntry, DayType } from "../types";
 
 interface WorkoutState {
   history: WorkoutEntry[];
@@ -25,6 +25,7 @@ interface WorkoutState {
   skipExercise: (exerciseIndex: number) => void;
   unskipExercise: (exerciseIndex: number) => void;
   updateHistoryEntry: (workoutId: string, exercises: ExerciseEntry[]) => void;
+  logCardioSession: (dayId: string, dayName: string, program: string, dayType: DayType) => void;
   deleteHistoryEntry: (workoutId: string) => void;
   importHistory: (workouts: WorkoutEntry[]) => void;
   clearAll: () => void;
@@ -77,6 +78,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           program: active.program,
           day: active.dayName,
           dayId: active.dayId,
+          dayType: "lift",
           startedAt: active.startedAt,
           exercises: active.exercises.filter((e) => e.skipped || e.sets.some((s) => s.reps > 0)),
         };
@@ -128,6 +130,21 @@ export const useWorkoutStore = create<WorkoutState>()(
       updateHistoryEntry: (workoutId, exercises) => {
         set((state) => ({
           history: state.history.map((w) => (w.id === workoutId ? { ...w, exercises } : w)),
+        }));
+      },
+
+      logCardioSession: (dayId, dayName, program, dayType) => {
+        const entry: WorkoutEntry = {
+          id: crypto.randomUUID(),
+          date: new Date().toISOString(),
+          program,
+          day: dayName,
+          dayId,
+          dayType,
+          exercises: [],
+        };
+        set((state) => ({
+          history: [entry, ...state.history],
         }));
       },
 

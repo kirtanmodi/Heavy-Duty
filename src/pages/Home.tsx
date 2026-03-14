@@ -4,10 +4,11 @@ import { PageLayout } from "../components/layout/PageLayout";
 import { getProgram } from "../data/programs";
 import { getRandomQuote } from "../data/quotes";
 import { exportJSON, exportCSV, validateImport, mergeImport } from "../lib/export";
+import { getMuscleRecoveryStatus, getDaysSinceLastActivity, getRestDaySuggestion } from "../lib/recovery";
 import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { useWorkoutStore } from "../store/workoutStore";
-import type { ProgramDay } from "../types";
+import type { DayType, ProgramDay } from "../types";
 import { formatRelativeDateShort } from "../lib/dates";
 
 function daysSinceLastSession(dayId: string, history: { dayId: string; date: string }[]): number | null {
@@ -118,27 +119,42 @@ export function Home() {
     // Monday-based offset (0=Mon, 6=Sun)
     const startDow = (firstDay.getDay() + 6) % 7;
 
-    const trained = new Set<number>();
+    const trainedMap = new Map<number, DayType>();
     let sessions = 0;
     for (const w of history) {
       const d = new Date(w.date);
       if (d.getFullYear() === year && d.getMonth() === month) {
-        trained.add(d.getDate());
+        const dayType = w.dayType ?? "lift";
+        const existing = trainedMap.get(d.getDate());
+        // lift takes priority over other types on same day
+        if (!existing || dayType === "lift") {
+          trainedMap.set(d.getDate(), dayType);
+        }
         sessions++;
       }
     }
 
+    // Build weekday-to-rest map from program
+    const restWeekdays = new Set<number>();
+    for (const pd of program.days) {
+      if (pd.type === "rest") restWeekdays.add(pd.dayOfWeek);
+    }
+
     const today = now.getDate();
-    const days: { day: number; trained: boolean; isToday: boolean }[] = [];
-    for (let i = 0; i < startDow; i++) days.push({ day: 0, trained: false, isToday: false });
+    const days: { day: number; dayType: DayType | null; isToday: boolean; isRest: boolean }[] = [];
+    for (let i = 0; i < startDow; i++) days.push({ day: 0, dayType: null, isToday: false, isRest: false });
     for (let d = 1; d <= daysInMonth; d++) {
-      days.push({ day: d, trained: trained.has(d), isToday: d === today });
+      const dateObj = new Date(year, month, d);
+      const isPast = d < today;
+      const dow = dateObj.getDay(); // 0=Sun
+      const isRest = isPast && !trainedMap.has(d) && restWeekdays.has(dow);
+      days.push({ day: d, dayType: trainedMap.get(d) ?? null, isToday: d === today, isRest });
     }
 
     const label = now.toLocaleDateString("en-US", { month: "long" });
 
     return { monthSessionCount: sessions, monthLabel: label, calendarDays: days };
-  }, [history]);
+  }, [history, program.days]);
 
   const lastSession = history.length > 0 ? history[0] : null;
 
@@ -348,7 +364,11 @@ export function Home() {
                   </div>
                   <div className="flex flex-1 flex-col">
                     <span className="text-sm font-medium text-text-primary">{day.focus}</span>
-                    {day.duration && <span className="text-[10px] text-text-muted">{day.duration}</span>}
+                    <div className="flex items-center gap-2">
+                      {day.duration && <span className="text-[10px] text-text-muted">{day.duration}</span>}
+                      <span className="text-[10px] text-text-dim">·</span>
+                      <LastDoneLabel day={day} history={history} />
+                    </div>
                   </div>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5 text-text-dim">
                     <path d="M9 6l6 6-6 6" />
@@ -411,16 +431,25 @@ export function Home() {
                 {cell.day === 0 ? (
                   <div className="h-7 w-7" />
                 ) : (
-                  <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums ${
-                      cell.trained
-                        ? "bg-accent-green text-white"
-                        : cell.isToday
-                          ? "ring-1 ring-text-muted text-text-primary"
-                          : "text-text-dim"
-                    }`}
-                  >
-                    {cell.day}
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums ${
+                        cell.dayType === "lift"
+                          ? "bg-accent-green text-white"
+                          : cell.dayType === "cardio"
+                            ? "bg-accent-blue text-white"
+                            : cell.dayType === "recovery"
+                              ? "bg-accent-blue/60 text-white"
+                              : cell.isToday
+                                ? "ring-1 ring-text-muted text-text-primary"
+                                : "text-text-dim"
+                      }`}
+                    >
+                      {cell.day}
+                    </div>
+                    {cell.isRest && !cell.dayType && (
+                      <div className="mt-0.5 h-1 w-1 rounded-full bg-text-dim/40" />
+                    )}
                   </div>
                 )}
               </div>
@@ -428,6 +457,109 @@ export function Home() {
           </div>
           <span className="text-xs text-text-muted">{monthSessionCount} session{monthSessionCount !== 1 ? "s" : ""}</span>
         </div>
+
+        {/* Muscle Recovery Status */}
+        {(() => {
+          const statuses = getMuscleRecoveryStatus(history);
+          const trained = statuses.filter((s) => s.status !== "never");
+          if (trained.length === 0) return null;
+          return (
+            <div className="col-span-2 flex flex-col gap-3 rounded-[14px] bg-bg-card p-4 card-surface animate-fade-up" style={{ animationDelay: "370ms" }}>
+              <span className="text-[10px] font-semibold tracking-widest text-text-muted uppercase">Muscle Recovery</span>
+              <div className="flex flex-wrap gap-2">
+                {trained.map((s) => (
+                  <div
+                    key={s.group}
+                    className="flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5"
+                  >
+                    <div
+                      className={`h-2 w-2 rounded-full ${
+                        s.status === "recovering" ? "bg-accent-orange" : "bg-accent-green"
+                      }`}
+                    />
+                    <span className="text-[11px] font-medium text-text-secondary">{s.group}</span>
+                    <span className="text-[10px] tabular-nums text-text-dim">
+                      {s.daysSinceLastTrained === 0 ? "today" : `${s.daysSinceLastTrained}d`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] leading-relaxed text-text-dim">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-orange align-middle" /> Recovering (&lt;4d)
+                {" · "}
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-green align-middle" /> Ready (4d+)
+              </p>
+            </div>
+          );
+        })()}
+
+        {/* Rest Day Activity Suggestion */}
+        {(() => {
+          const now = new Date();
+          const todayDow = now.getDay(); // 0=Sun
+          const todayProgram = program.days.find((d) => d.dayOfWeek === todayDow);
+          const isRestOrRecoveryDay = todayProgram && (todayProgram.type === "rest" || todayProgram.type === "recovery");
+          const isDoneToday = history.some(
+            (w) => w.date.slice(0, 10) === now.toISOString().slice(0, 10),
+          );
+          // Show on rest/recovery days OR when no activity in 2+ days
+          const daysSinceActivity = getDaysSinceLastActivity(history);
+          const showNudge = (isRestOrRecoveryDay && !isDoneToday) || daysSinceActivity >= 2;
+          if (!showNudge) return null;
+
+          const suggestion = getRestDaySuggestion(daysSinceActivity);
+          const nudgeColor = suggestion.type === "light-cardio" ? "#FF8844" : suggestion.type === "active-recovery" ? "#4488FF" : "#46D369";
+
+          return (
+            <div
+              className="col-span-2 flex flex-col gap-3 rounded-[14px] p-4 card-surface animate-fade-up"
+              style={{
+                background: `linear-gradient(135deg, ${nudgeColor}08 0%, transparent 60%)`,
+                border: `1px solid ${nudgeColor}15`,
+                animationDelay: "390ms",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ background: `${nudgeColor}15` }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke={nudgeColor} strokeWidth="1.5" className="h-4 w-4">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: nudgeColor }}>
+                  {suggestion.type === "full-rest" ? "Rest Day" : "Stay Active"}
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed text-text-secondary">{suggestion.message}</p>
+              {suggestion.activities.length > 0 && suggestion.type !== "full-rest" && (
+                <div className="flex flex-col gap-1.5">
+                  {suggestion.activities.map((a, idx) => (
+                    <div key={idx} className="flex items-start gap-2 rounded-lg bg-white/[0.03] px-3 py-2">
+                      <span className="mt-0.5 text-[10px] font-bold tabular-nums" style={{ color: nudgeColor }}>{idx + 1}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-medium text-text-primary">{a.name}</span>
+                        <span className="text-[10px] text-text-muted">{a.note}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!isDoneToday && suggestion.type !== "full-rest" && (
+                <button
+                  onClick={() => {
+                    const dayId = todayProgram?.id ?? "hd-saturday";
+                    const dayName = todayProgram?.name ?? "Active Recovery";
+                    const dayType = todayProgram?.type ?? ("recovery" as const);
+                    useWorkoutStore.getState().logCardioSession(dayId, dayName, program.name, dayType);
+                  }}
+                  className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-all active:scale-[0.98]"
+                  style={{ background: `linear-gradient(135deg, ${nudgeColor}, ${nudgeColor}CC)` }}
+                >
+                  Mark as Done
+                </button>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Data Management */}
         <div className="col-span-2 overflow-hidden rounded-[14px] bg-bg-card card-surface animate-fade-up" style={{ animationDelay: "420ms" }}>
