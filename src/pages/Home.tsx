@@ -250,6 +250,7 @@ export function Home() {
   const [selectedCalendarCell, setSelectedCalendarCell] = useState<CalendarCell | null>(null);
   const [calendarDateDraft, setCalendarDateDraft] = useState("");
   const [calendarActionError, setCalendarActionError] = useState<string | null>(null);
+  const [calendarMonthOffset, setCalendarMonthOffset] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const recoveryStatuses = useMemo(() => getMuscleRecoveryStatus(history), [history]);
@@ -293,10 +294,13 @@ export function Home() {
     return count;
   }, [history]);
 
+  const isCurrentMonth = calendarMonthOffset === 0;
+
   const { monthSessionCount, monthLabel, calendarDays } = useMemo(() => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    const viewDate = new Date(now.getFullYear(), now.getMonth() + calendarMonthOffset, 1);
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
@@ -367,10 +371,10 @@ export function Home() {
       });
     }
 
-    const label = now.toLocaleDateString("en-US", { month: "long" });
+    const label = viewDate.toLocaleDateString("en-US", { month: "long", year: calendarMonthOffset === 0 ? undefined : "numeric" });
 
     return { monthSessionCount: sessions, monthLabel: label, calendarDays: days };
-  }, [history, program.days, recoveryStatuses, todayDateKey]);
+  }, [history, program.days, recoveryStatuses, todayDateKey, calendarMonthOffset]);
 
   const lastSession = history.find((workout) => getIsoDateKey(workout.date) <= todayDateKey) ?? null;
   const suggestedMeta = suggested ? getLastDoneMeta(suggested.day, history) : null;
@@ -823,7 +827,32 @@ export function Home() {
 
         <div className="surface-card rounded-[1.6rem] p-4">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base font-semibold text-text-primary">{monthLabel}</h3>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCalendarMonthOffset((o) => o - 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-text-secondary active:bg-white/[0.1]"
+                aria-label="Previous month"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
+                  <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <h3 className="min-w-[5.5rem] text-center text-base font-semibold text-text-primary">{monthLabel}</h3>
+              <button
+                type="button"
+                onClick={() => setCalendarMonthOffset((o) => o + 1)}
+                disabled={isCurrentMonth}
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-text-secondary active:bg-white/[0.1] ${
+                  isCurrentMonth ? "opacity-25" : "bg-white/[0.06]"
+                }`}
+                aria-label="Next month"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
+                  <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => navigate("/progress", { state: { tab: "schedule" } })}
