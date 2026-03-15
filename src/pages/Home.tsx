@@ -1,9 +1,9 @@
-import { useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
 import { getProgram } from "../data/programs";
-import { getRandomQuote } from "../data/quotes";
 import { exportJSON, exportCSV, validateImport } from "../lib/export";
+import { prefetchRoute } from "../lib/routePrefetch";
 import {
   getMuscleRecoveryStatus,
   getDaysSinceLastActivity,
@@ -245,6 +245,7 @@ export function Home() {
   const updateWorkoutDate = useWorkoutStore((s) => s.updateWorkoutDate);
   const program = getProgram("heavy-duty-complete")!;
   const [dataExpanded, setDataExpanded] = useState(false);
+  const [showAlternateWorkouts, setShowAlternateWorkouts] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [selectedCalendarCell, setSelectedCalendarCell] = useState<CalendarCell | null>(null);
   const [calendarDateDraft, setCalendarDateDraft] = useState("");
@@ -274,8 +275,6 @@ export function Home() {
         : null,
     [program.days, recoveryStatuses, suggested, todayDateKey],
   );
-
-  const quote = useMemo(() => getRandomQuote(), []);
 
   const streak = useMemo(() => {
     if (history.length === 0) return 0;
@@ -465,9 +464,43 @@ export function Home() {
     () => QUICK_OPTIONS.filter((opt) => !suggested || opt.dayId !== suggested.day.id),
     [suggested],
   );
+  const shortcutOptions = useMemo(
+    () => filteredOptions.filter((option) => option.type !== "lift"),
+    [filteredOptions],
+  );
+  const alternateLiftOptions = useMemo(
+    () => filteredOptions.filter((option) => option.type === "lift"),
+    [filteredOptions],
+  );
+  const allLiftOptions = useMemo(
+    () => QUICK_OPTIONS.filter((option) => option.type === "lift"),
+    [],
+  );
+  const visibleLiftOptions = isDoneToday ? allLiftOptions : alternateLiftOptions;
   const selectedCalendarLabel = selectedCalendarCell?.dateKey
     ? formatDayDate(createSessionIso(selectedCalendarCell.dateKey))
     : "";
+  const prefetchButtonProps = (path: string) => ({
+    onMouseEnter: () => prefetchRoute(path),
+    onFocus: () => prefetchRoute(path),
+    onTouchStart: () => prefetchRoute(path),
+  });
+  const getOptionPrefetchPath = (option: QuickOption) => {
+    if (option.type === "lift") return `/workout/${option.dayId}`;
+    if (option.type === "open") return "/workout/open";
+    return null;
+  };
+
+  useEffect(() => {
+    if (activeWorkout) {
+      prefetchRoute(`/workout/${activeWorkout.dayId}`);
+      return;
+    }
+
+    if (!isDoneToday && suggested) {
+      prefetchRoute(`/workout/${suggested.day.id}`);
+    }
+  }, [activeWorkout, isDoneToday, suggested]);
 
   const closeCalendarActions = () => {
     setSelectedCalendarCell(null);
@@ -488,11 +521,13 @@ export function Home() {
   };
 
   const handleOptionTap = (option: QuickOption) => {
-    if (isDoneToday || activeWorkout) return;
+    if (activeWorkout) return;
     if (option.type === "lift") {
       navigate(`/workout/${option.dayId}`);
     } else if (option.type === "open") {
       navigate("/workout/open");
+    } else if (isDoneToday) {
+      return;
     } else {
       if (!logManualActivity(option.type, todayDateKey)) {
         setCalendarActionError("That day already has a logged session.");
@@ -541,7 +576,7 @@ export function Home() {
   };
 
   return (
-    <PageLayout className="flex flex-col gap-6">
+    <PageLayout className="flex flex-col gap-5">
       <header className="animate-fade-up">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -549,15 +584,15 @@ export function Home() {
               <span className="h-1.5 w-1.5 rounded-full bg-accent-red" />
               Heavy Duty
             </div>
-            <h1 className="mt-4 font-[var(--font-display)] text-[2.6rem] leading-none tracking-[0.18em] text-text-primary">
-              HEAVY DUTY
+            <h1 className="mt-3 font-[var(--font-display)] text-[2rem] leading-none tracking-[0.12em] text-text-primary">
+              Today
             </h1>
             <p className="mt-2 max-w-[18rem] text-sm leading-relaxed text-text-muted">
               {activeWorkout
-                ? "Your session is still live. Resume it first, then use cardio or rest if you still need to log today."
-                : history.length === 0
-                  ? "Three clear choices live at the top: start the workout, mark cardio, or mark a rest day."
-                  : "Everything important for today lives right here."}
+                ? "Resume your session first. The calendar below still handles date changes and quick logs."
+                : isDoneToday
+                  ? "Today is already logged. Use the calendar below if anything needs to move."
+                  : "Start the suggested day, quick-log an off day, or open a different workout."}
             </p>
           </div>
           <div className="surface-card-muted rounded-[1.15rem] px-3 py-2 text-right">
@@ -569,14 +604,15 @@ export function Home() {
 
       <section className="flex flex-col gap-3 animate-fade-up" style={{ animationDelay: "40ms" }}>
         <SectionHeading
-          eyebrow="Quick Start"
-          title={activeWorkout ? "Resume or log today" : "Workout, cardio, or rest"}
-          description="The main card follows your rolling cycle, with simple cardio and rest logs still one tap away."
+          eyebrow="Actions"
+          title={activeWorkout ? "Resume your session" : isDoneToday ? "Logged for today" : "Start from here"}
+          description="Keep the top of Home focused on what you can do right now."
         />
 
         {activeWorkout && (
           <button
             onClick={() => navigate(`/workout/${activeWorkout.dayId}`)}
+            {...prefetchButtonProps(`/workout/${activeWorkout.dayId}`)}
             className="surface-card card-glow-green flex flex-col gap-4 rounded-[1.6rem] p-4 text-left"
           >
             <div className="flex items-start gap-3">
@@ -610,7 +646,7 @@ export function Home() {
         )}
 
         {!activeWorkout && isDoneToday && todayEntries.length > 0 && (
-          <div className="surface-card flex flex-col gap-3 rounded-[1.6rem] p-5 text-left">
+          <div className="surface-card rounded-[1.6rem] p-5">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-accent-green/12 text-accent-green">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-5 w-5">
@@ -623,7 +659,7 @@ export function Home() {
                   {(todayEntries[0].day.includes("—") ? todayEntries[0].day.split("—").pop()?.trim() : todayEntries[0].day) ?? todayEntries[0].day}
                 </h2>
                 <p className="mt-2 text-sm text-text-muted">
-                  Check the calendar below to undo or adjust.
+                  The calendar is right below if you need to undo or move it.
                 </p>
               </div>
             </div>
@@ -631,7 +667,7 @@ export function Home() {
         )}
 
         {!activeWorkout && !isDoneToday && suggested && (
-          <div className="hero-surface card-glow-red flex flex-col gap-4 rounded-[1.8rem] p-5 text-left">
+          <div className="hero-surface rounded-[1.7rem] p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -642,10 +678,10 @@ export function Home() {
                     </span>
                   )}
                 </div>
-                <h2 className="mt-3 font-[var(--font-display)] text-[2.4rem] leading-[0.92] tracking-[0.08em] text-text-primary">
+                <h2 className="mt-2 font-[var(--font-display)] text-[2rem] leading-[0.95] tracking-[0.08em] text-text-primary">
                   {suggested.day.focus}
                 </h2>
-                <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-text-secondary">
+                <p className="mt-2 max-w-[18rem] text-sm leading-relaxed text-text-secondary">
                   {getPlannedDaySummary(suggested.day, history.length > 0)}
                 </p>
               </div>
@@ -656,7 +692,8 @@ export function Home() {
                 </span>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+
+            <div className="mt-4 flex flex-wrap gap-2">
               {suggested.day.type === "lift" && (
                 <span className="chip text-xs text-text-secondary">Mentzer protocol</span>
               )}
@@ -664,8 +701,9 @@ export function Home() {
                 <span className={`chip text-xs ${getLastDoneToneClass(suggestedMeta.tone)}`}>{suggestedMeta.label}</span>
               )}
             </div>
+
             {suggestedSmart?.reason && suggestedSmart.suggestion && (
-              <div className="rounded-[1.2rem] border border-accent-orange/20 bg-accent-orange/10 px-4 py-3">
+              <div className="mt-4 rounded-[1.2rem] border border-accent-orange/20 bg-accent-orange/10 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-orange">
                   Recovery Suggestion
                 </p>
@@ -674,9 +712,11 @@ export function Home() {
                 </p>
               </div>
             )}
+
             <button
               onClick={() => navigate(`/workout/${suggested.day.id}`)}
-              className="flex items-center justify-between rounded-[1.2rem] bg-white/[0.06] px-4 py-3"
+              {...prefetchButtonProps(`/workout/${suggested.day.id}`)}
+              className="mt-4 flex items-center justify-between rounded-[1.2rem] bg-white/[0.06] px-4 py-3"
             >
               <span className="text-sm font-semibold text-white">{getPlannedDayActionLabel(suggested.day)}</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-white">
@@ -686,99 +726,93 @@ export function Home() {
           </div>
         )}
 
-        {!activeWorkout && (
-          <>
-            <p className="section-label mt-1 text-text-muted">
-              {isDoneToday ? "Already logged — options disabled" : "Other Options"}
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {filteredOptions.map((option) => (
-                <button
-                  key={option.key}
-                  onClick={() => handleOptionTap(option)}
-                  disabled={isDoneToday}
-                  className={`surface-card-muted flex flex-col gap-3 rounded-[1.45rem] p-4 text-left transition-opacity ${
-                    isDoneToday ? "opacity-45 pointer-events-none" : ""
-                  }`}
+        {!activeWorkout && !isDoneToday && (
+          <div className="grid grid-cols-2 gap-3">
+            {shortcutOptions.map((option) => (
+              <button
+                key={option.key}
+                onClick={() => handleOptionTap(option)}
+                {...(getOptionPrefetchPath(option) ? prefetchButtonProps(getOptionPrefetchPath(option)!) : {})}
+                className="surface-card-muted flex flex-col gap-3 rounded-[1.45rem] p-4 text-left"
+              >
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-[1rem]"
+                  style={{ background: `${option.accentColor}15`, color: option.accentColor }}
                 >
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-[1rem]"
-                    style={{ background: `${option.accentColor}15`, color: option.accentColor }}
+                  {option.icon}
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary">{option.label}</h3>
+                  <p className="mt-0.5 text-[11px] text-text-muted">
+                    {option.type === "open" ? "Freeform session" : "Quick log"}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!activeWorkout && visibleLiftOptions.length > 0 && (
+          <div className="surface-card overflow-hidden rounded-[1.45rem]">
+            <button
+              type="button"
+              onClick={() => setShowAlternateWorkouts((value) => !value)}
+              className="flex w-full items-center justify-between px-4 py-4 text-left"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text-primary">{isDoneToday ? "Start a lift workout" : "Choose a different lift day"}</p>
+                <p className="mt-1 text-xs text-text-muted">
+                  {isDoneToday ? "Override today's schedule and start a lifting session." : "Manual overrides stay available, but they no longer crowd the top of the screen."}
+                </p>
+              </div>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className={`h-4 w-4 text-text-dim transition-transform ${showAlternateWorkouts ? "rotate-180" : ""}`}
+              >
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {showAlternateWorkouts && (
+              <div className="grid gap-2 border-t border-border px-4 py-4">
+                {visibleLiftOptions.map((option) => (
+                  <button
+                    key={option.key}
+                    onClick={() => handleOptionTap(option)}
+                    {...prefetchButtonProps(`/workout/${option.dayId}`)}
+                    className="flex items-center justify-between rounded-[1.15rem] bg-white/[0.04] px-4 py-3 text-left"
                   >
-                    {option.icon}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-text-primary">{option.label}</h3>
-                    <p className="mt-0.5 text-[11px] text-text-muted">
-                      {option.type === "lift" ? "Start workout" : option.type === "open" ? "Freeform session" : "Quick log"}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[0.95rem]"
+                        style={{ background: `${option.accentColor}15`, color: option.accentColor }}
+                      >
+                        {option.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-text-primary">{option.label}</p>
+                        <p className="mt-0.5 text-[11px] text-text-muted">Start workout</p>
+                      </div>
+                    </div>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-text-dim">
+                      <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </section>
 
       <section className="flex flex-col gap-3 animate-fade-up" style={{ animationDelay: "80ms" }}>
         <SectionHeading
-          eyebrow="Overview"
-          title="Your snapshot"
-          description="A quick read on consistency, total logged work, and the most recent session."
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            label="Streak"
-            value={streak}
-            hint={`${streak === 1 ? "Day" : "Days"} in a row`}
-            accentClass="text-accent-orange"
-          />
-          <StatCard
-            label="Workouts"
-            value={history.length}
-            hint="Logged in total"
-            accentClass="text-accent-blue"
-          />
-        </div>
-
-        <div className="surface-card rounded-[1.55rem] p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="section-label">Last Session</p>
-              <h3 className="mt-2 text-base font-semibold text-text-primary">
-                {lastSessionTitle ?? "No sessions yet"}
-              </h3>
-              <p className="mt-1 text-sm text-text-muted">
-                {lastSession ? formatDayDate(lastSession.date) : "Your first finished workout will show up here."}
-              </p>
-            </div>
-            {lastSession && (
-              <span className="chip chip-muted shrink-0 text-[11px] text-text-secondary">
-                {formatRelativeDateShort(lastSession.date)}
-              </span>
-            )}
-          </div>
-
-          <div className="mt-4 rounded-[1.2rem] bg-white/[0.04] px-4 py-3">
-            {lastSession ? (
-              <p className="text-sm leading-relaxed text-text-secondary">
-                Jump into History to review the full session, edit it, or filter similar workouts later.
-              </p>
-            ) : (
-              <p className="text-sm leading-relaxed text-text-muted">
-                Finish any workout and it will appear here automatically with the same edit and history tools.
-              </p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-3 animate-fade-up" style={{ animationDelay: "120ms" }}>
-        <SectionHeading
-          eyebrow="This Month"
-          title="Plan and history in one place"
-          description="Filled circles are logged sessions. Rings show the plan, and orange rings mean recovery suggests a change."
+          eyebrow="Calendar"
+          title="Plan and history together"
+          description="See what is logged, what is planned next, and tap any date to make quick fixes."
           action={
             <div className="surface-card-muted rounded-[1rem] px-3 py-2 text-right">
               <span className="section-label block text-[0.58rem]">Sessions</span>
@@ -790,18 +824,14 @@ export function Home() {
         <div className="surface-card rounded-[1.6rem] p-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-text-primary">{monthLabel}</h3>
-            <div className="flex items-center gap-2">
-              <span className="chip chip-muted text-[11px] text-text-secondary">
-                {monthSessionCount === 0 ? "No sessions yet" : `${monthSessionCount} logged`}
-              </span>
-              <button
-                type="button"
-                onClick={() => navigate("/progress", { state: { tab: "schedule" } })}
-                className="chip text-[11px] font-semibold text-accent-blue"
-              >
-                Schedule &rarr;
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/progress", { state: { tab: "schedule" } })}
+              {...prefetchButtonProps("/progress")}
+              className="chip text-[11px] font-semibold text-accent-blue"
+            >
+              Schedule &rarr;
+            </button>
           </div>
 
           <div className="mt-4 grid grid-cols-7 gap-2">
@@ -859,8 +889,62 @@ export function Home() {
           </div>
 
           <p className="mt-4 text-sm leading-relaxed text-text-muted">
-            Tap an empty date to log cardio or rest. Logged cardio or rest days can be undone here, logged lift days can be moved to the right date, and future rings now advance from your history-based cycle.
+            Tap an empty date to log cardio or rest. Logged cardio or rest days can be undone here, and logged lift days can be moved to the right date.
           </p>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3 animate-fade-up" style={{ animationDelay: "120ms" }}>
+        <SectionHeading
+          eyebrow="Overview"
+          title="Your snapshot"
+          description="Keep the stats small and useful: consistency, total sessions, and your last workout."
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard
+            label="Streak"
+            value={streak}
+            hint={`${streak === 1 ? "Day" : "Days"} in a row`}
+            accentClass="text-accent-orange"
+          />
+          <StatCard
+            label="Workouts"
+            value={history.length}
+            hint="Logged in total"
+            accentClass="text-accent-blue"
+          />
+        </div>
+
+        <div className="surface-card rounded-[1.55rem] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="section-label">Last Session</p>
+              <h3 className="mt-2 text-base font-semibold text-text-primary">
+                {lastSessionTitle ?? "No sessions yet"}
+              </h3>
+              <p className="mt-1 text-sm text-text-muted">
+                {lastSession ? formatDayDate(lastSession.date) : "Your first finished workout will show up here."}
+              </p>
+            </div>
+            {lastSession && (
+              <span className="chip chip-muted shrink-0 text-[11px] text-text-secondary">
+                {formatRelativeDateShort(lastSession.date)}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-[1.2rem] bg-white/[0.04] px-4 py-3">
+            {lastSession ? (
+              <p className="text-sm leading-relaxed text-text-secondary">
+                Jump into History to review the full session, edit it, or filter similar workouts later.
+              </p>
+            ) : (
+              <p className="text-sm leading-relaxed text-text-muted">
+                Finish any workout and it will appear here automatically with the same edit and history tools.
+              </p>
+            )}
+          </div>
         </div>
       </section>
 
@@ -969,62 +1053,70 @@ export function Home() {
 
       <section className="flex flex-col gap-3 animate-fade-up" style={{ animationDelay: "200ms" }}>
         <SectionHeading
-          eyebrow="Backup & Export"
-          title="Keep your data portable"
-          description="Export a full backup, grab CSV, or restore from a saved file without leaving Home."
+          eyebrow="Data"
+          title="Backup and restore"
+          description="Keep backup tools available, but tucked behind one last section instead of taking over the main flow."
         />
 
-        <div className="surface-card overflow-hidden rounded-[1.55rem]">
-          <button
-            onClick={() => setDataExpanded((value) => !value)}
-            className="flex w-full items-center justify-between px-4 py-4 text-left"
-          >
+        <div className="surface-card rounded-[1.55rem] p-4">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-text-primary">Backup & Export</p>
-              <p className="mt-1 text-xs text-text-muted">{history.length} workouts stored on this device</p>
-            </div>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className={`h-4 w-4 text-text-dim transition-transform ${dataExpanded ? "rotate-180" : ""}`}
-            >
-              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-
-          {dataExpanded && (
-            <div className="border-t border-border px-4 py-4">
-              <p className="mb-3 text-sm leading-relaxed text-text-muted">
-                JSON now restores the full app state, including your in-progress workout. CSV exports set-level data for spreadsheets.
+              <p className="mt-1 text-xs leading-relaxed text-text-muted">
+                {history.length} workouts stored on this device. Export anytime, and only open restore tools when you need to replace local data.
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={handleExportJSON} className="btn-secondary w-full text-[13px] font-medium">
-                  Export JSON
-                </button>
-                <button onClick={handleExportCSV} className="btn-secondary w-full text-[13px] font-medium">
-                  Export CSV
-                </button>
-              </div>
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="btn-secondary mt-2 w-full border-dashed text-[13px] font-medium"
-              >
-                Import Backup
-              </button>
-              <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
-              {importMsg && <p className={`mt-3 text-center text-sm ${importMessageTone}`}>{importMsg}</p>}
             </div>
-          )}
-        </div>
-      </section>
+            <span className="chip chip-muted shrink-0 px-3 py-2 text-[11px] font-semibold text-text-secondary">
+              {history.length} saved
+            </span>
+          </div>
 
-      <section className="animate-fade-up" style={{ animationDelay: "240ms" }}>
-        <div className="surface-card-muted rounded-[1.55rem] p-5">
-          <p className="section-label">Mentzer Quote</p>
-          <p className="mt-3 text-[0.95rem] leading-7 text-text-secondary">"{quote}"</p>
-          <p className="mt-3 text-xs font-medium tracking-[0.16em] text-text-dim uppercase">Mike Mentzer</p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button onClick={handleExportJSON} className="btn-secondary w-full text-[13px] font-medium">
+              Full Backup
+            </button>
+            <button onClick={handleExportCSV} className="btn-secondary w-full text-[13px] font-medium">
+              CSV Export
+            </button>
+          </div>
+
+          <div className="mt-4 border-t border-border pt-4">
+            <button
+              onClick={() => setDataExpanded((value) => !value)}
+              className="flex w-full items-center justify-between text-left"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text-primary">Restore from backup</p>
+                <p className="mt-1 text-xs text-text-muted">Use this only when you want to replace current local data.</p>
+              </div>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className={`h-4 w-4 shrink-0 text-text-dim transition-transform ${dataExpanded ? "rotate-180" : ""}`}
+              >
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {dataExpanded && (
+              <div className="mt-3 rounded-[1.2rem] border border-accent-orange/15 bg-accent-orange/8 p-3.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-orange">Replace Current Data</p>
+                <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+                  Restoring a JSON backup replaces your current history, settings, and any in-progress workout on this device.
+                </p>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="btn-secondary mt-3 w-full border-dashed text-[13px] font-medium"
+                >
+                  Choose Backup File
+                </button>
+                <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+                {importMsg && <p className={`mt-3 text-center text-sm ${importMessageTone}`}>{importMsg}</p>}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -1042,15 +1134,15 @@ export function Home() {
                       ? "Empty Date"
                       : selectedCalendarCell.entryKind === "lift"
                         ? "Lift Logged"
-                        : "Cardio Or Rest Logged"}
+                        : "Activity Logged"}
                   </p>
                   <h3 className="mt-2 text-lg font-semibold text-text-primary">{selectedCalendarLabel}</h3>
                   <p className="mt-1 text-sm leading-relaxed text-text-muted">
                     {selectedCalendarCell.entryKind === "empty"
                       ? "Nothing is logged here yet."
                       : selectedCalendarCell.entryKind === "lift"
-                        ? "Pick the correct empty date to move this workout."
-                        : "Use undo to remove this cardio or rest log from the calendar."}
+                        ? "Choose an empty date to move this workout."
+                        : "Undo this cardio, recovery, or rest log if needed."}
                   </p>
                 </div>
                 <button onClick={closeCalendarActions} className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold">
@@ -1082,9 +1174,9 @@ export function Home() {
                   >
                     <div className="flex items-center gap-2 text-sm font-semibold">
                       {ACTIVITY_ICONS.cardio}
-                      Mark Cardio
+                      Log Cardio
                     </div>
-                    <p className="mt-2 text-xs leading-relaxed text-text-muted">Save a cardio log on this date.</p>
+                    <p className="mt-2 text-xs leading-relaxed text-text-muted">Save a cardio session here.</p>
                   </button>
                   <button
                     onClick={() => handleCalendarActivity("rest")}
@@ -1095,7 +1187,7 @@ export function Home() {
                   >
                     <div className="flex items-center gap-2 text-sm font-semibold">
                       {ACTIVITY_ICONS.rest}
-                      Mark Rest
+                      Log Rest
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-text-muted">Save a full rest day here.</p>
                   </button>
@@ -1131,14 +1223,14 @@ export function Home() {
                     onClick={handleLiftDateChange}
                     className="w-full rounded-[1.2rem] bg-accent-red px-4 py-3 text-sm font-semibold text-white"
                   >
-                    Save New Date
+                    Move Workout
                   </button>
                 </div>
               )}
 
               {activeWorkout && selectedCalendarCell.entryKind === "empty" && (
                 <p className="mt-3 text-sm leading-relaxed text-text-muted">
-                  Finish or cancel the workout in progress before logging cardio or rest on another date.
+                  Finish or cancel the workout in progress before logging another date.
                 </p>
               )}
 

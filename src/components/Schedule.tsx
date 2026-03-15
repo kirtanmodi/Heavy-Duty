@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { exerciseGroups, getEffectiveExercise, muscleColors } from "../data/exercises";
 import { getProgram } from "../data/programs";
@@ -173,6 +173,7 @@ export function Schedule() {
   const navigate = useNavigate();
   const activeWorkout = useWorkoutStore((state) => state.activeWorkout);
   const history = useWorkoutStore((state) => state.history);
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const program = getProgram("heavy-duty-complete")!;
   const todayDateKey = formatDateKey(new Date());
   const firstProjectedDateKey = history.some((entry) => getIsoDateKey(entry.date) === todayDateKey)
@@ -197,7 +198,7 @@ export function Schedule() {
           {program.name}
         </h2>
         <p className="section-caption mt-1 max-w-[24rem]">
-          Upcoming days now advance from your workout history instead of snapping back to Monday-Sunday.
+          Upcoming days advance from your history. The next planned day stays open by default and the rest can expand on demand.
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
@@ -225,6 +226,7 @@ export function Schedule() {
         const leadDays = daysBetweenDateKeys(dateKey, todayDateKey);
         const isLogged = source !== "planned";
         const isNextUp = index === firstPlannedIndex;
+        const isExpanded = isNextUp || expandedDates.has(dateKey);
         const isRest = day.type === "rest";
         const daysAgo = daysSinceLastSession(day.id, history);
         const stalenessText =
@@ -306,7 +308,24 @@ export function Schedule() {
               ) : null}
             </div>
 
-            {day.type === "lift" && liftExercises.length > 0 ? (
+            {!isNextUp ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setExpandedDates((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(dateKey)) next.delete(dateKey);
+                    else next.add(dateKey);
+                    return next;
+                  });
+                }}
+                className="btn-ghost mt-4 px-3 py-2 text-xs font-semibold"
+              >
+                {isExpanded ? "Hide Details" : "Show Details"}
+              </button>
+            ) : null}
+
+            {isExpanded && day.type === "lift" && liftExercises.length > 0 ? (
               <div className="surface-card-muted mt-4 rounded-[1.35rem] p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <p className="section-label">Exercises</p>
@@ -336,7 +355,7 @@ export function Schedule() {
               </div>
             ) : null}
 
-            {(day.type === "cardio" || day.type === "recovery" || day.type === "rest") &&
+            {isExpanded && (day.type === "cardio" || day.type === "recovery" || day.type === "rest") &&
             (day.description || day.tips) ? (
               <div className="surface-card-muted mt-4 rounded-[1.35rem] p-3.5">
                 {day.description ? (
@@ -351,7 +370,7 @@ export function Schedule() {
               </div>
             ) : null}
 
-            {pillGroups.length > 0 ? (
+            {isExpanded && pillGroups.length > 0 ? (
               <div className="mt-4 flex flex-col gap-2.5">
                 <div className="flex items-center justify-between gap-3">
                   <p className="section-label">Recovery</p>
@@ -373,7 +392,7 @@ export function Schedule() {
               </div>
             ) : null}
 
-            {!isLogged && smartSuggestion?.reason && smartSuggestion.suggestion ? (
+            {isExpanded && !isLogged && smartSuggestion?.reason && smartSuggestion.suggestion ? (
               <div className="mt-4 rounded-[1.25rem] border border-accent-orange/20 bg-accent-orange/10 px-3.5 py-3">
                 <p className="text-[12px] font-semibold text-accent-orange">Recovery suggestion</p>
                 <p className="mt-1 text-sm leading-6 text-text-secondary">

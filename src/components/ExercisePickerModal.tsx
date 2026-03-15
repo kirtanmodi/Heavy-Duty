@@ -39,29 +39,44 @@ interface ExercisePickerModalProps {
 
 export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId, onSelect, onSelectWithAction, onClose }: ExercisePickerModalProps) {
   const [search, setSearch] = useState("");
+  const [activeGroup, setActiveGroup] = useState("all");
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const allExercises = getEffectiveExercises();
+  const groupMatches = (exercise: Exercise, muscles: readonly MuscleGroup[]) =>
+    exercise.primaryMuscles.some((muscle) => muscles.includes(muscle));
 
-  const candidates = allExercises.filter((e) => {
+  const availableCandidates = allExercises.filter((e) => {
     if (mode === "swap" && e.id === currentExerciseId) return false;
     if (activeExerciseIds.includes(e.id)) return false;
-    if (search && !e.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const grouped: { label: string; exercises: Exercise[]; color: string }[] = [];
-  for (const group of exerciseGroups) {
-    const matches = candidates.filter((e) => e.primaryMuscles.some((m) => (group.muscles as readonly string[]).includes(m)));
-    if (matches.length > 0) {
-      grouped.push({ label: group.label, exercises: matches, color: muscleColors[group.muscles[0]] });
+  const visibleGroups = exerciseGroups.filter((group) =>
+    availableCandidates.some((exercise) => groupMatches(exercise, group.muscles as readonly MuscleGroup[])),
+  );
+
+  useEffect(() => {
+    if (activeGroup !== "all" && !visibleGroups.some((group) => group.label === activeGroup)) {
+      setActiveGroup("all");
     }
-  }
+  }, [activeGroup, visibleGroups]);
+
+  const selectedGroup = visibleGroups.find((group) => group.label === activeGroup);
+  const candidates = availableCandidates
+    .filter((exercise) => {
+      if (search && !exercise.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (selectedGroup) {
+        return groupMatches(exercise, selectedGroup.muscles as readonly MuscleGroup[]);
+      }
+      return true;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const title = mode === "swap" ? "Swap Exercise" : "Add Exercise";
   const description = mode === "swap"
-    ? "Choose a replacement for this slot or create a new exercise."
-    : "Search your exercise list or create a new custom movement.";
+    ? "Search or filter to replace this slot, or create a custom movement."
+    : "Search or filter your exercise list, or create a custom movement.";
   const emptyMessage = search
     ? "No exercises match your search."
     : mode === "swap"
@@ -122,6 +137,35 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
               </button>
             )}
           </div>
+
+          {visibleGroups.length > 0 && (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => setActiveGroup("all")}
+                className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold transition-colors ${
+                  activeGroup === "all"
+                    ? "bg-white/[0.1] text-text-primary"
+                    : "bg-white/[0.04] text-text-muted active:bg-white/[0.08]"
+                }`}
+              >
+                All
+              </button>
+              {visibleGroups.map((group) => (
+                <button
+                  key={group.label}
+                  onClick={() => setActiveGroup(group.label)}
+                  className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold transition-colors ${
+                    activeGroup === group.label
+                      ? "text-white"
+                      : "bg-white/[0.04] text-text-muted active:bg-white/[0.08]"
+                  }`}
+                  style={activeGroup === group.label ? { background: muscleColors[group.muscles[0]] || "#666" } : undefined}
+                >
+                  {group.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -147,67 +191,71 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-5 pt-4">
-            {grouped.map(({ label, exercises, color }) => (
-              <div key={label} className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 px-0.5">
-                  <div className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-                  <p className="text-[10px] font-bold tracking-[0.15em] text-text-muted uppercase">{label}</p>
-                  <span className="text-[10px] text-text-dim">{exercises.length}</span>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {exercises.map((e) => (
-                    <button
-                      key={e.id}
-                      onClick={() => {
-                        if (mode === "swap" && onSelectWithAction) {
-                          setSelectedExercise(e);
-                        } else {
-                          onSelect(e);
-                        }
-                      }}
-                      className="relative flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.99]"
-                      style={{
-                        background: `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
-                        border: `1px solid ${color}12`,
-                      }}
-                    >
-                      {/* Color accent */}
-                      <div
-                        className="absolute left-0 top-0 h-full w-[3px]"
-                        style={{ background: `linear-gradient(180deg, ${color}, ${color}30)` }}
-                      />
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[14px] font-semibold text-text-primary">{e.name}</span>
-                          {e.type === "compound" && (
-                            <span
-                              className="rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-widest"
-                              style={{ color, background: `${color}15` }}
-                            >
-                              C
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                            {e.equipment === "bodyweight+" ? "BW+" : e.equipment}
-                          </span>
-                          <span className="text-[11px] text-text-dim">
-                            {e.repRange[0]}–{e.repRange[1]} reps
-                          </span>
-                        </div>
-                      </div>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 shrink-0 text-text-dim">
-                        <path d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col gap-3 pt-4">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-text-muted">
+                {selectedGroup ? selectedGroup.label : "All Exercises"}
+              </p>
+              <span className="text-[11px] text-text-dim">{candidates.length} available</span>
+            </div>
 
-            {/* Create new exercise button */}
+            <div className="flex flex-col gap-1.5">
+              {candidates.map((exercise) => {
+                const color = muscleColors[exercise.primaryMuscles[0]];
+                const groupLabel =
+                  exerciseGroups.find((group) => groupMatches(exercise, group.muscles as readonly MuscleGroup[]))?.label ?? "Custom";
+
+                return (
+                  <button
+                    key={exercise.id}
+                    onClick={() => {
+                      if (mode === "swap" && onSelectWithAction) {
+                        setSelectedExercise(exercise);
+                      } else {
+                        onSelect(exercise);
+                      }
+                    }}
+                    className="relative flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.99]"
+                    style={{
+                      background: `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
+                      border: `1px solid ${color}12`,
+                    }}
+                  >
+                    <div
+                      className="absolute left-0 top-0 h-full w-[3px]"
+                      style={{ background: `linear-gradient(180deg, ${color}, ${color}30)` }}
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-semibold text-text-primary">{exercise.name}</span>
+                        {exercise.type === "compound" && (
+                          <span
+                            className="rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-widest"
+                            style={{ color, background: `${color}15` }}
+                          >
+                            C
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] text-text-dim">{groupLabel}</span>
+                        <span className="text-[11px] text-text-dim">·</span>
+                        <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                          {exercise.equipment === "bodyweight+" ? "BW+" : exercise.equipment}
+                        </span>
+                        <span className="text-[11px] text-text-dim">
+                          {exercise.repRange[0]}–{exercise.repRange[1]} reps
+                        </span>
+                      </div>
+                    </div>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 shrink-0 text-text-dim">
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                );
+              })}
+            </div>
+
             <button
               onClick={() => setShowCreate(true)}
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.02] py-3.5 text-sm font-medium text-text-dim transition-colors active:bg-white/[0.05]"

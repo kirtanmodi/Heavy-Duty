@@ -52,7 +52,7 @@ export function ExerciseCard({
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const [weightOverride, setWeightOverride] = useState<boolean | undefined>(undefined);
   const [showMenu, setShowMenu] = useState(false);
-  const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
   const { weightMode, setWeightMode, equipmentOverride, setEquipmentOverride } = useExerciseStore();
@@ -224,6 +224,7 @@ export function ExerciseCard({
 
   const completedCount = entry.sets.filter((s, i) => isSetComplete(s, i)).length;
   const totalSets = entry.sets.length;
+  const equipmentLabel = exercise.equipment === "bodyweight+" ? "BW+" : exercise.equipment;
 
   const getSetPR = (set: SetEntry, setIndex: number) => {
     if (!showOverloadBanner) return null;
@@ -261,7 +262,7 @@ export function ExerciseCard({
       <div className="flex flex-col gap-3.5 pl-5 pr-4 py-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-1.5">
+          <div className="min-w-0 flex flex-1 flex-col gap-2">
             <div className="flex items-center gap-2">
               <h2 className="text-[16px] font-bold text-text-primary leading-tight">{entry.name}</h2>
               {exercise.type === "compound" && (
@@ -273,21 +274,10 @@ export function ExerciseCard({
                 </span>
               )}
             </div>
-              {isHistoryEdit && (
-                <p className="text-[11px] leading-relaxed text-text-dim">
-                  Saved session entry. Adjust logged values, failure markers, or set count here.
-                </p>
-              )}
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => setShowEquipmentPicker(!showEquipmentPicker)}
-                className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted transition-colors active:bg-white/[0.1]"
-              >
-                {exercise.equipment === "bodyweight+" ? "BW+" : exercise.equipment}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-2.5 w-2.5 opacity-50">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
+              <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                {equipmentLabel}
+              </span>
               <span className="text-[11px] text-text-dim">
                 {exercise.repRange[0]}–{exercise.repRange[1]} reps
               </span>
@@ -300,18 +290,15 @@ export function ExerciseCard({
                 </>
               )}
               {isBwExercise && (
-                <button
-                  onClick={toggleWeightMode}
-                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                    bwMode
-                      ? "border-white/[0.08] bg-white/[0.04] text-text-muted"
-                      : "border-accent-blue/20 bg-accent-blue/10 text-accent-blue"
-                  }`}
-                >
-                  {bwMode ? "+ Weight" : "BW Only"}
-                </button>
+                <span className="text-[11px] text-text-dim">{bwMode ? "BW only" : "+ weight"}</span>
               )}
             </div>
+            <button
+              onClick={() => setShowDetails((prev) => !prev)}
+              className="self-start text-[11px] font-semibold text-text-secondary transition-colors active:text-text-primary"
+            >
+              {showDetails ? "Hide options" : isHistoryEdit ? "Edit options" : "Show options"}
+            </button>
           </div>
 
           {/* Context menu */}
@@ -377,33 +364,53 @@ export function ExerciseCard({
           </div>
         </div>
 
-        {/* Equipment picker */}
-        {showEquipmentPicker && (
-          <div className="flex flex-wrap gap-1.5">
-            {(["barbell", "dumbbells", "cable", "machine", "bodyweight+"] as Equipment[]).map((eq) => {
-              const isActive = exercise.equipment === eq;
-              const hasOverride = !!equipmentOverride[entry.id];
-              const label = eq === "bodyweight+" ? "BW+" : eq.charAt(0).toUpperCase() + eq.slice(1);
-              return (
+        {showDetails && (
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Options</p>
+
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(["barbell", "dumbbells", "cable", "machine", "bodyweight+"] as Equipment[]).map((eq) => {
+                const isActive = exercise.equipment === eq;
+                const hasOverride = !!equipmentOverride[entry.id];
+                const label = eq === "bodyweight+" ? "BW+" : eq.charAt(0).toUpperCase() + eq.slice(1);
+                return (
+                  <button
+                    key={eq}
+                    onClick={() => {
+                      setEquipmentOverride(entry.id, eq);
+                      setWeightOverride(undefined);
+                    }}
+                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                      isActive
+                        ? hasOverride
+                          ? "border border-accent-blue/25 bg-accent-blue/15 text-accent-blue"
+                          : "border border-white/[0.12] bg-white/[0.1] text-text-primary"
+                        : "border border-white/[0.06] bg-white/[0.04] text-text-dim active:bg-white/[0.08]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {isBwExercise && (
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-[11px] text-text-muted">
+                  {bwMode ? "Logging bodyweight only" : "Logging added weight"}
+                </span>
                 <button
-                  key={eq}
-                  onClick={() => {
-                    setEquipmentOverride(entry.id, eq);
-                    setShowEquipmentPicker(false);
-                    setWeightOverride(undefined);
-                  }}
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all ${
-                    isActive
-                      ? hasOverride
-                        ? "bg-accent-blue/15 text-accent-blue border border-accent-blue/25"
-                        : "bg-white/[0.1] text-text-primary border border-white/[0.12]"
-                      : "bg-white/[0.04] text-text-dim border border-white/[0.06] active:bg-white/[0.08]"
+                  onClick={toggleWeightMode}
+                  className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors ${
+                    bwMode
+                      ? "border-accent-blue/20 bg-accent-blue/10 text-accent-blue"
+                      : "border-white/[0.08] bg-white/[0.04] text-text-muted"
                   }`}
                 >
-                  {label}
+                  {bwMode ? "Add Weight" : "BW Only"}
                 </button>
-              );
-            })}
+              </div>
+            )}
           </div>
         )}
 
@@ -633,7 +640,7 @@ export function ExerciseCard({
             onClick={() => onAddSet(exerciseIndex)}
             className="flex-1 rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-[13px] font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
           >
-            {isHistoryEdit ? "Add Set" : "+ Set"}
+            Add Set
           </button>
 
           {restButtons?.map((btn, i) => (

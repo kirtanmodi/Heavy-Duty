@@ -301,6 +301,8 @@ export function Progress() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [chartMode, setChartMode] = useState<"1rm" | "volume">("1rm");
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [showAllSessions, setShowAllSessions] = useState(false);
 
   const tracked = useMemo(() => getTrackedExercises(history), [history]);
 
@@ -378,6 +380,10 @@ export function Progress() {
   const exerciseMeta = exercise
     ? `${exercise.primaryMuscles.map(humanizeLabel).join(", ")} · ${humanizeLabel(exercise.equipment)} · ${humanizeLabel(exercise.type)}`
     : "Saved from workout history";
+  const displayedSessions = useMemo(
+    () => (showAllSessions ? sessions.slice().reverse() : sessions.slice().reverse().slice(0, 3)),
+    [sessions, showAllSessions],
+  );
   const prGridStyle: CSSProperties = {
     gridTemplateColumns: `repeat(${Math.max(1, Math.min(prs.length, 3))}, minmax(0, 1fr))`,
   };
@@ -416,7 +422,7 @@ export function Progress() {
         <EmptyStateCard
           eyebrow="Charts"
           title="No progress yet"
-          description="Complete some workouts to unlock charts and personal bests. The Schedule tab is ready whenever you want to preview the week."
+          description="Log a few workouts to unlock charts and PRs. The Schedule tab is ready whenever you want to preview the week."
         />
       ) : (
         <>
@@ -493,138 +499,119 @@ export function Progress() {
 
           <section className="flex flex-col gap-3 animate-fade-up">
             <SectionHeading
-              eyebrow="Exercise Picker"
-              title={selectedGroup === "All" ? "Choose a logged exercise" : `${selectedGroup} exercises`}
-              description="Filter by muscle group, then pick one exercise to review. Counts show completed sessions."
+              eyebrow="Exercise"
+              title="Change tracked exercise"
+              description="Open the picker only when you want to switch context."
               trailing={
-                <span className="chip chip-muted text-[11px] text-text-secondary">
-                  {selectedGroup === "All"
-                    ? `${groupedExercises.length} groups`
-                    : `${visibleExercises.length} exercises`}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowExercisePicker((value) => !value)}
+                  className="btn-ghost px-3 py-2 text-xs font-semibold"
+                >
+                  {showExercisePicker ? "Hide" : "Change"}
+                </button>
               }
             />
 
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <button
-                type="button"
-                onClick={() => setSelectedGroup("All")}
-                className="chip shrink-0 touch-target text-[11px] font-semibold"
-                style={
-                  selectedGroup === "All"
-                    ? {
-                        background:
-                          "linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.08) 100%)",
-                        borderColor: "rgba(255,255,255,0.14)",
-                        color: "#FFFFFF",
-                      }
-                    : undefined
-                }
-              >
-                All
-                <span className={selectedGroup === "All" ? "text-white/70" : "text-text-dim"}>
-                  {tracked.length}
-                </span>
-              </button>
-              {groupedExercises.map((group) => {
-                const groupColor = groupColors[group.label] || "#8F93A2";
-                const active = selectedGroup === group.label;
-
-                return (
+            {showExercisePicker ? (
+              <>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                   <button
-                    key={group.label}
                     type="button"
-                    onClick={() => setSelectedGroup(group.label)}
-                    className={`chip shrink-0 touch-target text-[11px] font-semibold ${
-                      active ? "" : "chip-muted text-text-secondary"
-                    }`}
+                    onClick={() => setSelectedGroup("All")}
+                    className="chip shrink-0 touch-target text-[11px] font-semibold"
                     style={
-                      active
+                      selectedGroup === "All"
                         ? {
-                            background: `linear-gradient(135deg, ${groupColor}20 0%, ${groupColor}38 100%)`,
-                            borderColor: `${groupColor}66`,
-                            color: groupColor,
-                            boxShadow: `0 10px 20px ${groupColor}22`,
+                            background:
+                              "linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.08) 100%)",
+                            borderColor: "rgba(255,255,255,0.14)",
+                            color: "#FFFFFF",
                           }
                         : undefined
                     }
                   >
-                    {group.label}
-                    <span className={active ? "opacity-70" : "text-text-dim"}>
-                      {group.exercises.length}
+                    All
+                    <span className={selectedGroup === "All" ? "text-white/70" : "text-text-dim"}>
+                      {tracked.length}
                     </span>
                   </button>
-                );
-              })}
-            </div>
-
-            <div className="surface-card rounded-[1.75rem] p-3.5">
-              {selectedGroup === "All" ? (
-                <div className="flex flex-col gap-3">
                   {groupedExercises.map((group) => {
                     const groupColor = groupColors[group.label] || "#8F93A2";
+                    const active = selectedGroup === group.label;
 
                     return (
-                      <div key={group.label} className="surface-card-muted rounded-[1.4rem] p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="h-2.5 w-2.5 rounded-full"
-                              style={{ background: groupColor }}
-                            />
-                            <span className="text-[12px] font-semibold text-text-primary">
-                              {group.label}
-                            </span>
-                          </div>
-                          <span className="text-[11px] text-text-dim">
-                            {group.exercises.length} exercises
-                          </span>
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {group.exercises.map((groupExercise) => (
-                            <ExerciseChip
-                              key={groupExercise.id}
-                              active={groupExercise.id === activeId}
-                              color={groupColor}
-                              name={groupExercise.name}
-                              sessionCount={groupExercise.sessionCount}
-                              onClick={() => setSelectedId(groupExercise.id)}
-                            />
-                          ))}
-                        </div>
-                      </div>
+                      <button
+                        key={group.label}
+                        type="button"
+                        onClick={() => setSelectedGroup(group.label)}
+                        className={`chip shrink-0 touch-target text-[11px] font-semibold ${
+                          active ? "" : "chip-muted text-text-secondary"
+                        }`}
+                        style={
+                          active
+                            ? {
+                                background: `linear-gradient(135deg, ${groupColor}20 0%, ${groupColor}38 100%)`,
+                                borderColor: `${groupColor}66`,
+                                color: groupColor,
+                                boxShadow: `0 10px 20px ${groupColor}22`,
+                              }
+                            : undefined
+                        }
+                      >
+                        {group.label}
+                        <span className={active ? "opacity-70" : "text-text-dim"}>
+                          {group.exercises.length}
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
-              ) : visibleExercises.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {visibleExercises.map((visibleExercise) => (
-                    <ExerciseChip
-                      key={visibleExercise.id}
-                      active={visibleExercise.id === activeId}
-                      color={groupColors[selectedGroup] || "#8F93A2"}
-                      name={visibleExercise.name}
-                      sessionCount={visibleExercise.sessionCount}
-                      onClick={() => setSelectedId(visibleExercise.id)}
-                    />
-                  ))}
+
+                <div className="surface-card rounded-[1.75rem] p-3.5">
+                  {visibleExercises.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {visibleExercises.map((visibleExercise) => (
+                        <ExerciseChip
+                          key={visibleExercise.id}
+                          active={visibleExercise.id === activeId}
+                          color={groupColors[getExerciseGroupLabel(visibleExercise.id)] || "#8F93A2"}
+                          name={visibleExercise.name}
+                          sessionCount={visibleExercise.sessionCount}
+                          onClick={() => {
+                            setSelectedId(visibleExercise.id);
+                            setShowExercisePicker(false);
+                            setShowAllSessions(false);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-text-muted">
+                      Nothing logged in this group yet.
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-text-muted">
-                  No logged exercises in this group yet.
+              </>
+            ) : (
+              <div className="surface-card-muted rounded-[1.4rem] p-4">
+                <p className="text-sm font-semibold text-text-primary">{exerciseTitle}</p>
+                <p className="mt-1 text-sm leading-6 text-text-muted">
+                  {selectedGroup === "All"
+                    ? `Browsing ${tracked.length} tracked exercises.`
+                    : `${visibleExercises.length} exercises in ${selectedGroup}.`}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
           </section>
 
           {prs.length > 0 ? (
             <section className="flex flex-col gap-3 animate-fade-up">
-              <SectionHeading
-                eyebrow="Personal Bests"
-                title={`${exerciseTitle} PRs`}
-                description="All-time milestones pulled from your logged history for this exercise."
-              />
+            <SectionHeading
+              eyebrow="Personal Bests"
+              title={`${exerciseTitle} PRs`}
+              description="All-time milestones from your logged history for this exercise."
+            />
               <div className="grid gap-2" style={prGridStyle}>
                 {prs.map((pr) => (
                   <PRBadge key={pr.type} pr={pr} color={color} />
@@ -744,19 +731,30 @@ export function Progress() {
             <SectionHeading
               eyebrow="Recent Sessions"
               title={`${exerciseTitle} history`}
-              description="Newest first, with the top set and chart metrics from each workout."
+              description={
+                showAllSessions
+                  ? `Showing all ${sessions.length} logged sessions for ${exerciseTitle}.`
+                  : `Showing the latest ${Math.min(3, sessions.length)} logged sessions for ${exerciseTitle}.`
+              }
               trailing={
-                <span className="chip chip-muted text-[11px] text-text-secondary">
-                  {sessions.length} sessions
-                </span>
+                sessions.length > 3 ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllSessions((value) => !value)}
+                    className="btn-ghost px-3 py-2 text-xs font-semibold"
+                  >
+                    {showAllSessions ? "Show Less" : "Show All"}
+                  </button>
+                ) : (
+                  <span className="chip chip-muted text-[11px] text-text-secondary">
+                    {sessions.length} sessions
+                  </span>
+                )
               }
             />
 
             <div className="flex flex-col gap-2.5">
-              {sessions
-                .slice()
-                .reverse()
-                .map((session, index) => (
+              {displayedSessions.map((session, index) => (
                   <div
                     key={`${session.date}-${index}`}
                     className="surface-card rounded-[1.6rem] p-4"

@@ -17,7 +17,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **Skip/alternate exercises** — skip an exercise for the current session so it returns next time, enabling alternation (e.g. leg press ↔ squats). Anti-chronic-skip safeguard (yellow → amber → red block)
 - **Auto-save & resume** — workout data persists automatically. Resume banner appears on home page if app closes mid-workout
 - **Interactive calendar** — color-coded by session type (green=lift, blue=cardio, recovery, rest). Tap any cell (past or future) to quick-log cardio/rest, undo non-lift logs, or move lift workouts via date picker. Future rings project from the rolling cycle, skipping dates that already have sessions. "Schedule →" shortcut links directly to the full schedule view
-- **Quick Start grid** — Home page shows a suggested hero card (rolling cycle recommendation) plus an "Other Options" grid with all day types: Push, Pull, Legs & Abs, Cardio, Recovery, Rest, and Open Workout. Lift options navigate to the workout page, non-lift options instant-log in one tap. After logging, a "Done for Today" card replaces the hero and all options disable
+- **Quick Start** — Home page ("Today") shows a suggested hero card (rolling cycle recommendation) with shortcut grid for non-lift options (Cardio, Recovery, Rest, Open) and a collapsible "Other Workouts" drawer for alternate lift days. Lift options navigate to the workout page, non-lift options instant-log in one tap. After logging, a "Done for Today" card replaces the hero; non-lift shortcuts disable but lift overrides remain accessible
 - **Muscle recovery status** — per-muscle-group recovery tracking (Mentzer 4-day rule), resolves custom/swapped exercises. Color-coded pills (orange=recovering, green=ready). Workout page warns when targeting recovering muscles with bulk-skip buttons
 - **Smart day suggestions** — upcoming rolling-cycle days adapt to recovery state: ranks alternative lift days by muscle recovery readiness, preferring fully recovered swaps over partial ones, falling back to cardio. Recovery suggestion banner shown on the home hero card
 - **Rest day suggestions** — context-aware activity nudges on rest/recovery days or after 2+ days of inactivity
@@ -25,6 +25,10 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - **One session per day** — only one workout, cardio, or rest entry can exist per date. The store blocks duplicates, and the UI shows inline error messages when a collision is detected. The Workout page prevents starting a new session when today already has a completed entry
 - **History** — filter by exercise or day type, inline editing (swap/add/remove exercises, modify sets/reps/weight), delete sessions. Cards show type badges and session stats
 - **Full-state backup/restore** — JSON export captures all app state (workout history, active workout, exercise overrides, settings, gym equipment). CSV export (one row per set). Import validates field-by-field, supports v1 legacy format migration
+- **Route-level code splitting** — all pages lazy-loaded with route-aware skeleton fallbacks and spring page transitions. Route chunks prefetched on hover/touch/focus for instant navigation
+- **4-tab navigation** — Home, Progress, History, and Setup (popover drawer with Exercises + My Gym). Bottom nav prefetches route chunks on interaction
+- **Workout session UI** — session summary card (exercise count + set progress), collapsible setup tools, toggleable coaching hints (overload suggestions), collapsible recovery actions
+- **Exercise picker filtering** — muscle group filter tabs in the exercise picker modal for faster browsing alongside text search
 - **PWA install** — native install prompt (Chrome/Edge) with iOS fallback instructions, app shortcuts (Open Workout, Progress, History), offline-ready via service worker
 - **Rest timer** — configurable countdown with presets, auto-starts on set completion (toggleable)
 - **Stepper inputs** — ±buttons with exercise-specific increments, long-press rapid adjust, tappable "prev:" hints from last session
@@ -35,7 +39,7 @@ A Mike Mentzer-inspired workout tracker PWA. Log sets, track progressive overloa
 - Tailwind CSS v4 (dark theme, Apple HIG system colors, surface utility classes)
 - Zustand (persisted to localStorage)
 - React Router DOM v7
-- Recharts (progress charts), Framer Motion (animations)
+- Recharts (progress charts, separate bundle chunk), Motion (page transitions + animations)
 - PWA via vite-plugin-pwa (auto-update, maskable icons, app shortcuts)
 - Deployed to Netlify
 
@@ -70,4 +74,4 @@ All data is client-side. Three Zustand stores persist to localStorage:
 
 Date handling uses a **date-key abstraction** (`YYYY-MM-DD` strings) in `lib/dates.ts` for timezone-safe day-boundary arithmetic. All day comparisons use UTC-based math; session timestamps pin to noon local time via `createSessionIso()`. Relative date formatting handles future dates ("Tomorrow", "In 3 days"). Recovery and staleness functions exclude future-dated entries to avoid counting pre-logged sessions as "done".
 
-Exercise and program definitions are static in `src/data/`. Currently ships with one program (`heavy-duty-complete`) with an 8-day rolling cycle (3 lift days separated by rest days, plus cardio, recovery, and rest), and ~49 exercises. Cardio activities are consolidated under a single `hd-cardio` key covering both steady-state and interval options. Shared utilities in `src/lib/`: history-aware rolling cycle projection with non-lift type matching, rest-day skipping after 48h+ gaps, and stalest-lift-first resumption (`rollingSchedule.ts`), gym equipment curation (`curatedWorkout.ts`), muscle recovery tracking and smart day suggestions (`recovery.ts`), date-key primitives and formatting (`dates.ts`), full-state backup/restore with v1 migration (`export.ts`), per-set PR detection (`records.ts`).
+Exercise and program definitions are static in `src/data/`. Currently ships with one program (`heavy-duty-complete`) with an 8-day rolling cycle (3 lift days separated by rest days, plus cardio, recovery, and rest), and ~49 exercises. Cardio activities are consolidated under a single `hd-cardio` key covering both steady-state and interval options. Shared utilities in `src/lib/`: history-aware rolling cycle projection with non-lift type matching, rest-day skipping after 48h+ gaps, and stalest-lift-first resumption (`rollingSchedule.ts`), gym equipment curation (`curatedWorkout.ts`), muscle recovery tracking and smart day suggestions (`recovery.ts`), date-key primitives and formatting (`dates.ts`), full-state backup/restore with v1 migration (`export.ts`), per-set PR detection (`records.ts`), route-level lazy loading and prefetch (`routePrefetch.ts`).

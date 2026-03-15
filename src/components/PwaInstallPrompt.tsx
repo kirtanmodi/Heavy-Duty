@@ -40,6 +40,7 @@ export function PwaInstallPrompt() {
   const [dismissed, setDismissed] = useState(() => readDismissedState());
   const [isStandalone, setIsStandalone] = useState(() => isStandaloneDisplayMode());
   const [isInstalling, setIsInstalling] = useState(false);
+  const [showIosSteps, setShowIosSteps] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -108,10 +109,10 @@ export function PwaInstallPrompt() {
     }
   };
 
-  const title = deferredPrompt ? "Install Heavy Duty" : "Add it to your home screen";
+  const title = deferredPrompt ? "Install the app" : "Add to Home Screen";
   const message = deferredPrompt
-    ? "Open the tracker like a native app with offline access and a cleaner full-screen mobile layout."
-    : "On iPhone or iPad, tap Share and then Add to Home Screen for the full PWA experience.";
+    ? "Open Heavy Duty like a native app with offline access and a cleaner full-screen layout."
+    : "Add Heavy Duty to your home screen for the cleaner app-style layout.";
 
   return (
     <AnimatePresence>
@@ -125,9 +126,9 @@ export function PwaInstallPrompt() {
           className="pointer-events-none fixed inset-x-0 bottom-[calc(6.4rem+env(safe-area-inset-bottom))] z-40 px-3"
         >
           <div className="pointer-events-auto mx-auto w-full max-w-[460px]">
-            <div className="surface-card card-glow-red rounded-[1.45rem] p-4">
+            <div className="surface-card rounded-[1.35rem] p-4">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent-red/12 text-accent-red">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent-red/12 text-accent-red">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
                     <path d="M12 15V5" strokeLinecap="round" />
                     <path d="M8.5 8.5L12 5l3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -150,17 +151,32 @@ export function PwaInstallPrompt() {
                 </button>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 {deferredPrompt ? (
                   <button type="button" onClick={handleInstall} className="btn-primary px-4 text-sm font-medium" disabled={isInstalling}>
                     {isInstalling ? "Opening..." : "Install App"}
                   </button>
                 ) : (
-                  <div className="chip text-xs font-medium uppercase tracking-[0.18em] text-accent-yellow">
-                    Share &gt; Add to Home Screen
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowIosSteps((value) => !value)}
+                    className="btn-secondary px-4 text-sm font-medium"
+                  >
+                    {showIosSteps ? "Hide Steps" : "Show Steps"}
+                  </button>
                 )}
-                <button type="button" onClick={dismiss} className="btn-secondary px-4 text-sm font-medium">
+              </div>
+
+              {!deferredPrompt && showIosSteps && (
+                <div className="mt-3 rounded-[1.1rem] border border-white/[0.06] bg-white/[0.03] px-3.5 py-3 text-sm leading-relaxed text-text-secondary">
+                  Tap <span className="font-semibold text-text-primary">Share</span>, then choose{" "}
+                  <span className="font-semibold text-text-primary">Add to Home Screen</span>.
+                </div>
+              )}
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-[11px] text-text-dim">You can dismiss this and install later.</span>
+                <button type="button" onClick={dismiss} className="text-[11px] font-semibold text-text-secondary transition-colors active:text-text-primary">
                   Maybe later
                 </button>
               </div>

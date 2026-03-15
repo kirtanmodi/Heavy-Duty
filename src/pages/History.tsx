@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
 import { programs } from "../data/programs";
-import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
+import type { WorkoutEntry, ExerciseEntry } from "../types";
 import { formatDayDate, formatMonthYear } from "../lib/dates";
 
 function calcStats(workout: WorkoutEntry) {
@@ -38,48 +38,6 @@ function calcProgress(current: WorkoutEntry, prev: WorkoutEntry | null) {
     volumePercent: pct,
     type: delta > 0 ? "increase" : delta < 0 ? "decrease" : "same",
   } as const;
-}
-
-function getPrevExerciseSets(exerciseId: string, prevSession: WorkoutEntry | null): SetEntry[] | null {
-  if (!prevSession) return null;
-  const ex = prevSession.exercises.find((e) => e.id === exerciseId);
-  return ex?.sets.length ? ex.sets : null;
-}
-
-function calcStreak(history: WorkoutEntry[]): number {
-  if (history.length === 0) return 0;
-  let streak = 0;
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  const uniqueDays = new Set<string>();
-  for (const w of history) {
-    const d = new Date(w.date);
-    uniqueDays.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
-  }
-
-  for (let i = 0; i <= 365; i++) {
-    const check = new Date(today);
-    check.setDate(check.getDate() - i);
-    const key = `${check.getFullYear()}-${check.getMonth()}-${check.getDate()}`;
-    if (uniqueDays.has(key)) {
-      streak++;
-    } else if (i > 0) {
-      break;
-    }
-  }
-  return streak;
-}
-
-function calcTotalVolume(history: WorkoutEntry[]): number {
-  let total = 0;
-  for (const w of history) {
-    for (const ex of w.exercises) {
-      if (ex.skipped) continue;
-      for (const s of ex.sets) total += s.weight * s.reps;
-    }
-  }
-  return total;
 }
 
 function formatVolume(vol: number): string {
@@ -155,16 +113,6 @@ export function History() {
   }, [history, activeFilter, exerciseFilter]);
   const monthGroups = useMemo(() => groupByMonth(filteredHistory), [filteredHistory]);
 
-  const streak = useMemo(() => calcStreak(history), [history]);
-  const totalVol = useMemo(() => calcTotalVolume(history), [history]);
-  const thisWeek = useMemo(() => {
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-    return history.filter((w) => new Date(w.date) >= startOfWeek).length;
-  }, [history]);
-
   const exerciseNames = useMemo(() => {
     const names = new Map<string, string>();
     for (const workout of history) {
@@ -205,7 +153,7 @@ export function History() {
     ? exerciseFilterLabel
       ? `${activeFilterLabel} · filtered by ${exerciseFilterLabel}`
       : activeFilterLabel
-    : "All-time history across lift, open, cardio, recovery, and rest sessions.";
+    : "All logged sessions.";
 
   return (
     <PageLayout className="flex flex-col gap-5">
@@ -215,7 +163,7 @@ export function History() {
             <p className="section-label">Training Log</p>
             <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">History</h1>
             <p className="mt-1 max-w-[28rem] text-sm leading-relaxed text-text-muted">
-              Review past sessions, compare progress, and jump back into edits without losing your place.
+              Find, review, and edit past sessions.
             </p>
           </div>
           {history.length > 0 && (
@@ -229,7 +177,7 @@ export function History() {
           <section className="surface-card rounded-[1.6rem] p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="section-label">Browse</p>
+                <p className="section-label">Filters</p>
                 <p className="mt-1 text-sm font-semibold text-text-primary">
                   Showing {filteredHistory.length} of {history.length} session{history.length !== 1 ? "s" : ""}
                 </p>
@@ -242,28 +190,10 @@ export function History() {
               )}
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Streak</p>
-                <p className="mt-2 text-xl font-semibold tabular-nums text-accent-red">{streak}</p>
-                <p className="mt-1 text-[11px] text-text-dim">All-time</p>
-              </div>
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">This Week</p>
-                <p className="mt-2 text-xl font-semibold tabular-nums text-accent-orange">{thisWeek}</p>
-                <p className="mt-1 text-[11px] text-text-dim">Sessions</p>
-              </div>
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Total Vol</p>
-                <p className="mt-2 text-xl font-semibold tabular-nums text-accent-green">{formatVolume(totalVol)}</p>
-                <p className="mt-1 text-[11px] text-text-dim">All-time</p>
-              </div>
-            </div>
-
             <div className="mt-4 flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="section-label">Day Filters</p>
-                <p className="text-[11px] text-text-dim">Exercise chips below each card filter the feed.</p>
+                <p className="text-[11px] text-text-dim">Tap any exercise tag to filter.</p>
               </div>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                 <button
@@ -345,11 +275,11 @@ export function History() {
           <div className="flex max-w-[18rem] flex-col gap-2">
             <p className="font-[var(--font-display)] text-xl tracking-wide text-text-primary">No workouts yet</p>
             <p className="text-sm leading-relaxed text-text-muted">
-              Complete your first workout and it will show up here with set details, progress, and edit controls.
+              Finish a workout and it will show up here.
             </p>
           </div>
           <button onClick={() => navigate("/")} className="btn-primary px-8 py-3 text-sm font-semibold text-white">
-            Start Today's Workout
+            Start Workout
           </button>
         </section>
       ) : filteredHistory.length === 0 ? (
@@ -363,11 +293,11 @@ export function History() {
           <div className="flex max-w-[18rem] flex-col gap-2">
             <p className="font-semibold text-text-primary">No matching sessions</p>
             <p className="text-sm leading-relaxed text-text-muted">
-              Try a different day filter or clear the exercise filter to see more of your history.
+              Try another filter, or clear everything to see your full history.
             </p>
           </div>
           <button onClick={clearFilters} className="btn-secondary px-5 py-3 text-sm font-semibold">
-            Clear Filters
+            Reset Filters
           </button>
         </section>
       ) : (
@@ -488,10 +418,7 @@ export function History() {
 
                               {workout.exercises.length > 0 && (
                                 <div className="mt-4 flex flex-col gap-2">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">Exercises</p>
-                                    <p className="text-[11px] text-text-dim">Tap to filter</p>
-                                  </div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">Exercises</p>
                                   <div className="flex flex-wrap gap-1.5">
                                     {workout.exercises.map((ex) => (
                                       <span
@@ -521,19 +448,11 @@ export function History() {
 
                       {expanded && (
                         <div className="border-t border-white/[0.06] px-3 pb-3 pt-3">
-                          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-3">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">Session Details</p>
-                            <p className="mt-1 text-sm text-text-muted">
-                              Expanded rows compare this session with the previous matching workout when data exists.
-                            </p>
-                          </div>
-
-                          <div className="mt-3 flex flex-col gap-2.5">
+                          <div className="flex flex-col gap-2.5">
                             {workout.exercises.map((exercise) => (
-                              <ExerciseDetail
+                              <ExerciseSummaryRow
                                 key={`${workout.id}-${exercise.id}-${exercise.name}`}
                                 exercise={exercise}
-                                prevSets={getPrevExerciseSets(exercise.id, prev)}
                               />
                             ))}
                           </div>
@@ -635,14 +554,12 @@ export function History() {
   );
 }
 
-/* ─── Exercise Detail (expanded view) ─── */
+/* ─── Exercise Summary (expanded view) ─── */
 
-function ExerciseDetail({
+function ExerciseSummaryRow({
   exercise,
-  prevSets,
 }: {
   exercise: ExerciseEntry;
-  prevSets: SetEntry[] | null;
 }) {
   if (exercise.skipped) {
     return (
@@ -666,6 +583,8 @@ function ExerciseDetail({
   }
 
   const bestSet = exercise.sets.reduce((best, s) => (s.weight * s.reps > best.weight * best.reps ? s : best), exercise.sets[0]);
+  const totalReps = exercise.sets.reduce((sum, set) => sum + set.reps, 0);
+  const failureSets = exercise.sets.filter((set) => set.toFailure).length;
 
   return (
     <div className="rounded-[1.25rem] border border-white/[0.06] bg-white/[0.03] px-4 py-4">
@@ -673,7 +592,7 @@ function ExerciseDetail({
         <div className="min-w-0">
           <h4 className="text-[14px] font-semibold text-text-primary">{exercise.name}</h4>
           <p className="mt-1 text-[11px] text-text-dim">
-            {prevSets ? "Compared with the previous matching session." : "First logged session for this exercise."}
+            {exercise.sets.length} set{exercise.sets.length !== 1 ? "s" : ""} logged · {totalReps} total reps
           </p>
         </div>
         <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-text-secondary">
@@ -681,66 +600,23 @@ function ExerciseDetail({
         </span>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2">
-        {exercise.sets.map((set, idx) => {
-          const prevSet = prevSets?.[idx] ?? null;
-          const wDelta = prevSet ? set.weight - prevSet.weight : 0;
-          const rDelta = prevSet ? set.reps - prevSet.reps : 0;
-          const volume = set.weight * set.reps;
-          const prevVolume = prevSet ? prevSet.weight * prevSet.reps : 0;
-          const volDelta = prevSet ? volume - prevVolume : 0;
-          const weightChange = wDelta === 0 ? null : `${wDelta > 0 ? "+" : ""}${wDelta}kg`;
-          const repChange = rDelta === 0 ? null : `${rDelta > 0 ? "+" : ""}${rDelta} reps`;
-          const volumeChange = volDelta === 0 ? null : `${volDelta > 0 ? "+" : ""}${volDelta}`;
-
-          return (
-            <div key={idx} className="rounded-[1rem] border border-white/[0.05] bg-white/[0.03] px-3 py-3">
-              <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-[11px] font-semibold text-text-muted">
-                  {idx + 1}
-                </span>
-
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold tabular-nums text-text-primary">
-                      {set.weight > 0 ? `${set.weight}kg` : "BW"} × {set.reps}
-                    </span>
-                    {set.toFailure && (
-                      <span className="rounded-full bg-accent-red/15 px-2 py-0.5 text-[10px] font-semibold text-accent-red">
-                        F
-                      </span>
-                    )}
-                  </div>
-
-                  {prevSet ? (
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-dim">
-                      <span className={wDelta > 0 ? "text-accent-green" : wDelta < 0 ? "text-accent-red" : ""}>
-                        {weightChange ?? "Same weight"}
-                      </span>
-                      <span className={rDelta > 0 ? "text-accent-green" : rDelta < 0 ? "text-accent-red" : ""}>
-                        {repChange ?? "Same reps"}
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-[11px] text-text-dim">No previous set to compare.</p>
-                  )}
-                </div>
-
-                <div className="text-right">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Volume</p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums text-text-primary">
-                    {volume > 0 ? volume.toLocaleString() : "—"}
-                  </p>
-                  {volumeChange && (
-                    <p className={`mt-1 text-[11px] font-medium tabular-nums ${volDelta > 0 ? "text-accent-green" : "text-accent-red"}`}>
-                      {volumeChange}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="rounded-[1rem] border border-white/[0.05] bg-white/[0.03] px-3 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Sets</p>
+          <p className="mt-1 text-sm font-semibold tabular-nums text-text-primary">{exercise.sets.length}</p>
+        </div>
+        <div className="rounded-[1rem] border border-white/[0.05] bg-white/[0.03] px-3 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Volume</p>
+          <p className="mt-1 text-sm font-semibold tabular-nums text-text-primary">
+            {formatVolume(exercise.sets.reduce((sum, set) => sum + (set.weight * set.reps), 0))}
+          </p>
+        </div>
+        <div className="rounded-[1rem] border border-white/[0.05] bg-white/[0.03] px-3 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Failure</p>
+          <p className="mt-1 text-sm font-semibold tabular-nums text-text-primary">
+            {failureSets}
+          </p>
+        </div>
       </div>
     </div>
   );

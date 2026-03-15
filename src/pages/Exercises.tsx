@@ -167,81 +167,71 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditing(true);
-              }}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-dim transition-colors hover:text-text-muted active:bg-white/[0.06]"
-              aria-label="Rename exercise"
+          <button
+            onClick={() => setExpanded((value) => !value)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-dim transition-colors active:bg-white/[0.06]"
+            aria-label={expanded ? "Hide exercise details" : "Show exercise details"}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                className="h-3.5 w-3.5"
-              >
-                <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-              </svg>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRemove();
-              }}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${
-                confirmRemove
-                  ? "bg-accent-red/15 text-accent-red scale-110"
-                  : "text-text-dim hover:text-text-muted active:bg-white/[0.06]"
-              }`}
-              aria-label={
-                confirmRemove ? "Confirm remove exercise" : "Remove exercise"
-              }
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                className="h-3.5 w-3.5"
-              >
-                <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-              </svg>
-            </button>
-          </div>
+              <path d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
 
         {/* Expandable details */}
-        {expanded && exercise.mentzerTips && (
+        {expanded && (
           <div className="mt-3 animate-fade-in">
-            <div
-              className="rounded-xl px-3 py-2.5"
-              style={{ background: `${color}08`, border: `1px solid ${color}12` }}
-            >
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" style={{ color }}>
-                  <path
-                    d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>
-                  Mentzer Tip
-                </span>
-              </div>
-              <p className="text-[12px] leading-relaxed text-text-secondary">
-                {exercise.mentzerTips}
-              </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setEditing(true)}
+                className="btn-ghost px-3 py-2 text-xs font-semibold"
+              >
+                Rename
+              </button>
+              <button
+                onClick={handleRemove}
+                className={`px-3 py-2 text-xs font-semibold rounded-xl transition-all ${
+                  confirmRemove
+                    ? "bg-accent-red/15 text-accent-red"
+                    : "btn-ghost text-accent-red"
+                }`}
+              >
+                {confirmRemove ? "Confirm Delete" : "Delete"}
+              </button>
             </div>
 
-            {/* Extra details */}
-            <div className="mt-2 flex items-center gap-3 px-1">
+            {exercise.mentzerTips && (
+              <div
+                className="mt-3 rounded-xl px-3 py-2.5"
+                style={{ background: `${color}08`, border: `1px solid ${color}12` }}
+              >
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" style={{ color }}>
+                    <path
+                      d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>
+                    Mentzer Tip
+                  </span>
+                </div>
+                <p className="text-[12px] leading-relaxed text-text-secondary">
+                  {exercise.mentzerTips}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-3 flex items-center gap-3 px-1">
               <div className="flex items-center gap-1.5">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3 w-3 text-text-dim">
                   <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -262,26 +252,6 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
           </div>
         )}
       </div>
-
-      {/* Expand indicator */}
-      {exercise.mentzerTips && (
-        <div
-          className="flex cursor-pointer items-center justify-center pb-1 pt-0"
-          onClick={() => setExpanded(!expanded)}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className={`h-3.5 w-3.5 text-text-dim transition-transform duration-200 ${
-              expanded ? "rotate-180" : ""
-            }`}
-          >
-            <path d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-      )}
     </div>
   );
 }
@@ -453,6 +423,7 @@ export function Exercises() {
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   useExerciseStore();
 
   const allExercises = getEffectiveExercises();
@@ -539,8 +510,30 @@ export function Exercises() {
         )}
       </div>
 
-      {/* Muscle group filter chips */}
       {!search && (
+        <div className="surface-card-muted rounded-[1.35rem] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-text-primary">
+                {activeGroup ? `${activeGroup} exercises` : "All muscle groups"}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-text-muted">
+                Search is fastest. Open muscle filters only when you want to browse by category.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((value) => !value)}
+              className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
+            >
+              {showFilters ? "Hide" : "Filter"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Muscle group filter chips */}
+      {!search && showFilters && (
         <div className="scrollbar-hide -mx-2 flex gap-2 overflow-x-auto px-2 pb-1">
           <button
             onClick={() => setActiveGroup(null)}
@@ -603,7 +596,7 @@ export function Exercises() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3 py-16">
+          <div className="surface-card flex flex-col items-center gap-4 rounded-[1.6rem] p-6 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04]">
               <svg
                 viewBox="0 0 24 24"
@@ -615,18 +608,26 @@ export function Exercises() {
                 <path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
             </div>
-            <p className="text-sm text-text-muted">
-              No exercises match "{search}"
-            </p>
-            <button
-              onClick={() => {
-                setSearch("");
-                setShowAdd(true);
-              }}
-              className="mt-1 rounded-xl bg-white/[0.06] px-4 py-2 text-xs font-semibold text-text-secondary transition-colors active:bg-white/[0.1]"
-            >
-              Create "{search}" as new exercise
-            </button>
+            <div className="flex max-w-[18rem] flex-col gap-2">
+              <p className="text-sm font-semibold text-text-primary">No exercises match "{search}"</p>
+              <p className="text-sm leading-relaxed text-text-muted">
+                Clear the search to browse your full library, or create this as a new custom exercise.
+              </p>
+            </div>
+            <div className="grid w-full grid-cols-2 gap-2">
+              <button onClick={() => setSearch("")} className="btn-ghost py-3 text-sm font-semibold">
+                Clear Search
+              </button>
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setShowAdd(true);
+                }}
+                className="btn-secondary py-3 text-sm font-semibold"
+              >
+                Create New
+              </button>
+            </div>
           </div>
         )
       ) : (

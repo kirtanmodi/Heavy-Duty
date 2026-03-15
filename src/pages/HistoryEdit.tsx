@@ -22,6 +22,7 @@ export function HistoryEdit() {
   const [swapTarget, setSwapTarget] = useState<number | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReorderControls, setShowReorderControls] = useState(false);
 
   // --- Handlers ---
 
@@ -145,9 +146,7 @@ export function HistoryEdit() {
             <div className="min-w-0">
               <p className="section-label">Edit Logged Workout</p>
               <h1 className="mt-1 font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{workout.day}</h1>
-              <p className="mt-1 text-sm leading-relaxed text-text-muted">
-                Adjust the saved sets, reorder exercises, or swap movements before saving the updated session.
-              </p>
+              <p className="mt-1 text-sm leading-relaxed text-text-muted">Adjust the saved session, then save the cleaned-up version back to history.</p>
             </div>
             <button
               onClick={() => navigate("/history")}
@@ -165,13 +164,32 @@ export function HistoryEdit() {
               {workoutTypeLabel}
             </span>
             <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
-              {exercises.length} exercise{exercises.length !== 1 ? "s" : ""}
-            </span>
-            <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
-              {totalSetCount} set{totalSetCount !== 1 ? "s" : ""}
+              {exercises.length} exercise{exercises.length !== 1 ? "s" : ""} · {totalSetCount} set{totalSetCount !== 1 ? "s" : ""}
             </span>
           </div>
         </header>
+
+        <section className="surface-card rounded-[1.6rem] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="section-label">Edit Tools</p>
+              <p className="text-sm font-semibold text-text-primary">Keep the controls simple while you review the workout.</p>
+              <p className="mt-1 text-sm leading-relaxed text-text-muted">
+                Add exercises here, and only turn on reordering when you actually need to move blocks around.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowReorderControls((prev) => !prev)}
+              className="btn-ghost shrink-0 px-4 py-2 text-sm font-semibold"
+            >
+              {showReorderControls ? "Done Reordering" : "Reorder"}
+            </button>
+          </div>
+
+          <button onClick={() => setShowAddExercise(true)} className="btn-secondary mt-4 w-full py-3 text-sm font-semibold">
+            Add Exercise
+          </button>
+        </section>
 
         {exercises.length === 0 ? (
           <section className="surface-card flex flex-col items-center gap-4 rounded-[1.6rem] p-7 text-center">
@@ -198,40 +216,34 @@ export function HistoryEdit() {
 
               return (
                 <section key={`s-${exIndex}`} className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between gap-3 px-1">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-[11px] font-semibold tabular-nums text-text-secondary">
-                        {String(exIndex + 1).padStart(2, "0")}
+                  {showReorderControls && (
+                    <div className="flex items-center justify-between gap-3 px-1">
+                      <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
+                        Exercise {String(exIndex + 1).padStart(2, "0")}
                       </span>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">
-                          Exercise {exIndex + 1}
-                        </p>
-                        <p className="text-[12px] text-text-muted">Move this block up or down in the saved order.</p>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleMoveGroup(exIndex, "up")}
+                          className={`btn-ghost flex h-10 w-10 items-center justify-center ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                          aria-label="Move up"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                            <path d="M18 15l-6-6-6 6" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleMoveGroup(exIndex, "down")}
+                          className={`btn-ghost flex h-10 w-10 items-center justify-center ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                          aria-label="Move down"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                            <path d="M6 9l6 6 6-6" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleMoveGroup(exIndex, "up")}
-                        className={`btn-ghost flex h-10 w-10 items-center justify-center ${isFirst ? "pointer-events-none opacity-20" : ""}`}
-                        aria-label="Move up"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                          <path d="M18 15l-6-6-6 6" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleMoveGroup(exIndex, "down")}
-                        className={`btn-ghost flex h-10 w-10 items-center justify-center ${isLast ? "pointer-events-none opacity-20" : ""}`}
-                        aria-label="Move down"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                          <path d="M6 9l6 6 6-6" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                  )}
 
                   <ExerciseCard
                     mode="history-edit"
@@ -249,32 +261,14 @@ export function HistoryEdit() {
           </div>
         )}
 
-        <button
-          onClick={() => setShowAddExercise(true)}
-          className="w-full rounded-[1.45rem] border border-dashed border-white/[0.1] bg-white/[0.03] py-4 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.05]"
-        >
-          + Add Exercise
-        </button>
-
         <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-10 mt-1">
           <section className="glass rounded-[1.6rem] p-3.5">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-text-primary">Save this workout</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-text-muted">
-                  Changes apply to this logged session only. Exercises without reps are removed on save.
-                </p>
+                <p className="mt-1 text-[12px] leading-relaxed text-text-muted">Exercises without reps are removed when you save.</p>
               </div>
-              <span className="chip chip-muted shrink-0 px-3 py-2 text-[11px] font-semibold text-text-secondary">
-                {exercises.length} items
-              </span>
-            </div>
-
-            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-              <button onClick={() => setShowAddExercise(true)} className="btn-ghost px-4 py-3 text-sm font-semibold">
-                Add Exercise
-              </button>
-              <button onClick={handleSave} className="btn-primary px-5 py-3 text-sm font-semibold tracking-wide text-white">
+              <button onClick={handleSave} className="btn-primary shrink-0 px-5 py-3 text-sm font-semibold tracking-wide text-white">
                 Save Changes
               </button>
             </div>

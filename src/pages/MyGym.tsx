@@ -4,8 +4,6 @@ import { gymEquipmentOptions } from "../lib/curatedWorkout";
 import { useSettingsStore } from "../store/settingsStore";
 import type { CustomGymEquipment } from "../types";
 
-type CategoryFilter = "All" | "Machines" | "Free Weights" | "Cardio" | "Custom";
-
 const categoryColors: Record<string, string> = {
   Machines: "#4488FF",
   "Free Weights": "#FF6B35",
@@ -336,7 +334,6 @@ function CategoryHeader({
 
 export function MyGym() {
   const [showSheet, setShowSheet] = useState<{ mode: "add" | "edit"; item?: CustomGymEquipment } | null>(null);
-  const [activeFilter, setActiveFilter] = useState<CategoryFilter>("All");
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
@@ -386,9 +383,6 @@ export function MyGym() {
     gymEquipmentOptions.filter((o) => gymEquipment[o.id]).length +
     customGymEquipment.filter((c) => gymEquipment[c.id]).length;
 
-  const showCategory = (cat: string) =>
-    activeFilter === "All" || activeFilter === cat;
-
   const handleBulkToggle = (id: string) => {
     setBulkSelected((prev) => {
       const next = new Set(prev);
@@ -435,61 +429,23 @@ export function MyGym() {
         </button>
       </header>
 
-      {/* Filter chips */}
-      <div className="scrollbar-hide -mx-2 flex gap-2 overflow-x-auto px-2 pb-1">
-        <button
-          onClick={() => setActiveFilter("All")}
-          className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all ${
-            activeFilter === "All"
-              ? "bg-white/[0.12] text-text-primary"
-              : "bg-white/[0.04] text-text-dim"
-          }`}
-        >
-          All
-        </button>
-        {categories.map((cat) => {
-          const color = categoryColors[cat];
-          const isActive = activeFilter === cat;
-          const count = (groupedStatic[cat] || []).length;
-          return (
-            <button
-              key={cat}
-              onClick={() => setActiveFilter(isActive ? "All" : cat)}
-              className="shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all"
-              style={
-                isActive
-                  ? { background: `${color}20`, color, boxShadow: `0 0 12px ${color}15` }
-                  : { background: "rgba(255,255,255,0.04)", color: "var(--color-text-dim)" }
-              }
-            >
-              {cat}
-              <span className="ml-1.5 text-[10px] opacity-60">{count}</span>
-            </button>
-          );
-        })}
-        {hasCustom && (
-          <button
-            onClick={() => setActiveFilter(activeFilter === "Custom" ? "All" : "Custom")}
-            className="shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all"
-            style={
-              activeFilter === "Custom"
-                ? {
-                    background: `${categoryColors.Custom}20`,
-                    color: categoryColors.Custom,
-                    boxShadow: `0 0 12px ${categoryColors.Custom}15`,
-                  }
-                : { background: "rgba(255,255,255,0.04)", color: "var(--color-text-dim)" }
-            }
-          >
-            Custom
-            <span className="ml-1.5 text-[10px] opacity-60">{customGymEquipment.length}</span>
-          </button>
-        )}
-      </div>
+      <section className="surface-card-muted rounded-[1.35rem] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-text-primary">Equipment setup</p>
+            <p className="mt-1 text-sm leading-6 text-text-muted">
+              Toggle what is available in your gym. Built-in equipment stays grouped below, and custom items live in their own section.
+            </p>
+          </div>
+          <div className="shrink-0 rounded-[1rem] border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Available</p>
+            <p className="mt-1 text-sm font-semibold tabular-nums text-text-primary">{availableCount}/{totalItems}</p>
+          </div>
+        </div>
+      </section>
 
       {/* Equipment list by category */}
       {categories.map((cat) => {
-        if (!showCategory(cat)) return null;
         const items = groupedStatic[cat] || [];
         if (items.length === 0) return null;
         const color = categoryColors[cat];
@@ -523,7 +479,7 @@ export function MyGym() {
       })}
 
       {/* Custom equipment section */}
-      {hasCustom && showCategory("Custom") && (
+      {hasCustom && (
         <section className="flex flex-col gap-1">
           <div className="flex items-center gap-2 px-0.5 mb-1">
             <div className="h-1.5 w-1.5 rounded-full" style={{ background: categoryColors.Custom }} />
@@ -598,15 +554,21 @@ export function MyGym() {
         </section>
       )}
 
-      {/* Reset button */}
-      <div className="flex justify-center pb-4">
+      <section className="surface-card rounded-[1.45rem] p-4">
+        <div className="flex flex-col gap-1">
+          <p className="section-label">Reset</p>
+          <p className="text-sm font-semibold text-text-primary">Reset built-in equipment</p>
+          <p className="text-sm leading-relaxed text-text-muted">
+            Restore the default availability for built-in equipment. Custom equipment stays in your list.
+          </p>
+        </div>
         <button
           onClick={resetGymEquipment}
-          className="text-[12px] font-medium text-text-dim transition-colors active:text-text-muted"
+          className="btn-ghost mt-4 w-full py-3 text-sm font-semibold"
         >
           Reset All Equipment
         </button>
-      </div>
+      </section>
 
       {showSheet && (
         <EquipmentSheet

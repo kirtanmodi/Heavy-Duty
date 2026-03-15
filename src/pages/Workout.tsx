@@ -229,6 +229,11 @@ export function Workout() {
   const [showAddExercise, setShowAddExercise] = useState(
     () => isOpen && (!activeWorkout || activeWorkout.exercises.length === 0),
   );
+  const [showWorkoutSetup, setShowWorkoutSetup] = useState(
+    () => isOpen && (!activeWorkout || activeWorkout.exercises.length === 0),
+  );
+  const [showCoachingHints, setShowCoachingHints] = useState(false);
+  const [showRecoveryActions, setShowRecoveryActions] = useState(false);
   const [curationFeedback, setCurationFeedback] = useState<string | null>(null);
   const [sessionSaveError, setSessionSaveError] = useState<string | null>(null);
   const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
@@ -300,6 +305,7 @@ export function Workout() {
   const groups = buildGroups();
 
   // Progress calculation (exclude skipped exercises)
+  const activeExerciseCount = activeWorkout?.exercises.filter((exercise) => !exercise.skipped).length ?? 0;
   const totalSets = activeWorkout?.exercises.filter(e => !e.skipped).reduce((sum, e) => sum + e.sets.length, 0) ?? 0;
   const completedSets = activeWorkout?.exercises.filter(e => !e.skipped).reduce(
     (sum, e) => sum + e.sets.filter((s) => s.weight > 0 || s.reps > 0).length,
@@ -325,6 +331,35 @@ export function Workout() {
   );
   const curatedExerciseIds = curatedResult?.exerciseIds ?? [];
   const selectedEquipmentCount = gymEquipmentOptions.filter((option) => gymEquipment[option.id]).length;
+  const { recoveringGroups, groupExerciseIndices, skipHistory } = useMemo(() => {
+    const recoveryStatuses = getMuscleRecoveryStatus(history);
+    const skipHistory = getGroupSkipHistory(history);
+    const targetMuscles = new Set<string>();
+    const groupExerciseIndices = new Map<string, number[]>();
+
+    if (activeWorkout) {
+      for (let i = 0; i < activeWorkout.exercises.length; i++) {
+        const ex = activeWorkout.exercises[i];
+        if (ex.skipped) continue;
+        const def = getEffectiveExercise(ex.id);
+        if (!def) continue;
+        for (const m of def.primaryMuscles) {
+          const group = muscleToGroup.get(m);
+          if (!group) continue;
+          targetMuscles.add(group);
+          const indices = groupExerciseIndices.get(group) ?? [];
+          if (!indices.includes(i)) indices.push(i);
+          groupExerciseIndices.set(group, indices);
+        }
+      }
+    }
+
+    const recoveringGroups = recoveryStatuses.filter(
+      (status) => targetMuscles.has(status.group) && status.status === "recovering" && status.daysSinceLastTrained !== null,
+    );
+
+    return { recoveringGroups, groupExerciseIndices, skipHistory };
+  }, [activeWorkout, history]);
 
   const handleSetChange = (exerciseIndex: number, setIndex: number, field: keyof SetEntry, value: number | boolean) => {
     setHasSessionSetInteraction(true);
@@ -456,6 +491,7 @@ export function Workout() {
     }
 
     replaceActiveWorkoutExercises(result.exerciseIds.map(seedExerciseEntry));
+    setShowWorkoutSetup(false);
 
     const skippedMsg = result.skippedSlots.length > 0
       ? ` Skipped: ${result.skippedSlots.join(", ")}.`
@@ -527,7 +563,7 @@ export function Workout() {
       onRemove: (idx: number) => removeExerciseFromWorkout(idx),
       onSkip: (idx: number) => skipExercise(idx),
       onUnskip: (idx: number) => unskipExercise(idx),
-      showOverloadBanner: true,
+      showOverloadBanner: showCoachingHints,
       overloadSuggestion: suggestion,
       restButtons: restBtns.length > 0 ? restBtns : undefined,
       previousSets: lastSets ?? undefined,
@@ -751,151 +787,203 @@ export function Workout() {
           </section>
         )}
 
-        {liftFocus && (
+        <section className="surface-card-muted rounded-[1.55rem] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="section-label">Session</p>
+              <p className="mt-1 text-sm font-semibold text-text-primary">
+                {activeExerciseCount} exercise{activeExerciseCount !== 1 ? "s" : ""} · {completedSets}/{totalSets} sets logged
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-text-muted">
+                {showWorkoutSetup
+                  ? "Setup tools are open below. Make your changes, then get back to logging."
+                  : "Stay in logging mode unless you need to change the exercise list."}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowWorkoutSetup((value) => !value)}
+              className={`${showWorkoutSetup ? "btn-primary text-white" : "btn-secondary"} px-4 py-2.5 text-sm font-semibold`}
+            >
+              {showWorkoutSetup ? "Done Customizing" : "Customize Workout"}
+            </button>
+            <button
+              onClick={() => setShowCoachingHints((value) => !value)}
+              className="btn-ghost px-4 py-2.5 text-sm font-semibold"
+            >
+              {showCoachingHints ? "Hide Hints" : "Show Hints"}
+            </button>
+          </div>
+        </section>
+
+        {showWorkoutSetup && (
           <section
             className="flex flex-col gap-4 rounded-2xl p-5"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
           >
             <div className="flex flex-col gap-1">
-              <h2 className="text-sm font-bold tracking-wide text-text-primary">Curate from My Gym</h2>
+              <h2 className="text-sm font-bold tracking-wide text-text-primary">Workout Setup</h2>
               <p className="text-xs leading-relaxed text-text-muted">
-                Rebuild today's {liftFocus.toLowerCase()} workout from your available equipment.
+                Add exercises, reorder cards, or rebuild this workout.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-dim">
-              <span className="rounded-full border border-white/[0.08] px-2.5 py-1">{selectedEquipmentCount}/{gymEquipmentOptions.length} selected</span>
-              <span className="rounded-full border border-white/[0.08] px-2.5 py-1">{curatedExerciseIds.length} exercises matched</span>
-              {hasLoggedSets && <span className="rounded-full border border-accent-yellow/25 px-2.5 py-1 text-accent-yellow">Locked after first logged set</span>}
-            </div>
-            {curatedResult && curatedResult.skippedSlots.length > 0 && !hasLoggedSets && (
-              <p className="text-[11px] leading-relaxed text-accent-yellow">
-                Missing equipment for: {curatedResult.skippedSlots.join(", ")}
-              </p>
-            )}
-
-            <button
-              onClick={() => navigate("/my-gym")}
-              className="w-full rounded-2xl border border-white/[0.08] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-            >
-              Configure Equipment in My Gym
-            </button>
-
-            {curationFeedback && <p className="text-xs leading-relaxed text-text-secondary">{curationFeedback}</p>}
-
-            <button
-              onClick={() => handleCurateWorkout(false)}
-              disabled={hasLoggedSets || curatedExerciseIds.length === 0}
-              className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
-              style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, boxShadow: `0 4px 16px ${themeColor}20` }}
-            >
-              Build {liftFocus} Workout
-            </button>
-            {curatedExerciseIds.length > 0 && !hasLoggedSets && (
+            <div className="grid grid-cols-2 gap-2.5">
               <button
-                onClick={() => handleCurateWorkout(true)}
-                className="w-full rounded-2xl border border-white/[0.08] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+                onClick={() => setShowAddExercise(true)}
+                className="btn-secondary px-4 py-3 text-sm font-semibold"
               >
-                Try Another Split
+                Add Exercise
               </button>
+              <button
+                onClick={() => setShowWorkoutSetup(false)}
+                className="btn-ghost px-4 py-3 text-sm font-semibold"
+              >
+                Done
+              </button>
+            </div>
+
+            {liftFocus && (
+              <div className="rounded-[1.3rem] border border-white/[0.06] bg-white/[0.03] p-4">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-semibold text-text-primary">Curate from My Gym</h3>
+                  <p className="text-xs leading-relaxed text-text-muted">
+                    Rebuild this workout from the equipment you have available.
+                  </p>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-text-dim">
+                  <span className="rounded-full border border-white/[0.08] px-2.5 py-1">
+                    {selectedEquipmentCount}/{gymEquipmentOptions.length} selected
+                  </span>
+                  <span className="rounded-full border border-white/[0.08] px-2.5 py-1">
+                    {curatedExerciseIds.length} exercises matched
+                  </span>
+                  {hasLoggedSets && (
+                    <span className="rounded-full border border-accent-yellow/25 px-2.5 py-1 text-accent-yellow">
+                      Locked after first logged set
+                    </span>
+                  )}
+                </div>
+
+                {curatedResult && curatedResult.skippedSlots.length > 0 && !hasLoggedSets && (
+                  <p className="mt-3 text-[11px] leading-relaxed text-accent-yellow">
+                    Missing equipment for: {curatedResult.skippedSlots.join(", ")}
+                  </p>
+                )}
+
+                {curationFeedback && <p className="mt-3 text-xs leading-relaxed text-text-secondary">{curationFeedback}</p>}
+
+                <div className="mt-3 grid gap-2.5">
+                  <button
+                    onClick={() => handleCurateWorkout(false)}
+                    disabled={hasLoggedSets || curatedExerciseIds.length === 0}
+                    className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
+                    style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, boxShadow: `0 4px 16px ${themeColor}20` }}
+                  >
+                    Build Workout
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      onClick={() => handleCurateWorkout(true)}
+                      disabled={hasLoggedSets || curatedExerciseIds.length === 0}
+                      className="btn-ghost px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Shuffle
+                    </button>
+                    <button
+                      onClick={() => navigate("/my-gym")}
+                      className="btn-ghost px-4 py-3 text-sm font-medium"
+                    >
+                      My Gym
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </section>
         )}
 
-        {/* Muscle Recovery Banner */}
-        {(() => {
-          const recoveryStatuses = getMuscleRecoveryStatus(history);
-          const skipHistory = getGroupSkipHistory(history);
-          const targetMuscles = new Set<string>();
-          // Map group → exercise indices for bulk skip
-          const groupExerciseIndices = new Map<string, number[]>();
-
-          for (let i = 0; i < activeWorkout.exercises.length; i++) {
-            const ex = activeWorkout.exercises[i];
-            if (ex.skipped) continue;
-            const def = getEffectiveExercise(ex.id);
-            if (!def) continue;
-            for (const m of def.primaryMuscles) {
-              const group = muscleToGroup.get(m);
-              if (!group) continue;
-              targetMuscles.add(group);
-              const indices = groupExerciseIndices.get(group) ?? [];
-              if (!indices.includes(i)) indices.push(i);
-              groupExerciseIndices.set(group, indices);
-            }
-          }
-
-          const recovering = recoveryStatuses.filter(
-            (r) => targetMuscles.has(r.group) && r.status === "recovering" && r.daysSinceLastTrained !== null,
-          );
-          if (recovering.length === 0) return null;
-
-          return (
-            <section
-              className="flex flex-col gap-3 rounded-2xl px-4 py-3.5"
-              style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.12)" }}
-            >
-              <div className="flex items-center gap-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-accent-yellow">
-                  <path d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
-                </svg>
-                <span className="text-xs font-semibold text-accent-yellow">Recovery Notice</span>
+        {recoveringGroups.length > 0 && (
+          <section
+            className="flex flex-col gap-3 rounded-2xl px-4 py-3.5"
+            style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.12)" }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-accent-yellow">
+                    <path d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                  </svg>
+                  <span className="text-xs font-semibold text-accent-yellow">Recovery Notice</span>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+                  {recoveringGroups.length === 1
+                    ? `${recoveringGroups[0].group} was trained recently. Open options if you want to skip it today.`
+                    : `${recoveringGroups.length} target muscle groups were trained recently. Open options if you want to skip any today.`}
+                </p>
               </div>
-              {recovering.map((r) => {
-                const consecutiveSkips = skipHistory.get(r.group) ?? 0;
-                const exerciseIndices = groupExerciseIndices.get(r.group) ?? [];
-                const exerciseCount = exerciseIndices.length;
+              <button
+                onClick={() => setShowRecoveryActions((value) => !value)}
+                className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
+              >
+                {showRecoveryActions ? "Hide" : "Options"}
+              </button>
+            </div>
 
-                return (
-                  <div key={r.group} className="flex flex-col gap-2">
-                    <p className="text-xs leading-relaxed text-text-secondary">
-                      <span className="font-medium text-text-primary">{r.group}</span> was trained {r.daysSinceLastTrained}d ago. Mentzer recommends 4-7 days rest for growth.
+            {showRecoveryActions && recoveringGroups.map((groupStatus) => {
+              const consecutiveSkips = skipHistory.get(groupStatus.group) ?? 0;
+              const exerciseIndices = groupExerciseIndices.get(groupStatus.group) ?? [];
+              const exerciseCount = exerciseIndices.length;
+
+              return (
+                <div key={groupStatus.group} className="flex flex-col gap-2 border-t border-white/[0.06] pt-3">
+                  <p className="text-xs leading-relaxed text-text-secondary">
+                    <span className="font-medium text-text-primary">{groupStatus.group}</span> was trained {groupStatus.daysSinceLastTrained}d ago. Heavy Duty usually works best with 4-7 days rest.
+                  </p>
+
+                  {consecutiveSkips >= 2 ? (
+                    <p className="text-[11px] font-medium leading-snug text-accent-red">
+                      {groupStatus.group} has been skipped {consecutiveSkips} sessions in a row. Train it today for balanced progress.
                     </p>
-
-                    {consecutiveSkips >= 2 ? (
-                      /* Blocked — 2+ consecutive skips */
-                      <p className="text-[11px] font-medium leading-snug text-accent-red">
-                        {r.group} has been skipped {consecutiveSkips} sessions in a row. Train it today for balanced progress.
+                  ) : consecutiveSkips === 1 ? (
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-[11px] leading-snug text-accent-orange">
+                        {groupStatus.group} was also skipped last session. Skipping again may slow progress.
                       </p>
-                    ) : consecutiveSkips === 1 ? (
-                      /* Warning — 1 consecutive skip */
-                      <div className="flex flex-col gap-1.5">
-                        <p className="text-[11px] leading-snug text-accent-orange">
-                          {r.group} was also skipped last session. Skipping again may slow progress.
-                        </p>
-                        <button
-                          onClick={() => {
-                            // Skip all exercises targeting this group (highest index first to preserve indices)
-                            const sorted = [...exerciseIndices].sort((a, b) => b - a);
-                            for (const idx of sorted) skipExercise(idx);
-                          }}
-                          className="self-start rounded-lg border border-accent-orange/25 bg-accent-orange/10 px-3 py-1.5 text-[11px] font-semibold text-accent-orange transition-colors active:bg-accent-orange/20"
-                        >
-                          Skip anyway ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
-                        </button>
-                      </div>
-                    ) : (
-                      /* Normal — 0 consecutive skips */
                       <button
                         onClick={() => {
                           const sorted = [...exerciseIndices].sort((a, b) => b - a);
                           for (const idx of sorted) skipExercise(idx);
                         }}
-                        className="self-start rounded-lg border border-accent-yellow/25 bg-accent-yellow/10 px-3 py-1.5 text-[11px] font-semibold text-accent-yellow transition-colors active:bg-accent-yellow/20"
+                        className="self-start rounded-lg border border-accent-orange/25 bg-accent-orange/10 px-3 py-1.5 text-[11px] font-semibold text-accent-orange transition-colors active:bg-accent-orange/20"
                       >
-                        Skip {r.group} this week ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
+                        Skip anyway ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
                       </button>
-                    )}
-                  </div>
-                );
-              })}
-            </section>
-          );
-        })()}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        const sorted = [...exerciseIndices].sort((a, b) => b - a);
+                        for (const idx of sorted) skipExercise(idx);
+                      }}
+                      className="self-start rounded-lg border border-accent-yellow/25 bg-accent-yellow/10 px-3 py-1.5 text-[11px] font-semibold text-accent-yellow transition-colors active:bg-accent-yellow/20"
+                    >
+                      Skip {groupStatus.group} this week ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </section>
+        )}
 
         {activeWorkout.exercises.length === 0 && (
           <section className="rounded-2xl bg-white/[0.03] p-6 text-center text-sm text-text-secondary" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
-            {isOpen ? "Tap the button below to add your first exercise." : "No lifting exercises for this day."}
+            {isOpen ? "Add your first exercise to start logging." : "No lift exercises are loaded for this day."}
           </section>
         )}
 
@@ -926,47 +1014,51 @@ export function Workout() {
 
           return (
             <div key={`s-${group.index}`} className="flex flex-col">
-              {isFirst && insertButton(group.index)}
+              {showWorkoutSetup && isFirst && insertButton(group.index)}
               <section className="flex flex-col gap-2">
-                <div className="flex justify-end px-1">
-                  <div className="flex items-center gap-0.5">
-                    <button
-                      onClick={() => handleMoveGroup(groupIndex, "up")}
-                      className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
-                      aria-label="Move up"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
-                        <path d="M18 15l-6-6-6 6" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleMoveGroup(groupIndex, "down")}
-                      className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isLast ? "pointer-events-none opacity-20" : ""}`}
-                      aria-label="Move down"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
+                {showWorkoutSetup && (
+                  <div className="flex justify-end px-1">
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => handleMoveGroup(groupIndex, "up")}
+                        className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                        aria-label="Move up"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
+                          <path d="M18 15l-6-6-6 6" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleMoveGroup(groupIndex, "down")}
+                        className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                        aria-label="Move down"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
                 <ExerciseCard {...buildCardProps(group.index)} />
               </section>
-              {insertButton(getInsertIdx())}
+              {showWorkoutSetup && insertButton(getInsertIdx())}
             </div>
           );
         })}
 
         {/* Add exercise button */}
-        <button
-          onClick={() => setShowAddExercise(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/[0.08] py-4 text-sm font-medium text-text-dim transition-colors active:bg-white/[0.03]"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-            <path d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Add Exercise
-        </button>
+        {showWorkoutSetup && (
+          <button
+            onClick={() => setShowAddExercise(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/[0.08] py-4 text-sm font-medium text-text-dim transition-colors active:bg-white/[0.03]"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+              <path d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Add Exercise
+          </button>
+        )}
       </PageLayout>
 
       {/* Sticky Finish Bar */}
