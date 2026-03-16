@@ -11,10 +11,12 @@ interface SettingsState {
   activeProgram: ProgramId;
   restTimerSeconds: number;
   autoStartTimer: boolean;
+  restTimerSound: boolean;
   gymEquipment: GymEquipmentProfile;
   customGymEquipment: CustomGymEquipment[];
   setRestTimerSeconds: (seconds: number) => void;
   setAutoStartTimer: (enabled: boolean) => void;
+  setRestTimerSound: (enabled: boolean) => void;
   setGymEquipmentAvailability: (equipmentId: string, available: boolean) => void;
   bulkSetGymEquipmentAvailability: (equipmentIds: string[], available: boolean) => void;
   addCustomGymEquipment: (item: CustomGymEquipment) => void;
@@ -26,6 +28,7 @@ interface SettingsState {
     activeProgram: ProgramId;
     restTimerSeconds: number;
     autoStartTimer: boolean;
+    restTimerSound?: boolean;
     gymEquipment: GymEquipmentProfile;
     customGymEquipment: CustomGymEquipment[];
   }) => void;
@@ -38,10 +41,12 @@ export const useSettingsStore = create<SettingsState>()(
       activeProgram: "heavy-duty-complete" as const,
       restTimerSeconds: 120,
       autoStartTimer: true,
+      restTimerSound: true,
       gymEquipment: buildDefaultGymEquipmentProfile(),
       customGymEquipment: [],
       setRestTimerSeconds: (seconds) => set({ restTimerSeconds: seconds }),
       setAutoStartTimer: (enabled) => set({ autoStartTimer: enabled }),
+      setRestTimerSound: (enabled) => set({ restTimerSound: enabled }),
       setGymEquipmentAvailability: (equipmentId, available) =>
         set((state) => ({
           gymEquipment: {
@@ -92,6 +97,7 @@ export const useSettingsStore = create<SettingsState>()(
           activeProgram: state.activeProgram,
           restTimerSeconds: state.restTimerSeconds,
           autoStartTimer: state.autoStartTimer,
+          restTimerSound: state.restTimerSound ?? true,
           gymEquipment: { ...buildDefaultGymEquipmentProfile(), ...state.gymEquipment },
           customGymEquipment: state.customGymEquipment,
         }),
@@ -100,6 +106,7 @@ export const useSettingsStore = create<SettingsState>()(
           activeProgram: "heavy-duty-complete",
           restTimerSeconds: 120,
           autoStartTimer: true,
+          restTimerSound: true,
           gymEquipment: buildDefaultGymEquipmentProfile(),
           customGymEquipment: [],
         }),

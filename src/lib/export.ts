@@ -32,6 +32,7 @@ export interface BackupSettingsState {
   activeProgram: ProgramId;
   restTimerSeconds: number;
   autoStartTimer: boolean;
+  restTimerSound: boolean;
   gymEquipment: GymEquipmentProfile;
   customGymEquipment: CustomGymEquipment[];
 }
@@ -160,6 +161,7 @@ function validateV2Backup(json: Record<string, unknown>): ValidatedBackup | null
         activeProgram: (settings.activeProgram as ProgramId | undefined) ?? "heavy-duty-complete",
         restTimerSeconds: asNumber(settings.restTimerSeconds, 120),
         autoStartTimer: asBoolean(settings.autoStartTimer, true),
+        restTimerSound: asBoolean(settings.restTimerSound, true),
         gymEquipment: asBooleanRecord(settings.gymEquipment),
         customGymEquipment: settings.customGymEquipment as CustomGymEquipment[],
       },
@@ -191,6 +193,7 @@ function validateLegacyBackup(json: LegacyExportData): ValidatedBackup | null {
         activeProgram: "heavy-duty-complete",
         restTimerSeconds: json.settings?.restTimerSeconds ?? 120,
         autoStartTimer: json.settings?.autoStartTimer ?? true,
+        restTimerSound: true,
         gymEquipment: {},
         customGymEquipment: [],
       },

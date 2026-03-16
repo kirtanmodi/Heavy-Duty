@@ -399,6 +399,7 @@ export function Home() {
       activeProgram: stState.activeProgram,
       restTimerSeconds: stState.restTimerSeconds,
       autoStartTimer: stState.autoStartTimer,
+      restTimerSound: stState.restTimerSound,
       gymEquipment: stState.gymEquipment,
       customGymEquipment: stState.customGymEquipment,
     });
