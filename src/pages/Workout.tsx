@@ -216,7 +216,30 @@ export function Workout() {
     cancelWorkout,
     history,
   } = useWorkoutStore();
-  const timer = useTimer();
+  const restTimerSound = useSettingsStore((s) => s.restTimerSound);
+  const playTimerSound = useCallback(() => {
+    if (!restTimerSound) return;
+    try {
+      const ctx = new AudioContext();
+      const playBeep = (time: number, freq: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.3, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
+        osc.start(time);
+        osc.stop(time + duration);
+      };
+      const now = ctx.currentTime;
+      playBeep(now, 880, 0.15);
+      playBeep(now + 0.18, 880, 0.15);
+      playBeep(now + 0.36, 1174.66, 0.3);
+    } catch { /* audio not available */ }
+  }, [restTimerSound]);
+  const timer = useTimer(playTimerSound);
   const autoStartTimer = useSettingsStore((s) => s.autoStartTimer);
   const gymEquipment = useSettingsStore((s) => s.gymEquipment);
 
@@ -626,19 +649,34 @@ export function Workout() {
               Skip Rest
             </button>
 
-            <button
-              onClick={() => useSettingsStore.getState().setAutoStartTimer(!autoStartTimer)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-text-dim transition-colors active:bg-white/[0.04]"
-            >
-              <div
-                className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${autoStartTimer ? "bg-accent-green/60" : "bg-white/[0.1]"}`}
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => useSettingsStore.getState().setAutoStartTimer(!autoStartTimer)}
+                className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-text-dim transition-colors active:bg-white/[0.04]"
               >
                 <div
-                  className={`h-4 w-4 rounded-full bg-white transition-transform ${autoStartTimer ? "translate-x-4" : "translate-x-0"}`}
-                />
-              </div>
-              Auto-start timer
-            </button>
+                  className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${autoStartTimer ? "bg-accent-green/60" : "bg-white/[0.1]"}`}
+                >
+                  <div
+                    className={`h-4 w-4 rounded-full bg-white transition-transform ${autoStartTimer ? "translate-x-4" : "translate-x-0"}`}
+                  />
+                </div>
+                Auto-start timer
+              </button>
+              <button
+                onClick={() => useSettingsStore.getState().setRestTimerSound(!restTimerSound)}
+                className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-text-dim transition-colors active:bg-white/[0.04]"
+              >
+                <div
+                  className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${restTimerSound ? "bg-accent-green/60" : "bg-white/[0.1]"}`}
+                >
+                  <div
+                    className={`h-4 w-4 rounded-full bg-white transition-transform ${restTimerSound ? "translate-x-4" : "translate-x-0"}`}
+                  />
+                </div>
+                Sound alert
+              </button>
+            </div>
           </div>
         </div>
       )}

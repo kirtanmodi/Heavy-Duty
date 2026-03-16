@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-export function useTimer() {
+export function useTimer(onComplete?: () => void) {
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
   const [label, setLabel] = useState('')
   const intervalRef = useRef<number | null>(null)
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
 
   const stop = useCallback(() => {
     if (intervalRef.current) {
@@ -25,6 +27,7 @@ export function useTimer() {
     intervalRef.current = window.setInterval(() => {
       setSecondsLeft(prev => {
         if (prev <= 1) {
+          onCompleteRef.current?.()
           stop()
           return 0
         }
