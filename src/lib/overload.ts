@@ -91,9 +91,13 @@ export function getOverloadSuggestion(
   }
 
   const targetReps = Math.min(lastMaxReps + 1, repMax)
+  const exceededRange = lastMaxReps > repMax
+
   if (isBodyweightOnly) {
     return {
-      message: `Last session — ${lastRepsStr}. Best was ${lastMaxReps} reps. Aim for ${targetReps} reps — one more than last time.`,
+      message: exceededRange
+        ? `Last session — ${lastRepsStr}. Reps were inconsistent (${lastMaxReps} high, others below ${repMax}). Aim for ${repMax} reps consistently across all sets.`
+        : `Last session — ${lastRepsStr}. Best was ${lastMaxReps} reps. Aim for ${targetReps} reps — one more than last time.`,
       suggestedWeight: 0,
       suggestedReps: targetReps,
       type: 'maintain',
@@ -101,7 +105,9 @@ export function getOverloadSuggestion(
   }
 
   return {
-    message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. Best was ${lastMaxReps} reps (within ${repMin}–${repMax} range). Same weight, aim for ${targetReps} reps — one more than last time.`,
+    message: exceededRange
+      ? `Last session @ ${lastWeight}kg — ${lastRepsStr}. Reps were inconsistent (${lastMaxReps} high, others below ${repMax}). Same weight, aim for ${repMax} reps consistently across all sets.`
+      : `Last session @ ${lastWeight}kg — ${lastRepsStr}. Best was ${lastMaxReps} reps (within ${repMin}–${repMax} range). Same weight, aim for ${targetReps} reps — one more than last time.`,
     suggestedWeight: lastWeight,
     suggestedReps: targetReps,
     type: 'maintain',
