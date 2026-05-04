@@ -348,17 +348,24 @@ export function Workout() {
     });
   }, [activeWorkout, seedExerciseEntry]);
   const hasLoggedSets = hasSessionSetInteraction || hasPersistedSetChanges;
-  const backOffWeightedSetCount = useMemo(() => {
-    if (!activeWorkout) return 0;
-
-    return activeWorkout.exercises.reduce((count, entry) => {
-      if (entry.skipped) return count;
-      const exercise = getEffectiveExercise(entry.id);
-      if (!exercise) return count;
-      if (exercise.equipment === "bodyweight+" && weightMode[entry.id] === "bodyweight") return count;
-      return count + entry.sets.filter((set) => set.weight > 0).length;
-    }, 0);
-  }, [activeWorkout, weightMode]);
+  const isBodyweightOnlyMode = useCallback((entry: ExerciseEntry, exercise: Exercise) => {
+    if (exercise.equipment !== "bodyweight+") return false;
+    const storedMode = weightMode[entry.id];
+    if (storedMode) return storedMode === "bodyweight";
+    const lastSets = getLastSets(entry.id, history);
+    return !(lastSets && lastSets.some((set) => set.weight > 0));
+  }, [history, weightMode]);
+  const getBackOffSetCount = useCallback((entry: ExerciseEntry) => {
+    if (entry.skipped) return 0;
+    const exercise = getEffectiveExercise(entry.id);
+    if (!exercise) return 0;
+    if (isBodyweightOnlyMode(entry, exercise)) return 0;
+    return entry.sets.filter((set) => set.weight > 0).length;
+  }, [isBodyweightOnlyMode]);
+  const backOffWeightedSetCount = useMemo(
+    () => activeWorkout?.exercises.reduce((count, entry) => count + getBackOffSetCount(entry), 0) ?? 0,
+    [activeWorkout, getBackOffSetCount],
+  );
   const canBackOffWorkout = backOffWeightedSetCount > 0;
   const gymEquipmentOptions = useMemo(
     () => (liftFocus ? getGymEquipmentOptionsForFocus(liftFocus) : []),
@@ -430,12 +437,10 @@ export function Workout() {
 
     let reducedSets = 0;
     const exercises = activeWorkout.exercises.map((entry) => {
-      if (entry.skipped) return entry;
       const exercise = getEffectiveExercise(entry.id);
       if (!exercise) return entry;
-      if (exercise.equipment === "bodyweight+" && weightMode[entry.id] === "bodyweight") return entry;
 
-      const weightedSetCount = entry.sets.filter((set) => set.weight > 0).length;
+      const weightedSetCount = getBackOffSetCount(entry);
       if (weightedSetCount === 0) return entry;
 
       reducedSets += weightedSetCount;
@@ -453,6 +458,28 @@ export function Workout() {
     replaceActiveWorkoutExercises(exercises);
     setHasSessionSetInteraction(true);
     setBackOffFeedback(`Reduced ${reducedSets} weighted set${reducedSets === 1 ? "" : "s"} by one step.`);
+  };
+
+  const handleBackOffExercise = (exerciseIndex: number) => {
+    if (!activeWorkout) return;
+
+    const entry = activeWorkout.exercises[exerciseIndex];
+    if (!entry) return;
+    const exercise = getEffectiveExercise(entry.id);
+    if (!exercise) return;
+
+    const reducedSets = getBackOffSetCount(entry);
+    if (reducedSets === 0) {
+      setBackOffFeedback(`${entry.name} has no weighted sets to reduce.`);
+      return;
+    }
+
+    updateExercise(exerciseIndex, {
+      ...entry,
+      sets: backOffSetsByOneStep(entry.sets, exercise),
+    });
+    setHasSessionSetInteraction(true);
+    setBackOffFeedback(`Reduced ${entry.name} by one step (${reducedSets} set${reducedSets === 1 ? "" : "s"}).`);
   };
 
   const handleFinish = () => {
@@ -629,6 +656,8 @@ export function Workout() {
       onRemoveSet: handleRemoveSet,
       onSwap: (idx: number) => setSwapTarget(idx),
       onAutoReplace: handleAutoReplace,
+      onBackOff: handleBackOffExercise,
+      canBackOff: entry ? getBackOffSetCount(entry) > 0 : false,
       onRemove: (idx: number) => removeExerciseFromWorkout(idx),
       onSkip: (idx: number) => skipExercise(idx),
       onUnskip: (idx: number) => unskipExercise(idx),

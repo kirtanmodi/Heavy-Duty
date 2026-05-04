@@ -22,6 +22,8 @@ interface ExerciseCardProps {
   onSwap: (exerciseIndex: number) => void;
   onRemove: (exerciseIndex: number) => void;
   onAutoReplace?: (exerciseIndex: number) => void;
+  onBackOff?: (exerciseIndex: number) => void;
+  canBackOff?: boolean;
   onSkip?: (exerciseIndex: number) => void;
   onUnskip?: (exerciseIndex: number) => void;
   onSetComplete?: (exerciseIndex: number) => void;
@@ -41,6 +43,8 @@ export function ExerciseCard({
   onSwap,
   onRemove,
   onAutoReplace,
+  onBackOff,
+  canBackOff = false,
   onSkip,
   onUnskip,
   onSetComplete,
@@ -337,6 +341,26 @@ export function ExerciseCard({
                       <path d="M20 7h-3m3 0v3m0-3l-4 4a4 4 0 01-5.66 0L9 9.66a4 4 0 00-5.66 0L1 12m3 5h3m-3 0v-3m0 3l4-4a4 4 0 015.66 0L15 14.34a4 4 0 005.66 0L23 12" />
                     </svg>
                     Auto Replace
+                  </button>
+                )}
+                {onBackOff && (
+                  <button
+                    onClick={() => {
+                      if (!canBackOff) return;
+                      onBackOff(exerciseIndex);
+                      setShowMenu(false);
+                    }}
+                    disabled={!canBackOff}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] transition-colors ${
+                      canBackOff
+                        ? "text-accent-orange active:bg-white/[0.06]"
+                        : "cursor-not-allowed text-text-dim opacity-50"
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <path d="M12 5v14m0 0l-5-5m5 5l5-5" />
+                    </svg>
+                    Back Off
                   </button>
                 )}
                 {onSkip && (
