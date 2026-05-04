@@ -9,8 +9,9 @@ import { cardioActivities, programs } from "../data/programs";
 import { useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { formatDateKey, getIsoDateKey } from "../lib/dates";
-import { createMentzerSets, getOverloadSuggestion } from "../lib/overload";
+import { backOffSetsByOneStep, createMentzerSets, getOverloadSuggestion } from "../lib/overload";
 import { getMuscleRecoveryStatus, getGroupSkipHistory, muscleToGroup } from "../lib/recovery";
+import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, LiftFocus, ProgramDay, Program, SetEntry, WorkoutEntry } from "../types";
@@ -242,6 +243,7 @@ export function Workout() {
   const timer = useTimer(playTimerSound);
   const autoStartTimer = useSettingsStore((s) => s.autoStartTimer);
   const gymEquipment = useSettingsStore((s) => s.gymEquipment);
+  const weightMode = useExerciseStore((s) => s.weightMode);
 
   const isOpen = dayId === "open";
 
@@ -259,6 +261,7 @@ export function Workout() {
   const [showRecoveryActions, setShowRecoveryActions] = useState(false);
   const [curationFeedback, setCurationFeedback] = useState<string | null>(null);
   const [sessionSaveError, setSessionSaveError] = useState<string | null>(null);
+  const [backOffFeedback, setBackOffFeedback] = useState<string | null>(null);
   const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
   const leavingRef = useRef(false);
   const sessionStartRef = useRef(activeWorkout?.startedAt);
@@ -289,6 +292,7 @@ export function Workout() {
   if (activeWorkout?.startedAt !== sessionStartRef.current) {
     sessionStartRef.current = activeWorkout?.startedAt;
     setHasSessionSetInteraction(false);
+    setBackOffFeedback(null);
   }
 
   // Derive conflict: active workout exists for a different day
@@ -344,6 +348,18 @@ export function Workout() {
     });
   }, [activeWorkout, seedExerciseEntry]);
   const hasLoggedSets = hasSessionSetInteraction || hasPersistedSetChanges;
+  const backOffWeightedSetCount = useMemo(() => {
+    if (!activeWorkout) return 0;
+
+    return activeWorkout.exercises.reduce((count, entry) => {
+      if (entry.skipped) return count;
+      const exercise = getEffectiveExercise(entry.id);
+      if (!exercise) return count;
+      if (exercise.equipment === "bodyweight+" && weightMode[entry.id] === "bodyweight") return count;
+      return count + entry.sets.filter((set) => set.weight > 0).length;
+    }, 0);
+  }, [activeWorkout, weightMode]);
+  const canBackOffWorkout = backOffWeightedSetCount > 0;
   const gymEquipmentOptions = useMemo(
     () => (liftFocus ? getGymEquipmentOptionsForFocus(liftFocus) : []),
     [liftFocus],
@@ -407,6 +423,36 @@ export function Workout() {
     const exercise = { ...activeWorkout!.exercises[exerciseIndex] };
     if (exercise.sets.length <= 1) return;
     updateExercise(exerciseIndex, { ...exercise, sets: exercise.sets.filter((_, i) => i !== setIndex) });
+  };
+
+  const handleBackOffWorkout = () => {
+    if (!activeWorkout) return;
+
+    let reducedSets = 0;
+    const exercises = activeWorkout.exercises.map((entry) => {
+      if (entry.skipped) return entry;
+      const exercise = getEffectiveExercise(entry.id);
+      if (!exercise) return entry;
+      if (exercise.equipment === "bodyweight+" && weightMode[entry.id] === "bodyweight") return entry;
+
+      const weightedSetCount = entry.sets.filter((set) => set.weight > 0).length;
+      if (weightedSetCount === 0) return entry;
+
+      reducedSets += weightedSetCount;
+      return {
+        ...entry,
+        sets: backOffSetsByOneStep(entry.sets, exercise),
+      };
+    });
+
+    if (reducedSets === 0) {
+      setBackOffFeedback("No weighted sets to reduce.");
+      return;
+    }
+
+    replaceActiveWorkoutExercises(exercises);
+    setHasSessionSetInteraction(true);
+    setBackOffFeedback(`Reduced ${reducedSets} weighted set${reducedSets === 1 ? "" : "s"} by one step.`);
   };
 
   const handleFinish = () => {
@@ -497,7 +543,7 @@ export function Workout() {
     if (!activeWorkout || !liftFocus) return;
 
     if (hasLoggedSets) {
-      setCurationFeedback("Curating is locked after you log a set so you do not overwrite workout data.");
+      setCurationFeedback("Curating is locked after set changes so you do not overwrite workout data.");
       return;
     }
 
@@ -825,46 +871,78 @@ export function Workout() {
           </section>
         )}
 
-        <section className="surface-card-muted rounded-[1.55rem] p-4">
+        <section className="surface-card-muted rounded-[1.4rem] p-3.5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="section-label">Session</p>
               <p className="mt-1 text-sm font-semibold text-text-primary">
-                {activeExerciseCount} exercise{activeExerciseCount !== 1 ? "s" : ""} · {completedSets}/{totalSets} sets logged
-              </p>
-              <p className="mt-1 text-sm leading-relaxed text-text-muted">
-                {showWorkoutSetup
-                  ? "Setup tools are open below. Make your changes, then get back to logging."
-                  : "Stay in logging mode unless you need to change the exercise list."}
+                {activeExerciseCount} exercise{activeExerciseCount !== 1 ? "s" : ""} · {completedSets}/{totalSets} sets
               </p>
             </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => setShowWorkoutSetup((value) => !value)}
-              className={`${showWorkoutSetup ? "btn-primary text-white" : "btn-secondary"} px-4 py-2.5 text-sm font-semibold`}
+              className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors ${
+                showWorkoutSetup
+                  ? "bg-accent-red text-white"
+                  : "border border-white/[0.08] bg-white/[0.03] text-text-secondary active:bg-white/[0.07]"
+              }`}
             >
-              {showWorkoutSetup ? "Done Customizing" : "Customize Workout"}
-            </button>
-            <button
-              onClick={() => setShowCoachingHints((value) => !value)}
-              className="btn-ghost px-4 py-2.5 text-sm font-semibold"
-            >
-              {showCoachingHints ? "Hide Hints" : "Show Hints"}
+              {showWorkoutSetup ? "Close Tools" : "Tools"}
             </button>
           </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowCoachingHints((value) => !value)}
+              className={`rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                showCoachingHints
+                  ? "border-accent-blue/25 bg-accent-blue/12 text-accent-blue"
+                  : "border-white/[0.08] bg-white/[0.03] text-text-secondary active:bg-white/[0.07]"
+              }`}
+            >
+              {showCoachingHints ? "Hints On" : "Show Hints"}
+            </button>
+
+            <button
+              onClick={handleBackOffWorkout}
+              disabled={!canBackOffWorkout}
+              className={`rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                canBackOffWorkout
+                  ? "border-accent-orange/25 bg-accent-orange/10 text-accent-orange active:bg-accent-orange/18"
+                  : "cursor-not-allowed border-white/[0.05] bg-white/[0.02] text-text-dim opacity-60"
+              }`}
+            >
+              Back Off Today
+            </button>
+
+            {showWorkoutSetup && (
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                Reorder and add exercises below
+              </span>
+            )}
+
+            {recoveringGroups.length > 0 && (
+              <button
+                onClick={() => setShowRecoveryActions((value) => !value)}
+                className="rounded-full border border-accent-yellow/25 bg-accent-yellow/10 px-3 py-2 text-[11px] font-semibold text-accent-yellow transition-colors active:bg-accent-yellow/18"
+              >
+                {showRecoveryActions ? "Hide Recovery" : `${recoveringGroups.length} recovering`}
+              </button>
+            )}
+          </div>
+
+          <p className="mt-2 text-[11px] leading-snug text-text-dim">
+            {backOffFeedback ?? "Use if warm-up feels heavy or form feels off."}
+          </p>
         </section>
 
         {showWorkoutSetup && (
-          <section
-            className="flex flex-col gap-4 rounded-2xl p-5"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-          >
+          <section className="surface-card flex flex-col gap-4 rounded-[1.5rem] p-4">
             <div className="flex flex-col gap-1">
-              <h2 className="text-sm font-bold tracking-wide text-text-primary">Workout Setup</h2>
+              <p className="section-label">Workout Tools</p>
+              <h2 className="text-sm font-bold tracking-wide text-text-primary">Customize this session</h2>
               <p className="text-xs leading-relaxed text-text-muted">
-                Add exercises, reorder cards, or rebuild this workout.
+                Add exercises, reorder cards, or rebuild the day from your gym profile.
               </p>
             </div>
 
@@ -879,7 +957,7 @@ export function Workout() {
                 onClick={() => setShowWorkoutSetup(false)}
                 className="btn-ghost px-4 py-3 text-sm font-semibold"
               >
-                Done
+                Back to Logging
               </button>
             </div>
 
@@ -901,7 +979,7 @@ export function Workout() {
                   </span>
                   {hasLoggedSets && (
                     <span className="rounded-full border border-accent-yellow/25 px-2.5 py-1 text-accent-yellow">
-                      Locked after first logged set
+                      Locked after set changes
                     </span>
                   )}
                 </div>
@@ -947,7 +1025,7 @@ export function Workout() {
 
         {recoveringGroups.length > 0 && (
           <section
-            className="flex flex-col gap-3 rounded-2xl px-4 py-3.5"
+            className="flex flex-col gap-3 rounded-[1.35rem] px-3.5 py-3"
             style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.12)" }}
           >
             <div className="flex items-start justify-between gap-3">
@@ -956,19 +1034,19 @@ export function Workout() {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-accent-yellow">
                     <path d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
                   </svg>
-                  <span className="text-xs font-semibold text-accent-yellow">Recovery Notice</span>
+                  <span className="text-xs font-semibold text-accent-yellow">Recovery</span>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+                <p className="mt-1 text-sm leading-relaxed text-text-secondary">
                   {recoveringGroups.length === 1
-                    ? `${recoveringGroups[0].group} was trained recently. Open options if you want to skip it today.`
-                    : `${recoveringGroups.length} target muscle groups were trained recently. Open options if you want to skip any today.`}
+                    ? `${recoveringGroups[0].group} was trained recently. Review it before pushing hard again.`
+                    : `${recoveringGroups.length} target muscle groups were trained recently. Review them before logging.`}
                 </p>
               </div>
               <button
                 onClick={() => setShowRecoveryActions((value) => !value)}
                 className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
               >
-                {showRecoveryActions ? "Hide" : "Options"}
+                {showRecoveryActions ? "Hide" : "Review"}
               </button>
             </div>
 
@@ -979,7 +1057,7 @@ export function Workout() {
 
               return (
                 <div key={groupStatus.group} className="flex flex-col gap-2 border-t border-white/[0.06] pt-3">
-                  <p className="text-xs leading-relaxed text-text-secondary">
+                  <p className="text-[12px] leading-relaxed text-text-secondary">
                     <span className="font-medium text-text-primary">{groupStatus.group}</span> was trained {groupStatus.daysSinceLastTrained}d ago. Heavy Duty usually works best with 4-7 days rest.
                   </p>
 

@@ -251,6 +251,7 @@ export function Home() {
   const [calendarDateDraft, setCalendarDateDraft] = useState("");
   const [calendarActionError, setCalendarActionError] = useState<string | null>(null);
   const [calendarMonthOffset, setCalendarMonthOffset] = useState(0);
+  const [showCalendarLegend, setShowCalendarLegend] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const recoveryStatuses = useMemo(() => getMuscleRecoveryStatus(history), [history]);
@@ -611,7 +612,7 @@ export function Home() {
         <SectionHeading
           eyebrow="Actions"
           title={activeWorkout ? "Resume your session" : isDoneToday ? "Logged for today" : "Start from here"}
-          description="Keep the top of Home focused on what you can do right now."
+          description="Keep the first screen focused on the next decision, not every decision."
         />
 
         {activeWorkout && (
@@ -731,29 +732,40 @@ export function Home() {
           </div>
         )}
 
-        {!activeWorkout && !isDoneToday && (
-          <div className="grid grid-cols-2 gap-3">
-            {shortcutOptions.map((option) => (
-              <button
-                key={option.key}
-                onClick={() => handleOptionTap(option)}
-                {...(getOptionPrefetchPath(option) ? prefetchButtonProps(getOptionPrefetchPath(option)!) : {})}
-                className="surface-card-muted flex flex-col gap-3 rounded-[1.45rem] p-4 text-left"
-              >
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-[1rem]"
-                  style={{ background: `${option.accentColor}15`, color: option.accentColor }}
+        {!activeWorkout && !isDoneToday && shortcutOptions.length > 0 && (
+          <div className="surface-card-muted rounded-[1.45rem] p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="section-label">Quick Log</p>
+                <p className="mt-1 text-sm leading-relaxed text-text-muted">
+                  Cardio, recovery, rest, or a freeform session without taking over the screen.
+                </p>
+              </div>
+            </div>
+
+            <div className="scrollbar-hide -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+              {shortcutOptions.map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => handleOptionTap(option)}
+                  {...(getOptionPrefetchPath(option) ? prefetchButtonProps(getOptionPrefetchPath(option)!) : {})}
+                  className="flex min-w-[8.75rem] shrink-0 items-center gap-3 rounded-[1.25rem] border border-white/[0.06] bg-white/[0.03] px-3.5 py-3 text-left"
                 >
-                  {option.icon}
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-text-primary">{option.label}</h3>
-                  <p className="mt-0.5 text-[11px] text-text-muted">
-                    {option.type === "open" ? "Freeform session" : "Quick log"}
-                  </p>
-                </div>
-              </button>
-            ))}
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[1rem]"
+                    style={{ background: `${option.accentColor}15`, color: option.accentColor }}
+                  >
+                    {option.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-text-primary">{option.label}</h3>
+                    <p className="mt-0.5 text-[12px] text-text-muted">
+                      {option.type === "open" ? "Freeform" : "Log now"}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -765,9 +777,9 @@ export function Home() {
               className="flex w-full items-center justify-between px-4 py-4 text-left"
             >
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-text-primary">{isDoneToday ? "Start a lift workout" : "Choose a different lift day"}</p>
+                <p className="text-sm font-semibold text-text-primary">{isDoneToday ? "Start a lift workout" : "Other lift days"}</p>
                 <p className="mt-1 text-xs text-text-muted">
-                  {isDoneToday ? "Override today's schedule and start a lifting session." : "Manual overrides stay available, but they no longer crowd the top of the screen."}
+                  {isDoneToday ? "Override today and start another lift." : "Manual lift overrides stay available, just tucked away."}
                 </p>
               </div>
               <svg
@@ -891,36 +903,47 @@ export function Home() {
             ))}
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              <span className="h-2 w-2 rounded-full bg-accent-green" />
-              Lift
-            </span>
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              <span className="h-2 w-2 rounded-full bg-accent-blue" />
-              Cardio
-            </span>
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              <span className="h-2 w-2 rounded-full bg-accent-blue/65" />
-              Recovery
-            </span>
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              <span className="h-2 w-2 rounded-full bg-accent-green/45" />
-              Rest
-            </span>
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              <span className="h-2 w-2 rounded-full ring-1 ring-accent-green/60" />
-              Planned
-            </span>
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              <span className="h-2 w-2 rounded-full ring-1 ring-accent-orange/60" />
-              Suggested Change
-            </span>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-sm leading-relaxed text-text-muted">
+              Tap any date to log, undo, or move a session.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowCalendarLegend((value) => !value)}
+              className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
+            >
+              {showCalendarLegend ? "Hide Legend" : "Legend"}
+            </button>
           </div>
 
-          <p className="mt-4 text-sm leading-relaxed text-text-muted">
-            Tap an empty date to log cardio or rest. Logged cardio or rest days can be undone here, and logged lift days can be moved to the right date.
-          </p>
+          {showCalendarLegend && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                <span className="h-2 w-2 rounded-full bg-accent-green" />
+                Lift
+              </span>
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                <span className="h-2 w-2 rounded-full bg-accent-blue" />
+                Cardio
+              </span>
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                <span className="h-2 w-2 rounded-full bg-accent-blue/65" />
+                Recovery
+              </span>
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                <span className="h-2 w-2 rounded-full bg-accent-green/45" />
+                Rest
+              </span>
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                <span className="h-2 w-2 rounded-full ring-1 ring-accent-green/60" />
+                Planned
+              </span>
+              <span className="chip chip-muted text-[11px] text-text-secondary">
+                <span className="h-2 w-2 rounded-full ring-1 ring-accent-orange/60" />
+                Suggested Change
+              </span>
+            </div>
+          )}
         </div>
       </section>
 

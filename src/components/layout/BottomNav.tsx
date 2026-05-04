@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { prefetchRoute } from "../../lib/routePrefetch";
 
 const tabs = [
@@ -74,10 +74,6 @@ export function BottomNav() {
   const navigate = useNavigate();
   const [showSetupMenu, setShowSetupMenu] = useState(false);
 
-  useEffect(() => {
-    setShowSetupMenu(false);
-  }, [location.pathname]);
-
   const isSetupRoute = setupLinks.some((link) => location.pathname.startsWith(link.path));
   const shouldHide = location.pathname.startsWith("/workout") || /^\/history\/.+\/edit/.test(location.pathname);
   const primeRoute = (path: string) => {
@@ -94,7 +90,7 @@ export function BottomNav() {
       <div className="mx-auto w-full max-w-[460px]">
         {showSetupMenu && (
           <div className="mb-3 flex justify-end">
-            <div className="sheet-surface w-full max-w-[13rem] rounded-[1.5rem] p-2">
+            <div className="sheet-surface w-full max-w-[14.5rem] rounded-[1.5rem] p-2">
               <p className="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-dim">Setup</p>
               <div className="flex flex-col gap-1">
                 {setupLinks.map((link) => {
@@ -102,7 +98,10 @@ export function BottomNav() {
                   return (
                     <button
                       key={link.path}
-                      onClick={() => navigate(link.path)}
+                      onClick={() => {
+                        setShowSetupMenu(false);
+                        navigate(link.path);
+                      }}
                       onMouseEnter={() => primeRoute(link.path)}
                       onFocus={() => primeRoute(link.path)}
                       onTouchStart={() => primeRoute(link.path)}
@@ -145,7 +144,7 @@ export function BottomNav() {
                 onMouseEnter={() => (tab.path === "/setup" ? primeSetupRoutes() : primeRoute(tab.path))}
                 onFocus={() => (tab.path === "/setup" ? primeSetupRoutes() : primeRoute(tab.path))}
                 onTouchStart={() => (tab.path === "/setup" ? primeSetupRoutes() : primeRoute(tab.path))}
-                className={`relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[1.2rem] px-2 transition-colors ${
+                className={`relative flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-[1.2rem] px-2 transition-colors ${
                   active ? "text-text-primary" : "text-text-muted active:text-text-secondary"
                 }`}
               >
@@ -160,7 +159,7 @@ export function BottomNav() {
                 <span className="relative z-10">
                   <TabIcon icon={tab.icon} active={active} />
                 </span>
-                <span className="relative z-10 text-[10px] font-medium">{tab.label}</span>
+                <span className="relative z-10 text-[11px] font-medium">{tab.label}</span>
               </button>
             );
           })}

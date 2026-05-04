@@ -56,13 +56,11 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
     availableCandidates.some((exercise) => groupMatches(exercise, group.muscles as readonly MuscleGroup[])),
   );
 
-  useEffect(() => {
-    if (activeGroup !== "all" && !visibleGroups.some((group) => group.label === activeGroup)) {
-      setActiveGroup("all");
-    }
-  }, [activeGroup, visibleGroups]);
-
-  const selectedGroup = visibleGroups.find((group) => group.label === activeGroup);
+  const resolvedActiveGroup =
+    activeGroup !== "all" && !visibleGroups.some((group) => group.label === activeGroup)
+      ? "all"
+      : activeGroup;
+  const selectedGroup = visibleGroups.find((group) => group.label === resolvedActiveGroup);
   const candidates = availableCandidates
     .filter((exercise) => {
       if (search && !exercise.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -143,7 +141,7 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
               <button
                 onClick={() => setActiveGroup("all")}
                 className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold transition-colors ${
-                  activeGroup === "all"
+                  resolvedActiveGroup === "all"
                     ? "bg-white/[0.1] text-text-primary"
                     : "bg-white/[0.04] text-text-muted active:bg-white/[0.08]"
                 }`}
@@ -155,11 +153,11 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
                   key={group.label}
                   onClick={() => setActiveGroup(group.label)}
                   className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold transition-colors ${
-                    activeGroup === group.label
+                    resolvedActiveGroup === group.label
                       ? "text-white"
                       : "bg-white/[0.04] text-text-muted active:bg-white/[0.08]"
                   }`}
-                  style={activeGroup === group.label ? { background: muscleColors[group.muscles[0]] || "#666" } : undefined}
+                  style={resolvedActiveGroup === group.label ? { background: muscleColors[group.muscles[0]] || "#666" } : undefined}
                 >
                   {group.label}
                 </button>

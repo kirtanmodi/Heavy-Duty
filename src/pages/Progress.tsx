@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Bar,
@@ -258,18 +258,20 @@ function ExerciseChip({
   name,
   sessionCount,
   onClick,
+  fullWidth = false,
 }: {
   active: boolean;
   color: string;
   name: string;
   sessionCount: number;
   onClick: () => void;
+  fullWidth?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`touch-target rounded-full border px-3 py-2 text-left transition-all ${
+      className={`touch-target ${fullWidth ? "flex w-full items-center justify-between" : "inline-flex items-center"} rounded-full border px-3 py-2 text-left transition-all ${
         active
           ? "text-text-primary"
           : "border-white/[0.08] bg-white/[0.03] text-text-secondary"
@@ -285,7 +287,7 @@ function ExerciseChip({
       }
     >
       <span className="text-[13px] font-medium">{name}</span>
-      <span className={`ml-2 text-[10px] font-semibold ${active ? "text-white/70" : "text-text-dim"}`}>
+      <span className={`${fullWidth ? "" : "ml-2"} text-[10px] font-semibold ${active ? "text-white/70" : "text-text-dim"}`}>
         {sessionCount}x
       </span>
     </button>
@@ -380,13 +382,11 @@ export function Progress() {
   const exerciseMeta = exercise
     ? `${exercise.primaryMuscles.map(humanizeLabel).join(", ")} · ${humanizeLabel(exercise.equipment)} · ${humanizeLabel(exercise.type)}`
     : "Saved from workout history";
+  const collapsedSessionCount = Math.min(2, sessions.length);
   const displayedSessions = useMemo(
-    () => (showAllSessions ? sessions.slice().reverse() : sessions.slice().reverse().slice(0, 3)),
-    [sessions, showAllSessions],
+    () => (showAllSessions ? sessions.slice().reverse() : sessions.slice().reverse().slice(0, collapsedSessionCount)),
+    [sessions, showAllSessions, collapsedSessionCount],
   );
-  const prGridStyle: CSSProperties = {
-    gridTemplateColumns: `repeat(${Math.max(1, Math.min(prs.length, 3))}, minmax(0, 1fr))`,
-  };
 
   return (
     <PageLayout className="flex flex-col gap-5">
@@ -426,20 +426,20 @@ export function Progress() {
         />
       ) : (
         <>
-          <section className="hero-surface rounded-[1.9rem] p-5 animate-fade-up">
+          <section className="hero-surface rounded-[1.75rem] p-[1.125rem] animate-fade-up">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="section-label text-white/60">Selected Exercise</p>
+                <p className="section-label text-white/60">Selected</p>
                 <h2
-                  className="mt-2 font-[var(--font-display)] text-[2rem] leading-none tracking-[0.08em]"
+                  className="mt-2 font-[var(--font-display)] text-[1.75rem] leading-[0.92] tracking-[0.08em]"
                   style={{ color }}
                 >
                   {exerciseTitle}
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-text-secondary">{exerciseMeta}</p>
+                <p className="mt-2 max-w-[19rem] text-[13px] leading-5 text-text-secondary">{exerciseMeta}</p>
               </div>
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.35rem] border border-white/[0.08] bg-white/[0.05]"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.2rem] border border-white/[0.08] bg-white/[0.05]"
                 style={{ boxShadow: `0 0 0 1px ${color}22 inset` }}
               >
                 <svg
@@ -500,8 +500,8 @@ export function Progress() {
           <section className="flex flex-col gap-3 animate-fade-up">
             <SectionHeading
               eyebrow="Exercise"
-              title="Change tracked exercise"
-              description="Open the picker only when you want to switch context."
+              title="Switch exercise"
+              description="Keep the picker closed by default and open it only when you need a different chart."
               trailing={
                 <button
                   type="button"
@@ -568,9 +568,9 @@ export function Progress() {
                   })}
                 </div>
 
-                <div className="surface-card rounded-[1.75rem] p-3.5">
+                <div className="surface-card rounded-[1.6rem] p-3.5">
                   {visibleExercises.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-2">
                       {visibleExercises.map((visibleExercise) => (
                         <ExerciseChip
                           key={visibleExercise.id}
@@ -578,6 +578,7 @@ export function Progress() {
                           color={groupColors[getExerciseGroupLabel(visibleExercise.id)] || "#8F93A2"}
                           name={visibleExercise.name}
                           sessionCount={visibleExercise.sessionCount}
+                          fullWidth
                           onClick={() => {
                             setSelectedId(visibleExercise.id);
                             setShowExercisePicker(false);
@@ -607,14 +608,16 @@ export function Progress() {
 
           {prs.length > 0 ? (
             <section className="flex flex-col gap-3 animate-fade-up">
-            <SectionHeading
-              eyebrow="Personal Bests"
-              title={`${exerciseTitle} PRs`}
-              description="All-time milestones from your logged history for this exercise."
-            />
-              <div className="grid gap-2" style={prGridStyle}>
+              <SectionHeading
+                eyebrow="Personal Bests"
+                title={`${exerciseTitle} PRs`}
+                description="All-time milestones for this exercise."
+              />
+              <div className="scrollbar-hide -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                 {prs.map((pr) => (
-                  <PRBadge key={pr.type} pr={pr} color={color} />
+                  <div key={pr.type} className="min-w-[10.75rem] shrink-0">
+                    <PRBadge pr={pr} color={color} />
+                  </div>
                 ))}
               </div>
             </section>
@@ -734,7 +737,7 @@ export function Progress() {
               description={
                 showAllSessions
                   ? `Showing all ${sessions.length} logged sessions for ${exerciseTitle}.`
-                  : `Showing the latest ${Math.min(3, sessions.length)} logged sessions for ${exerciseTitle}.`
+                  : `Showing the latest ${collapsedSessionCount} logged sessions for ${exerciseTitle}.`
               }
               trailing={
                 sessions.length > 3 ? (

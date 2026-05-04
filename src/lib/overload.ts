@@ -25,6 +25,15 @@ export function createMentzerSets(suggestion: OverloadSuggestion, exercise: Exer
   ]
 }
 
+export function backOffSetsByOneStep(sets: SetEntry[], exercise: Exercise): SetEntry[] {
+  return sets.map((set) => ({
+    ...set,
+    weight: set.weight > 0
+      ? Math.max(0, Number((set.weight - exercise.weightIncrement).toFixed(2)))
+      : set.weight,
+  }))
+}
+
 export function getOverloadSuggestion(
   exercise: Exercise,
   lastSets: SetEntry[] | null,

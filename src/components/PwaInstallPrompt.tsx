@@ -87,8 +87,10 @@ export function PwaInstallPrompt() {
 
   const isHiddenRoute =
     location.pathname.startsWith("/workout") || /^\/history\/.+\/edit/.test(location.pathname);
+  const isHomeRoute = location.pathname === "/";
 
-  const canShowPrompt = !isHiddenRoute && !dismissed && !isStandalone && (Boolean(deferredPrompt) || isIos);
+  const canShowPrompt =
+    isHomeRoute && !isHiddenRoute && !dismissed && !isStandalone && (Boolean(deferredPrompt) || isIos);
 
   const dismiss = () => {
     setDismissed(true);
@@ -111,8 +113,8 @@ export function PwaInstallPrompt() {
 
   const title = deferredPrompt ? "Install the app" : "Add to Home Screen";
   const message = deferredPrompt
-    ? "Open Heavy Duty like a native app with offline access and a cleaner full-screen layout."
-    : "Add Heavy Duty to your home screen for the cleaner app-style layout.";
+    ? "Open Heavy Duty like a native app with offline access."
+    : "Add Heavy Duty to your home screen for the app-style layout.";
 
   return (
     <AnimatePresence>
@@ -123,7 +125,7 @@ export function PwaInstallPrompt() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}
           transition={{ type: "spring", stiffness: 320, damping: 28 }}
-          className="pointer-events-none fixed inset-x-0 bottom-[calc(6.4rem+env(safe-area-inset-bottom))] z-40 px-3"
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(6.1rem+env(safe-area-inset-bottom))] z-40 px-3"
         >
           <div className="pointer-events-auto mx-auto w-full max-w-[460px]">
             <div className="surface-card rounded-[1.35rem] p-4">

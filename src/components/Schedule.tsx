@@ -174,6 +174,7 @@ export function Schedule() {
   const activeWorkout = useWorkoutStore((state) => state.activeWorkout);
   const history = useWorkoutStore((state) => state.history);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+  const [showLegend, setShowLegend] = useState(false);
   const program = getProgram("heavy-duty-complete")!;
   const todayDateKey = formatDateKey(new Date());
   const firstProjectedDateKey = history.some((entry) => getIsoDateKey(entry.date) === todayDateKey)
@@ -198,19 +199,34 @@ export function Schedule() {
           {program.name}
         </h2>
         <p className="section-caption mt-1 max-w-[24rem]">
-          Upcoming days advance from your history. The next planned day stays open by default and the rest can expand on demand.
+          Upcoming days advance from your history. Keep the list compact, then open details only when you need them.
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="chip chip-muted text-[11px] text-text-secondary">
-            <span className="inline-block h-2 w-2 rounded-full bg-accent-green" />
-            Recovered
-          </span>
-          <span className="chip chip-muted text-[11px] text-text-secondary">
-            <span className="inline-block h-2 w-2 rounded-full bg-accent-orange" />
-            Recovering
-          </span>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-sm leading-6 text-text-secondary">
+            The next planned day stays open by default.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowLegend((value) => !value)}
+            className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
+          >
+            {showLegend ? "Hide Legend" : "Legend"}
+          </button>
         </div>
+
+        {showLegend ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="chip chip-muted text-[11px] text-text-secondary">
+              <span className="inline-block h-2 w-2 rounded-full bg-accent-green" />
+              Recovered
+            </span>
+            <span className="chip chip-muted text-[11px] text-text-secondary">
+              <span className="inline-block h-2 w-2 rounded-full bg-accent-orange" />
+              Recovering
+            </span>
+          </div>
+        ) : null}
 
         {activeWorkout ? (
           <div className="surface-card-muted mt-3 rounded-[1.3rem] p-3.5">
@@ -231,6 +247,12 @@ export function Schedule() {
         const daysAgo = daysSinceLastSession(day.id, history);
         const stalenessText =
           isLogged ? "Already logged" : daysAgo === null ? "Never done" : daysAgo === 0 ? "Done today" : `Last done ${daysAgo}d ago`;
+        const leadTimeLabel =
+          leadDays === 0 ? (isLogged ? "Today" : "Starts now") : leadDays === 1 ? "Tomorrow" : `In ${leadDays}d`;
+        const compactStat =
+          day.type === "lift"
+            ? `${day.exercises.length} exercises`
+            : day.duration ?? typeBadge[day.type]?.label ?? "Planned";
         const pillGroups =
           day.type === "lift"
             ? getLiftDayGroups(day)
@@ -281,9 +303,6 @@ export function Schedule() {
                 <p className="mt-1 text-sm leading-6 text-text-secondary">
                   {isLogged ? getLoggedSummary(day, workout?.activityName) : getDaySummary(day)}
                 </p>
-                <p className="mt-1.5 text-[12px] leading-5 text-text-dim">
-                  {getCycleReason(cycleIndex, program.days)}
-                </p>
               </div>
 
               <DayTypeBadge type={day.type} />
@@ -291,19 +310,14 @@ export function Schedule() {
 
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="chip chip-muted text-[11px] text-text-secondary">
-                {stalenessText}
+                {leadTimeLabel}
               </span>
               <span className="chip chip-muted text-[11px] text-text-secondary">
-                {leadDays === 0 ? (isLogged ? "Today" : "Starts now") : leadDays === 1 ? "Tomorrow" : `In ${leadDays}d`}
+                {compactStat}
               </span>
-              {day.type === "lift" ? (
+              {isLogged ? (
                 <span className="chip chip-muted text-[11px] text-text-secondary">
-                  {day.exercises.length} exercises
-                </span>
-              ) : null}
-              {day.duration ? (
-                <span className="chip chip-muted text-[11px] text-text-secondary">
-                  {day.duration}
+                  {stalenessText}
                 </span>
               ) : null}
             </div>
@@ -323,6 +337,18 @@ export function Schedule() {
               >
                 {isExpanded ? "Hide Details" : "Show Details"}
               </button>
+            ) : null}
+
+            {isExpanded ? (
+              <div className="surface-card-muted mt-4 rounded-[1.25rem] p-3.5">
+                <p className="text-sm font-semibold text-text-primary">Why this day is here</p>
+                <p className="mt-1 text-sm leading-6 text-text-secondary">
+                  {getCycleReason(cycleIndex, program.days)}
+                </p>
+                {!isLogged ? (
+                  <p className="mt-2 text-[12px] leading-5 text-text-dim">{stalenessText}</p>
+                ) : null}
+              </div>
             ) : null}
 
             {isExpanded && day.type === "lift" && liftExercises.length > 0 ? (

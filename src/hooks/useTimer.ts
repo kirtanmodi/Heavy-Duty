@@ -6,7 +6,10 @@ export function useTimer(onComplete?: () => void) {
   const [label, setLabel] = useState('')
   const intervalRef = useRef<number | null>(null)
   const onCompleteRef = useRef(onComplete)
-  onCompleteRef.current = onComplete
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
 
   const stop = useCallback(() => {
     if (intervalRef.current) {

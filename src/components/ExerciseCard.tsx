@@ -259,7 +259,7 @@ export function ExerciseCard({
         style={{ background: `linear-gradient(180deg, ${color}, ${color}30)` }}
       />
 
-      <div className="flex flex-col gap-3.5 pl-5 pr-4 py-4">
+      <div className="flex flex-col gap-3 pl-5 pr-4 py-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex flex-1 flex-col gap-2">
@@ -275,29 +275,29 @@ export function ExerciseCard({
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+              <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
                 {equipmentLabel}
               </span>
-              <span className="text-[11px] text-text-dim">
+              <span className="text-[12px] text-text-dim">
                 {exercise.repRange[0]}–{exercise.repRange[1]} reps
               </span>
               {showOverloadBanner && totalSets > 0 && (
                 <>
-                  <span className="text-[11px] text-text-dim">·</span>
-                  <span className="text-[11px] tabular-nums" style={{ color: completedCount === totalSets ? "#46D369" : "var(--color-text-dim)" }}>
+                  <span className="text-[12px] text-text-dim">·</span>
+                  <span className="text-[12px] tabular-nums" style={{ color: completedCount === totalSets ? "#46D369" : "var(--color-text-dim)" }}>
                     {completedCount}/{totalSets}
                   </span>
                 </>
               )}
               {isBwExercise && (
-                <span className="text-[11px] text-text-dim">{bwMode ? "BW only" : "+ weight"}</span>
+                <span className="text-[12px] text-text-dim">{bwMode ? "BW only" : "+ weight"}</span>
               )}
             </div>
             <button
               onClick={() => setShowDetails((prev) => !prev)}
-              className="self-start text-[11px] font-semibold text-text-secondary transition-colors active:text-text-primary"
+              className="self-start rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-text-secondary transition-colors active:bg-white/[0.07] active:text-text-primary"
             >
-              {showDetails ? "Hide options" : isHistoryEdit ? "Edit options" : "Show options"}
+              {showDetails ? "Hide Tools" : isHistoryEdit ? "Edit Tools" : "Exercise Tools"}
             </button>
           </div>
 
@@ -366,7 +366,7 @@ export function ExerciseCard({
 
         {showDetails && (
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Options</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">Options</p>
 
             <div className="mt-2 flex flex-wrap gap-1.5">
               {(["barbell", "dumbbells", "cable", "machine", "bodyweight+"] as Equipment[]).map((eq) => {
@@ -380,7 +380,7 @@ export function ExerciseCard({
                       setEquipmentOverride(entry.id, eq);
                       setWeightOverride(undefined);
                     }}
-                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                    className={`rounded-full px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-all ${
                       isActive
                         ? hasOverride
                           ? "border border-accent-blue/25 bg-accent-blue/15 text-accent-blue"
@@ -396,12 +396,12 @@ export function ExerciseCard({
 
             {isBwExercise && (
               <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="text-[11px] text-text-muted">
+                <span className="text-[12px] text-text-muted">
                   {bwMode ? "Logging bodyweight only" : "Logging added weight"}
                 </span>
                 <button
                   onClick={toggleWeightMode}
-                  className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors ${
+                  className={`rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
                     bwMode
                       ? "border-accent-blue/20 bg-accent-blue/10 text-accent-blue"
                       : "border-white/[0.08] bg-white/[0.04] text-text-muted"
@@ -437,14 +437,14 @@ export function ExerciseCard({
         {/* Set inputs */}
         <div className="flex flex-col gap-2">
           {bwMode ? (
-            <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_2.25rem_1rem] items-center gap-1 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
+            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_2.5rem_1rem] items-center gap-1 px-0.5 text-[11px] font-semibold tracking-wider text-text-dim uppercase">
               <span className="text-center">#</span>
               <span>Reps</span>
               <span className="text-center">Fail</span>
               <span />
             </div>
           ) : (
-            <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem_1rem] items-center gap-0.5 px-0.5 text-[10px] font-semibold tracking-wider text-text-dim uppercase">
+            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem_1rem] items-center gap-1 px-0.5 text-[11px] font-semibold tracking-wider text-text-dim uppercase">
               <span className="text-center">#</span>
               <span>Kg</span>
               <span>Reps</span>
@@ -461,26 +461,26 @@ export function ExerciseCard({
             return bwMode ? (
               <div key={setIndex} className="flex flex-col gap-1">
                 <div
-                  className="grid grid-cols-[1.5rem_minmax(0,1fr)_2.25rem_1rem] items-start gap-1 rounded-xl transition-all"
+                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_2.5rem_1rem] items-start gap-1 rounded-xl transition-all"
                   style={completed ? { background: `${color}08` } : {}}
                 >
-                  <div className="flex h-11 flex-col items-center justify-center">
+                  <div className="flex h-12 flex-col items-center justify-center">
                     <button
                       onClick={() => toggleSetComplete(setIndex)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full transition-all"
+                      className="flex h-8 w-8 items-center justify-center rounded-full transition-all"
                     >
                       {completed ? (
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
-                          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
+                          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
                             <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
+                        <span className="text-[13px] font-semibold text-text-dim">{setIndex + 1}</span>
                       )}
                     </button>
                     {entry.sets.length === 2 && !completed && (
-                      <span className={`text-[8px] font-bold uppercase tracking-wide ${setIndex === 0 ? "text-text-dim" : "text-accent-red/70"}`}>
+                      <span className={`text-[9px] font-bold uppercase tracking-wide ${setIndex === 0 ? "text-text-dim" : "text-accent-red/70"}`}>
                         {setIndex === 0 ? "W-up" : "Work"}
                       </span>
                     )}
@@ -494,7 +494,7 @@ export function ExerciseCard({
                   />
                   <button
                     onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                    className={`h-11 rounded-xl text-[11px] font-semibold transition-all ${
+                    className={`h-12 rounded-xl text-[12px] font-semibold transition-all ${
                       set.toFailure
                         ? "bg-accent-red/15 text-accent-red"
                         : "bg-white/[0.04] text-text-dim border border-white/[0.04]"
@@ -504,7 +504,7 @@ export function ExerciseCard({
                   </button>
                   <button
                     onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-                    className={`flex h-11 w-full items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06] ${
+                    className={`flex h-12 w-full items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06] ${
                       entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""
                     }`}
                     aria-label={`Remove set ${setIndex + 1}`}
@@ -531,26 +531,26 @@ export function ExerciseCard({
             ) : (
               <div key={setIndex} className="flex flex-col gap-1">
                 <div
-                  className="grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem_1rem] items-start gap-0.5 rounded-xl transition-all"
+                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem_1rem] items-start gap-1 rounded-xl transition-all"
                   style={completed ? { background: `${color}08` } : {}}
                 >
-                  <div className="flex h-11 flex-col items-center justify-center">
+                  <div className="flex h-12 flex-col items-center justify-center">
                     <button
                       onClick={() => toggleSetComplete(setIndex)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full transition-all"
+                      className="flex h-8 w-8 items-center justify-center rounded-full transition-all"
                     >
                       {completed ? (
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
-                          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
+                          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
                             <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </div>
                       ) : (
-                        <span className="text-[12px] font-semibold text-text-dim">{setIndex + 1}</span>
+                        <span className="text-[13px] font-semibold text-text-dim">{setIndex + 1}</span>
                       )}
                     </button>
                     {entry.sets.length === 2 && !completed && (
-                      <span className={`text-[8px] font-bold uppercase tracking-wide ${setIndex === 0 ? "text-text-dim" : "text-accent-red/70"}`}>
+                      <span className={`text-[9px] font-bold uppercase tracking-wide ${setIndex === 0 ? "text-text-dim" : "text-accent-red/70"}`}>
                         {setIndex === 0 ? "W-up" : "Work"}
                       </span>
                     )}
@@ -572,7 +572,7 @@ export function ExerciseCard({
                   />
                   <button
                     onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                    className={`h-11 rounded-xl text-[11px] font-semibold transition-all ${
+                    className={`h-12 rounded-xl text-[12px] font-semibold transition-all ${
                       set.toFailure
                         ? "bg-accent-red/15 text-accent-red"
                         : "bg-white/[0.04] text-text-dim border border-white/[0.04]"
@@ -582,7 +582,7 @@ export function ExerciseCard({
                   </button>
                   <button
                     onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-                    className={`flex h-11 w-full items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06] ${
+                    className={`flex h-12 w-full items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06] ${
                       entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""
                     }`}
                     aria-label={`Remove set ${setIndex + 1}`}
