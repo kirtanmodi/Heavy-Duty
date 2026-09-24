@@ -1,9 +1,10 @@
-import { Suspense, lazy, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { BottomNav } from "./components/layout/BottomNav";
 import { PageLayout } from "./components/layout/PageLayout";
 import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
+import { useWorkoutStore } from "./store/workoutStore";
 import {
   loadExercisesPage,
   loadHistoryEditPage,
@@ -180,7 +181,24 @@ function AppRoutes() {
   );
 }
 
+function useExpireStaleWorkout() {
+  useEffect(() => {
+    const expire = () => useWorkoutStore.getState().expireStaleWorkout();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") expire();
+    };
+    expire();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", expire);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", expire);
+    };
+  }, []);
+}
+
 export default function App() {
+  useExpireStaleWorkout();
   return (
     <BrowserRouter>
       <div className="app-shell">

@@ -22,6 +22,7 @@ interface WorkoutState {
   replaceActiveWorkoutExercises: (exercises: ExerciseEntry[]) => void;
   finishWorkout: () => boolean;
   cancelWorkout: () => void;
+  expireStaleWorkout: () => void;
   addExerciseToWorkout: (exercise: ExerciseEntry) => void;
   insertExerciseAtIndex: (exercise: ExerciseEntry, index: number) => void;
   removeExerciseFromWorkout: (exerciseIndex: number) => void;
@@ -123,6 +124,35 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       cancelWorkout: () => set({ activeWorkout: null }),
+
+      // A session belongs to the day it started. Once that day is over, save any
+      // logged sets to history on the start date and clear the active workout.
+      expireStaleWorkout: () => {
+        const active = get().activeWorkout;
+        if (!active) return;
+        const startDateKey = getIsoDateKey(active.startedAt);
+        if (startDateKey >= formatDateKey(new Date())) return;
+        const exercises = active.exercises.filter((e) => e.skipped || e.sets.some((s) => s.reps > 0));
+        const hasLoggedSets = exercises.some((e) => !e.skipped);
+        if (!hasLoggedSets || hasWorkoutOnDate(get().history, startDateKey)) {
+          set({ activeWorkout: null });
+          return;
+        }
+        const entry: WorkoutEntry = {
+          id: crypto.randomUUID(),
+          date: active.startedAt,
+          program: active.program,
+          day: active.dayName,
+          dayId: active.dayId,
+          dayType: "lift",
+          startedAt: active.startedAt,
+          exercises,
+        };
+        set((state) => ({
+          history: sortHistory([entry, ...state.history]),
+          activeWorkout: null,
+        }));
+      },
 
       addExerciseToWorkout: (exercise) => {
         const active = get().activeWorkout;
