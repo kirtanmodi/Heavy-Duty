@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { WorkoutEntry, ExerciseEntry, DayType } from "../types";
+import type { WorkoutEntry, ExerciseEntry, DayType, SetEntry } from "../types";
 import { createSessionIso, formatDateKey, getIsoDateKey } from "../lib/dates";
 
 export interface ActiveWorkoutState {
@@ -258,6 +258,17 @@ export function getLastSets(exerciseId: string, history: WorkoutEntry[]) {
     if (ex && !ex.skipped && ex.sets.length > 0) return ex.sets;
   }
   return null;
+}
+
+/** Sets from the most recent sessions of an exercise, most recent first (skips skipped entries) */
+export function getRecentSessionSets(exerciseId: string, history: WorkoutEntry[], limit = 3): SetEntry[][] {
+  const sessions: SetEntry[][] = []
+  for (const workout of history) {
+    if (sessions.length >= limit) break
+    const ex = workout.exercises.find((e) => e.id === exerciseId)
+    if (ex && !ex.skipped && ex.sets.length > 0) sessions.push(ex.sets)
+  }
+  return sessions
 }
 
 export function getExerciseLastDoneDate(exerciseId: string, history: WorkoutEntry[]): string | null {

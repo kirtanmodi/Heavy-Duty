@@ -1,9 +1,49 @@
 import type { Exercise, SetEntry, OverloadSuggestion } from '../types'
 
-/** Extract working sets (to-failure) from last session, falling back to the last set */
-function getWorkingSets(lastSets: SetEntry[]): SetEntry[] {
-  const failureSets = lastSets.filter(s => s.toFailure)
-  return failureSets.length > 0 ? failureSets : [lastSets[lastSets.length - 1]]
+interface WorkingSets {
+  /** Working sets that were actually performed (reps logged) */
+  sets: SetEntry[]
+  /** A working set was planned but left blank (reps 0) */
+  unlogged: boolean
+  /** Planned working weight, used when the working set was left blank */
+  plannedWeight: number
+}
+
+/**
+ * Extract working sets (to-failure) from a session. Blank sets (0 reps) are
+ * ignored so an unlogged working set never reads as a failed one. Legacy
+ * sessions without a to-failure flag fall back to the last performed set.
+ */
+function getWorkingSets(sets: SetEntry[]): WorkingSets {
+  const planned = sets.filter(s => s.toFailure)
+  if (planned.length > 0) {
+    const performed = planned.filter(s => s.reps > 0)
+    return { sets: performed, unlogged: performed.length === 0, plannedWeight: planned[0].weight }
+  }
+  const performed = sets.filter(s => s.reps > 0)
+  const last = performed[performed.length - 1]
+  return { sets: last ? [last] : [], unlogged: !last, plannedWeight: last?.weight ?? 0 }
+}
+
+function roundWeight(weight: number): number {
+  return Number(weight.toFixed(2))
+}
+
+/** Max relative jump in one step (NSCA guidance: 2.5–10% load increases) */
+const MAX_JUMP_RATIO = 0.1
+
+/**
+ * Next working weight after hitting the top of the rep range. Barely over the
+ * top → one increment (classic double progression). Clearly over (2+ reps,
+ * the NSCA "2-for-2" signal) → Epley-estimate the load for targetReps, rounded
+ * down to the increment, capped at +10%.
+ */
+function getIncreasedWeight(weight: number, reps: number, repMax: number, targetReps: number, increment: number): number {
+  if (reps - repMax < 2 || weight <= 0) return roundWeight(weight + increment)
+  const estimated1RM = weight * (1 + reps / 30)
+  const target = Math.min(estimated1RM / (1 + targetReps / 30), weight * (1 + MAX_JUMP_RATIO))
+  const steps = Math.max(1, Math.floor((target - weight) / increment + 1e-9))
+  return roundWeight(weight + steps * increment)
 }
 
 /** Create Mentzer-style sets: Set 1 = warm-up at 50% weight, Set 2 = working set to failure */
@@ -34,9 +74,15 @@ export function backOffSetsByOneStep(sets: SetEntry[], exercise: Exercise): SetE
   }))
 }
 
+/**
+ * @param lastSets     most recent session's sets for this exercise
+ * @param olderSessions earlier sessions' sets, most recent first (optional —
+ *                      enables "missed twice" and stall detection)
+ */
 export function getOverloadSuggestion(
   exercise: Exercise,
   lastSets: SetEntry[] | null,
+  olderSessions: SetEntry[][] = [],
 ): OverloadSuggestion {
   const [repMin, repMax] = exercise.repRange
   const isBodyweight = exercise.equipment === 'bodyweight+'
@@ -53,14 +99,43 @@ export function getOverloadSuggestion(
   }
 
   // Focus on working sets (to-failure) for progression decisions
-  const workingSets = getWorkingSets(lastSets)
+  const working = getWorkingSets(lastSets)
+
+  if (working.unlogged) {
+    const weight = working.plannedWeight
+    if (weight <= 0 && !isBodyweight) {
+      return {
+        message: `Last session's working set wasn't logged. Pick a weight you can handle for ${repMin}–${repMax} reps.`,
+        suggestedWeight: null,
+        suggestedReps: repMin,
+        type: 'testing',
+      }
+    }
+    return {
+      message: `Last session's working set wasn't logged. Repeat ${weight > 0 ? `${weight}kg` : 'bodyweight'} and aim for ${repMin}–${repMax} reps.`,
+      suggestedWeight: weight,
+      suggestedReps: repMin,
+      type: 'maintain',
+    }
+  }
+
+  const workingSets = working.sets
   const lastWeight = workingSets[0].weight
-  const lastRepsStr = lastSets.map((s, i) => `Set ${i + 1}: ${s.reps}`).join(', ')
+  const lastRepsStr = lastSets.filter(s => s.reps > 0).map((s, i) => `Set ${i + 1}: ${s.reps}`).join(', ')
   const allHitTop = workingSets.every(s => s.reps >= repMax)
   const anyBelowBottom = workingSets.some(s => s.reps < repMin)
   const lastMaxReps = Math.max(...workingSets.map(s => s.reps))
+  const lastMinReps = Math.min(...workingSets.map(s => s.reps))
 
   const isBodyweightOnly = isBodyweight && lastWeight === 0
+
+  // Earlier sessions at the same working weight (most recent first, contiguous)
+  const sameWeightHistory: SetEntry[][] = []
+  for (const session of olderSessions) {
+    const older = getWorkingSets(session)
+    if (older.sets.length === 0 || older.sets[0].weight !== lastWeight) break
+    sameWeightHistory.push(older.sets)
+  }
 
   if (allHitTop) {
     if (isBodyweightOnly) {
@@ -71,12 +146,16 @@ export function getOverloadSuggestion(
         type: 'increase',
       }
     }
-    const increment = exercise.weightIncrement
-    const newWeight = lastWeight + increment
+    const clearlyOver = lastMinReps - repMax >= 2 && lastWeight > 0
+    const targetReps = clearlyOver ? Math.round((repMin + repMax) / 2) : repMin
+    const newWeight = getIncreasedWeight(lastWeight, lastMinReps, repMax, targetReps, exercise.weightIncrement)
+    const added = roundWeight(newWeight - lastWeight)
     return {
-      message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. All sets hit ${repMax}+ reps (top of ${repMin}–${repMax} range), so adding ${increment}kg. Start at ${repMin} reps and build back up.`,
+      message: clearlyOver
+        ? `Last session @ ${lastWeight}kg — ${lastRepsStr}. That's ${lastMinReps - repMax} reps past the top of ${repMin}–${repMax}, so the weight was too light. Adding ${added}kg — aim for ${targetReps} reps.`
+        : `Last session @ ${lastWeight}kg — ${lastRepsStr}. All sets hit ${repMax}+ reps (top of ${repMin}–${repMax} range), so adding ${added}kg. Start at ${repMin} reps and build back up.`,
       suggestedWeight: newWeight,
-      suggestedReps: repMin,
+      suggestedReps: targetReps,
       type: 'increase',
     }
   }
@@ -90,9 +169,24 @@ export function getOverloadSuggestion(
         type: 'decrease',
       }
     }
-    const dropWeight = Math.max(0, lastWeight - exercise.weightIncrement)
+    // One short session is usually day-to-day variability (sleep, food, stress),
+    // not lost strength. Drop only when clearly too heavy or missed twice running.
+    const shortBy = repMin - lastMinReps
+    const missedBefore = sameWeightHistory.length > 0 && sameWeightHistory[0].some(s => s.reps < repMin)
+    if (shortBy < 2 && !missedBefore) {
+      return {
+        message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. ${shortBy} rep short of ${repMin} — could be an off day. Repeat ${lastWeight}kg and aim for ${repMin}. Miss again and the weight drops.`,
+        suggestedWeight: lastWeight,
+        suggestedReps: repMin,
+        type: 'maintain',
+      }
+    }
+    const dropWeight = Math.max(0, roundWeight(lastWeight - exercise.weightIncrement))
+    const reason = missedBefore
+      ? `Below ${repMin} reps two sessions in a row`
+      : `Some sets fell below ${repMin} reps (bottom of ${repMin}–${repMax} range)`
     return {
-      message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. Some sets fell below ${repMin} reps (bottom of ${repMin}–${repMax} range). Dropping to ${dropWeight}kg to rebuild with proper form.`,
+      message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. ${reason}. Dropping to ${dropWeight}kg to rebuild with proper form.`,
       suggestedWeight: dropWeight,
       suggestedReps: repMin,
       type: 'decrease',
@@ -100,9 +194,18 @@ export function getOverloadSuggestion(
   }
 
   const targetReps = Math.min(lastMaxReps + 1, repMax)
+
+  // Stall: same weight for 3 sessions with no rep gain. Mentzer's prescription
+  // is more recovery between sessions, not more sets.
+  const stalled = sameWeightHistory.length >= 2
+    && sameWeightHistory.slice(0, 2).every(sets => Math.max(...sets.map(s => s.reps)) >= lastMaxReps)
+  const stallNote = stalled
+    ? ' No rep gain in 3 sessions — add an extra rest day before this workout.'
+    : ''
+
   if (isBodyweightOnly) {
     return {
-      message: `Last session — ${lastRepsStr}. Best was ${lastMaxReps} reps. Aim for ${targetReps} reps — one more than last time.`,
+      message: `Last session — ${lastRepsStr}. Best was ${lastMaxReps} reps. Aim for ${targetReps} reps — one more than last time.${stallNote}`,
       suggestedWeight: 0,
       suggestedReps: targetReps,
       type: 'maintain',
@@ -110,7 +213,7 @@ export function getOverloadSuggestion(
   }
 
   return {
-    message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. Best was ${lastMaxReps} reps (within ${repMin}–${repMax} range). Same weight, aim for ${targetReps} reps — one more than last time.`,
+    message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. Best was ${lastMaxReps} reps (within ${repMin}–${repMax} range). Same weight, aim for ${targetReps} reps — one more than last time.${stallNote}`,
     suggestedWeight: lastWeight,
     suggestedReps: targetReps,
     type: 'maintain',
