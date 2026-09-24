@@ -46,6 +46,9 @@ function getIncreasedWeight(weight: number, reps: number, repMax: number, target
   return roundWeight(weight + steps * increment)
 }
 
+/** Working sets per exercise, each taken to failure at the same weight */
+export const WORKING_SETS_PER_EXERCISE = 2
+
 /** Warm-up load as a fraction of working weight (Mentzer: last warm-up ~75%) */
 const WARMUP_LOAD_RATIO = 0.7
 
@@ -62,9 +65,9 @@ export function needsWarmUpSet(exercise: Exercise, earlierExercises: Exercise[])
 }
 
 /**
- * Create Mentzer-style sets: an optional warm-up (~70% of working weight for
- * about half the target reps — specific but far from failure) followed by one
- * working set to failure.
+ * Create sets: an optional warm-up (~70% of working weight for about half the
+ * target reps — specific but far from failure) followed by
+ * WORKING_SETS_PER_EXERCISE working sets to failure at the same weight.
  */
 export function createMentzerSets(
   suggestion: OverloadSuggestion,
@@ -72,8 +75,10 @@ export function createMentzerSets(
   options: { warmUp?: boolean } = {},
 ): SetEntry[] {
   const workingWeight = suggestion.suggestedWeight ?? 0
-  const workingSet: SetEntry = { weight: workingWeight, reps: suggestion.suggestedReps, toFailure: true, tempo: "4-1-4" }
-  if (options.warmUp === false) return [workingSet]
+  const workingSets: SetEntry[] = Array.from({ length: WORKING_SETS_PER_EXERCISE }, () => (
+    { weight: workingWeight, reps: suggestion.suggestedReps, toFailure: true, tempo: "4-1-4" }
+  ))
+  if (options.warmUp === false) return workingSets
 
   const isBodyweightOnly = exercise.equipment === 'bodyweight+' && workingWeight === 0
   const warmupWeight = isBodyweightOnly || workingWeight === 0
@@ -83,7 +88,7 @@ export function createMentzerSets(
 
   return [
     { weight: warmupWeight, reps: warmupReps, toFailure: false, tempo: "4-1-4" },
-    workingSet,
+    ...workingSets,
   ]
 }
 
@@ -185,7 +190,9 @@ function getBaseSuggestion(
     }
   }
 
-  const workingSets = working.sets
+  // Progression keys off the first working set. Later sets to failure are
+  // expected to lose 1–3 reps to fatigue and shouldn't trigger weight drops.
+  const workingSets = working.sets.slice(0, 1)
   const lastWeight = workingSets[0].weight
   const lastRepsStr = lastSets.filter(s => s.reps > 0).map((s, i) => `Set ${i + 1}: ${s.reps}`).join(', ')
   const allHitTop = workingSets.every(s => s.reps >= repMax)
@@ -200,13 +207,13 @@ function getBaseSuggestion(
   for (const session of olderSessions) {
     const older = getWorkingSets(session)
     if (older.sets.length === 0 || older.sets[0].weight !== lastWeight) break
-    sameWeightHistory.push(older.sets)
+    sameWeightHistory.push(older.sets.slice(0, 1))
   }
 
   if (allHitTop) {
     if (isBodyweightOnly) {
       return {
-        message: `Last session — ${lastRepsStr}. All sets hit ${repMax}+ reps. Bodyweight mastered — consider adding weight, or maintain for endurance.`,
+        message: `Last session — ${lastRepsStr}. First working set hit ${repMax}+ reps. Bodyweight mastered — consider adding weight, or maintain for endurance.`,
         suggestedWeight: 0,
         suggestedReps: repMax,
         type: 'increase',
@@ -219,7 +226,7 @@ function getBaseSuggestion(
     return {
       message: clearlyOver
         ? `Last session @ ${lastWeight}kg — ${lastRepsStr}. That's ${lastMinReps - repMax} reps past the top of ${repMin}–${repMax}, so the weight was too light. Adding ${added}kg — aim for ${targetReps} reps.`
-        : `Last session @ ${lastWeight}kg — ${lastRepsStr}. All sets hit ${repMax}+ reps (top of ${repMin}–${repMax} range), so adding ${added}kg. Start at ${repMin} reps and build back up.`,
+        : `Last session @ ${lastWeight}kg — ${lastRepsStr}. First working set hit ${repMax}+ reps (top of ${repMin}–${repMax} range), so adding ${added}kg. Start at ${repMin} reps and build back up.`,
       suggestedWeight: newWeight,
       suggestedReps: targetReps,
       type: 'increase',
@@ -229,7 +236,7 @@ function getBaseSuggestion(
   if (anyBelowBottom) {
     if (isBodyweightOnly) {
       return {
-        message: `Last session — ${lastRepsStr}. Some sets fell below ${repMin} reps. Focus on form and hit ${repMin} reps consistently.`,
+        message: `Last session — ${lastRepsStr}. First working set fell below ${repMin} reps. Focus on form and hit ${repMin} reps consistently.`,
         suggestedWeight: 0,
         suggestedReps: repMin,
         type: 'decrease',
@@ -250,7 +257,7 @@ function getBaseSuggestion(
     const dropWeight = Math.max(0, roundWeight(lastWeight - exercise.weightIncrement))
     const reason = missedBefore
       ? `Below ${repMin} reps two sessions in a row`
-      : `Some sets fell below ${repMin} reps (bottom of ${repMin}–${repMax} range)`
+      : `First working set fell below ${repMin} reps (bottom of ${repMin}–${repMax} range)`
     return {
       message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. ${reason}. Dropping to ${dropWeight}kg to rebuild with proper form.`,
       suggestedWeight: dropWeight,

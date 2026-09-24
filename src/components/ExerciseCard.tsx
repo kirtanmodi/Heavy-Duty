@@ -55,6 +55,8 @@ export function ExerciseCard({
 }: ExerciseCardProps) {
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const [weightOverride, setWeightOverride] = useState<boolean | undefined>(undefined);
+  // Label sets by role (warm-up vs working) whenever the entry carries working-set flags
+  const hasWorkingSetFlags = entry.sets.some((set) => set.toFailure);
   const [showMenu, setShowMenu] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
@@ -503,9 +505,9 @@ export function ExerciseCard({
                         <span className="text-[13px] font-semibold text-text-dim">{setIndex + 1}</span>
                       )}
                     </button>
-                    {entry.sets.length === 2 && !completed && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wide ${setIndex === 0 ? "text-text-dim" : "text-accent-red/70"}`}>
-                        {setIndex === 0 ? "W-up" : "Work"}
+                    {hasWorkingSetFlags && !completed && (
+                      <span className={`text-[9px] font-bold uppercase tracking-wide ${entry.sets[setIndex].toFailure ? "text-accent-red/70" : "text-text-dim"}`}>
+                        {entry.sets[setIndex].toFailure ? "Work" : "W-up"}
                       </span>
                     )}
                   </div>
@@ -573,9 +575,9 @@ export function ExerciseCard({
                         <span className="text-[13px] font-semibold text-text-dim">{setIndex + 1}</span>
                       )}
                     </button>
-                    {entry.sets.length === 2 && !completed && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wide ${setIndex === 0 ? "text-text-dim" : "text-accent-red/70"}`}>
-                        {setIndex === 0 ? "W-up" : "Work"}
+                    {hasWorkingSetFlags && !completed && (
+                      <span className={`text-[9px] font-bold uppercase tracking-wide ${entry.sets[setIndex].toFailure ? "text-accent-red/70" : "text-text-dim"}`}>
+                        {entry.sets[setIndex].toFailure ? "Work" : "W-up"}
                       </span>
                     )}
                   </div>
