@@ -46,22 +46,44 @@ function getIncreasedWeight(weight: number, reps: number, repMax: number, target
   return roundWeight(weight + steps * increment)
 }
 
-/** Create Mentzer-style sets: Set 1 = warm-up at 50% weight, Set 2 = working set to failure */
-export function createMentzerSets(suggestion: OverloadSuggestion, exercise: Exercise): SetEntry[] {
-  const workingWeight = suggestion.suggestedWeight ?? 0
-  const isBodyweightOnly = exercise.equipment === 'bodyweight+' && workingWeight === 0
+/** Warm-up load as a fraction of working weight (Mentzer: last warm-up ~75%) */
+const WARMUP_LOAD_RATIO = 0.7
 
+/**
+ * A warm-up set is only needed when none of this exercise's primary muscles
+ * were already the primary target of an earlier exercise this session. This
+ * keeps Mentzer's pre-exhaust pairs back-to-back (e.g. leg extension → leg
+ * press, flyes → incline press, pullover → pulldown).
+ */
+export function needsWarmUpSet(exercise: Exercise, earlierExercises: Exercise[]): boolean {
+  return !earlierExercises.some((earlier) =>
+    earlier.primaryMuscles.some((muscle) => exercise.primaryMuscles.includes(muscle)),
+  )
+}
+
+/**
+ * Create Mentzer-style sets: an optional warm-up (~70% of working weight for
+ * about half the target reps — specific but far from failure) followed by one
+ * working set to failure.
+ */
+export function createMentzerSets(
+  suggestion: OverloadSuggestion,
+  exercise: Exercise,
+  options: { warmUp?: boolean } = {},
+): SetEntry[] {
+  const workingWeight = suggestion.suggestedWeight ?? 0
+  const workingSet: SetEntry = { weight: workingWeight, reps: suggestion.suggestedReps, toFailure: true, tempo: "4-1-4" }
+  if (options.warmUp === false) return [workingSet]
+
+  const isBodyweightOnly = exercise.equipment === 'bodyweight+' && workingWeight === 0
   const warmupWeight = isBodyweightOnly || workingWeight === 0
     ? 0
-    : Math.round((workingWeight * 0.5) / exercise.weightIncrement) * exercise.weightIncrement
-
-  const warmupReps = isBodyweightOnly
-    ? Math.max(1, Math.ceil(suggestion.suggestedReps / 2))
-    : suggestion.suggestedReps
+    : Math.round((workingWeight * WARMUP_LOAD_RATIO) / exercise.weightIncrement) * exercise.weightIncrement
+  const warmupReps = Math.max(3, Math.ceil(suggestion.suggestedReps / 2))
 
   return [
     { weight: warmupWeight, reps: warmupReps, toFailure: false, tempo: "4-1-4" },
-    { weight: workingWeight, reps: suggestion.suggestedReps, toFailure: true, tempo: "4-1-4" },
+    workingSet,
   ]
 }
 

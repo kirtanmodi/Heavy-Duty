@@ -9,7 +9,7 @@ import { cardioActivities, getDefaultExerciseIds, programs } from "../data/progr
 import { useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { formatDateKey, getIsoDateKey } from "../lib/dates";
-import { backOffSetsByOneStep, createMentzerSets, getOverloadSuggestion } from "../lib/overload";
+import { backOffSetsByOneStep, createMentzerSets, getOverloadSuggestion, needsWarmUpSet } from "../lib/overload";
 import { getMuscleRecoveryStatus, getGroupSkipHistory, muscleToGroup } from "../lib/recovery";
 import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
@@ -277,13 +277,17 @@ export function Workout() {
       : focusColors[day?.focus ?? ""] ?? "#FFAA00";
   const liftFocus = !isOpen && day?.type === "lift" && isLiftFocus(day.focus) ? day.focus : null;
 
-  const seedExerciseEntry = useCallback((exerciseId: string): ExerciseEntry => {
+  // earlierIds: exercises before this one in the session — decides whether a warm-up set is needed
+  const seedExerciseEntry = useCallback((exerciseId: string, earlierIds: string[] = []): ExerciseEntry => {
     const exercise = getEffectiveExercise(exerciseId);
     if (!exercise) return { id: exerciseId, name: exerciseId, sets: [] };
+    const earlierExercises = earlierIds
+      .map((id) => getEffectiveExercise(id))
+      .filter((e): e is Exercise => !!e);
 
     const [lastSets = null, ...olderSessions] = getRecentSessionSets(exerciseId, history);
     const suggestion = getOverloadSuggestion(exercise, lastSets, olderSessions, getDaysSinceExercise(exerciseId, history));
-    const sets = createMentzerSets(suggestion, exercise);
+    const sets = createMentzerSets(suggestion, exercise, { warmUp: needsWarmUpSet(exercise, earlierExercises) });
 
     return { id: exercise.id, name: exercise.name, sets };
   }, [history]);
@@ -319,7 +323,7 @@ export function Workout() {
       lastWorkoutForDay?.exercises.map((e) => e.id),
     );
 
-    const exercises = exerciseIds.map(seedExerciseEntry);
+    const exercises = exerciseIds.map((id, i) => seedExerciseEntry(id, exerciseIds.slice(0, i)));
 
     startWorkout(day.id, day.name, program.name, exercises);
   }, [isOpen, activeWorkout, day, dayId, history, startWorkout, cancelWorkout, program.name, seedExerciseEntry, todayHasCompletedSession]);
@@ -343,9 +347,13 @@ export function Workout() {
   const hasPersistedSetChanges = useMemo(() => {
     if (!activeWorkout) return false;
 
-    return activeWorkout.exercises.some((entry) => {
-      const seededEntry = seedExerciseEntry(entry.id);
-      return !areSetsEqual(entry.sets, seededEntry.sets);
+    const ids = activeWorkout.exercises.map((e) => e.id);
+    return activeWorkout.exercises.some((entry, i) => {
+      // Compare against both seed shapes so reorders/swaps (which can change
+      // whether a warm-up is needed) don't read as logged changes
+      const withContext = seedExerciseEntry(entry.id, ids.slice(0, i));
+      const withWarmUp = seedExerciseEntry(entry.id);
+      return !areSetsEqual(entry.sets, withContext.sets) && !areSetsEqual(entry.sets, withWarmUp.sets);
     });
   }, [activeWorkout, seedExerciseEntry]);
   const hasLoggedSets = hasSessionSetInteraction || hasPersistedSetChanges;
@@ -540,7 +548,7 @@ export function Workout() {
 
   const handleSwap = (exercise: Exercise) => {
     if (swapTarget === null) return;
-    updateExercise(swapTarget, seedExerciseEntry(exercise.id));
+    updateExercise(swapTarget, seedExerciseEntry(exercise.id, activeWorkout?.exercises.slice(0, swapTarget).map((e) => e.id)));
     setSwapTarget(null);
   };
 
@@ -550,20 +558,20 @@ export function Workout() {
     const excludeIds = activeWorkout.exercises.map((e) => e.id);
     const replacement = getAutoReplacement(current.id, excludeIds);
     if (replacement) {
-      updateExercise(exerciseIndex, seedExerciseEntry(replacement.id));
+      updateExercise(exerciseIndex, seedExerciseEntry(replacement.id, excludeIds.slice(0, exerciseIndex)));
     } else {
       setCurationFeedback("No alternative exercises available for this muscle group.");
     }
   };
 
   const handleAddExercise = (exercise: Exercise) => {
-    addExerciseToWorkout(seedExerciseEntry(exercise.id));
+    addExerciseToWorkout(seedExerciseEntry(exercise.id, activeWorkout?.exercises.map((e) => e.id)));
     setShowAddExercise(false);
   };
 
   const handleInsertExercise = (exercise: Exercise) => {
     if (insertAtIndex === null) return;
-    insertExerciseAtIndex(seedExerciseEntry(exercise.id), insertAtIndex);
+    insertExerciseAtIndex(seedExerciseEntry(exercise.id, activeWorkout?.exercises.slice(0, insertAtIndex).map((e) => e.id)), insertAtIndex);
     setInsertAtIndex(null);
   };
 
@@ -587,7 +595,7 @@ export function Workout() {
       return;
     }
 
-    replaceActiveWorkoutExercises(result.exerciseIds.map(seedExerciseEntry));
+    replaceActiveWorkoutExercises(result.exerciseIds.map((id, i) => seedExerciseEntry(id, result.exerciseIds.slice(0, i))));
     setShowWorkoutSetup(false);
 
     const skippedMsg = result.skippedSlots.length > 0
