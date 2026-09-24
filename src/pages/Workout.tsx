@@ -633,6 +633,14 @@ export function Workout() {
           <p className="px-6 text-sm leading-relaxed text-text-muted">
             One day can only hold one workout, cardio, or rest entry. Use the Home calendar to undo that day or move it.
           </p>
+          <div className="mt-4 flex flex-col gap-2 px-6">
+            <button type="button" onClick={() => navigate("/")} className="btn-primary touch-target rounded-2xl px-5 py-3 text-sm font-semibold">
+              Back to Home
+            </button>
+            <button type="button" onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/"))} className="btn-ghost touch-target rounded-2xl px-5 py-3 text-sm font-semibold">
+              Go Back
+            </button>
+          </div>
         </div>
       </PageLayout>
     );
