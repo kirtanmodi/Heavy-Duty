@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { WorkoutEntry, ExerciseEntry, DayType, SetEntry } from "../types";
-import { createSessionIso, formatDateKey, getIsoDateKey } from "../lib/dates";
+import { createSessionIso, daysSinceIsoDate, formatDateKey, getIsoDateKey } from "../lib/dates";
 
 export interface ActiveWorkoutState {
   dayId: string;
@@ -277,4 +277,10 @@ export function getExerciseLastDoneDate(exerciseId: string, history: WorkoutEntr
     if (ex && !ex.skipped) return workout.date;
   }
   return null;
+}
+
+/** Days since the exercise was last done (non-skipped), or undefined if never */
+export function getDaysSinceExercise(exerciseId: string, history: WorkoutEntry[]): number | undefined {
+  const lastDate = getExerciseLastDoneDate(exerciseId, history);
+  return lastDate ? daysSinceIsoDate(lastDate) : undefined;
 }

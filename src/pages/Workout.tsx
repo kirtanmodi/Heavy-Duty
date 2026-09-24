@@ -13,7 +13,7 @@ import { backOffSetsByOneStep, createMentzerSets, getOverloadSuggestion } from "
 import { getMuscleRecoveryStatus, getGroupSkipHistory, muscleToGroup } from "../lib/recovery";
 import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
-import { getLastSets, getRecentSessionSets, useWorkoutStore } from "../store/workoutStore";
+import { getDaysSinceExercise, getLastSets, getRecentSessionSets, useWorkoutStore } from "../store/workoutStore";
 import type { Exercise, ExerciseEntry, LiftFocus, ProgramDay, Program, SetEntry, WorkoutEntry } from "../types";
 
 interface ExerciseGroup {
@@ -282,7 +282,7 @@ export function Workout() {
     if (!exercise) return { id: exerciseId, name: exerciseId, sets: [] };
 
     const [lastSets = null, ...olderSessions] = getRecentSessionSets(exerciseId, history);
-    const suggestion = getOverloadSuggestion(exercise, lastSets, olderSessions);
+    const suggestion = getOverloadSuggestion(exercise, lastSets, olderSessions, getDaysSinceExercise(exerciseId, history));
     const sets = createMentzerSets(suggestion, exercise);
 
     return { id: exercise.id, name: exercise.name, sets };
@@ -642,7 +642,7 @@ export function Workout() {
     const entry = activeWorkout.exercises[exerciseIndex];
     const exercise = entry ? getEffectiveExercise(entry.id) : null;
     const [lastSets = null, ...olderSessions] = exercise ? getRecentSessionSets(entry.id, history) : [];
-    const suggestion = exercise ? getOverloadSuggestion(exercise, lastSets, olderSessions) : undefined;
+    const suggestion = exercise ? getOverloadSuggestion(exercise, lastSets, olderSessions, getDaysSinceExercise(entry.id, history)) : undefined;
 
     const restBtns: { label: string; onClick: () => void }[] = [];
     if (exercise && exercise.restSeconds > 0) {

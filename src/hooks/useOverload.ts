@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { Exercise } from '../types'
-import { useWorkoutStore, getRecentSessionSets } from '../store/workoutStore'
+import { useWorkoutStore, getDaysSinceExercise, getRecentSessionSets } from '../store/workoutStore'
 import { getOverloadSuggestion } from '../lib/overload'
 
 export function useOverload(exercise: Exercise) {
@@ -8,6 +8,6 @@ export function useOverload(exercise: Exercise) {
 
   return useMemo(() => {
     const [lastSets = null, ...olderSessions] = getRecentSessionSets(exercise.id, history)
-    return getOverloadSuggestion(exercise, lastSets, olderSessions)
+    return getOverloadSuggestion(exercise, lastSets, olderSessions, getDaysSinceExercise(exercise.id, history))
   }, [exercise, history])
 }

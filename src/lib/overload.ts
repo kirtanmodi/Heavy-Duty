@@ -75,14 +75,58 @@ export function backOffSetsByOneStep(sets: SetEntry[], exercise: Exercise): SetE
 }
 
 /**
- * @param lastSets     most recent session's sets for this exercise
+ * Layoff reduction by days since the exercise was last done. Trained lifters
+ * keep strength for ~3 weeks off; losses become meaningful from ~4 weeks and
+ * noticeable by ~8 weeks. Normal cycle gaps (~8–16 days) never trigger this.
+ */
+const LAYOFF_TIERS: { minDays: number; reduction: number }[] = [
+  { minDays: 42, reduction: 0.2 },
+  { minDays: 21, reduction: 0.1 },
+]
+
+function applyLayoffReduction(
+  suggestion: OverloadSuggestion,
+  exercise: Exercise,
+  daysSinceLast: number | undefined,
+): OverloadSuggestion {
+  if (daysSinceLast === undefined || suggestion.type === 'testing') return suggestion
+  const tier = LAYOFF_TIERS.find(t => daysSinceLast >= t.minDays)
+  const weight = suggestion.suggestedWeight
+  if (!tier || !weight || weight <= 0) return suggestion
+
+  const increment = exercise.weightIncrement
+  const reduced = Math.floor((weight * (1 - tier.reduction)) / increment + 1e-9) * increment
+  const newWeight = Math.max(0, roundWeight(Math.min(reduced, weight - increment)))
+  const weeks = Math.floor(daysSinceLast / 7)
+  const [repMin] = exercise.repRange
+  return {
+    message: `${weeks} weeks since you last did this, so easing back in at ${newWeight}kg (−${Math.round((1 - newWeight / weight) * 100)}%). Aim for ${repMin}+ reps with clean form; progression resumes from here.`,
+    suggestedWeight: newWeight,
+    suggestedReps: repMin,
+    type: 'decrease',
+  }
+}
+
+/**
+ * @param lastSets      most recent session's sets for this exercise
  * @param olderSessions earlier sessions' sets, most recent first (optional —
  *                      enables "missed twice" and stall detection)
+ * @param daysSinceLast days since the exercise was last done (optional —
+ *                      enables the automatic layoff reduction)
  */
 export function getOverloadSuggestion(
   exercise: Exercise,
   lastSets: SetEntry[] | null,
   olderSessions: SetEntry[][] = [],
+  daysSinceLast?: number,
+): OverloadSuggestion {
+  return applyLayoffReduction(getBaseSuggestion(exercise, lastSets, olderSessions), exercise, daysSinceLast)
+}
+
+function getBaseSuggestion(
+  exercise: Exercise,
+  lastSets: SetEntry[] | null,
+  olderSessions: SetEntry[][],
 ): OverloadSuggestion {
   const [repMin, repMax] = exercise.repRange
   const isBodyweight = exercise.equipment === 'bodyweight+'
