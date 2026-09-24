@@ -17,7 +17,6 @@ export const programs: Program[] = [
         exercises: [
           'dumbbell-flyes',
           'incline-bench-press',
-          'overhead-press',
           'side-lateral-raise',
           'tricep-pushdown',
           'weighted-dips',
@@ -66,10 +65,8 @@ export const programs: Program[] = [
         exercises: [
           'leg-extension',
           'leg-press',
-          'romanian-deadlift',
           'leg-curl',
           'calf-raise',
-          'hanging-leg-raise',
           'cable-crunch',
         ],
       },
@@ -108,6 +105,31 @@ export const programs: Program[] = [
     ],
   },
 ]
+
+// Default session size for every lift day. Users can still add exercises
+// mid-session; extras just aren't carried into the next session's defaults.
+export const MAX_DEFAULT_EXERCISES = 5
+
+/**
+ * Picks the exercise IDs a new session starts with. Reuses last session's
+ * choices (keeps swaps) but caps at MAX_DEFAULT_EXERCISES, preferring exercises
+ * that are still in the program day so legacy longer sessions collapse onto the
+ * current program. Last session's order is preserved.
+ */
+export function getDefaultExerciseIds(programExerciseIds: string[], lastSessionExerciseIds?: string[]): string[] {
+  const source = lastSessionExerciseIds && lastSessionExerciseIds.length > 0
+    ? [...new Set(lastSessionExerciseIds)]
+    : programExerciseIds
+  if (source.length <= MAX_DEFAULT_EXERCISES) return source
+
+  const inProgram = new Set(programExerciseIds)
+  const keep = new Set(source.filter((id) => inProgram.has(id)).slice(0, MAX_DEFAULT_EXERCISES))
+  for (const id of source) {
+    if (keep.size >= MAX_DEFAULT_EXERCISES) break
+    keep.add(id)
+  }
+  return source.filter((id) => keep.has(id))
+}
 
 export const programMap = new Map(programs.map(p => [p.id, p]))
 

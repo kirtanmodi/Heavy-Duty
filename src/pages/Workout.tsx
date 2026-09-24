@@ -4,7 +4,7 @@ import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { getAutoReplacement, getEffectiveExercise } from "../data/exercises";
-import { cardioActivities, programs } from "../data/programs";
+import { cardioActivities, getDefaultExerciseIds, programs } from "../data/programs";
 
 import { useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
@@ -314,9 +314,10 @@ export function Workout() {
     if (todayHasCompletedSession) return;
 
     const lastWorkoutForDay = history.find((w) => w.dayId === dayId);
-    const exerciseIds = lastWorkoutForDay
-      ? lastWorkoutForDay.exercises.map((e) => e.id)
-      : day.exercises;
+    const exerciseIds = getDefaultExerciseIds(
+      day.exercises,
+      lastWorkoutForDay?.exercises.map((e) => e.id),
+    );
 
     const exercises = exerciseIds.map(seedExerciseEntry);
 

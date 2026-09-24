@@ -1,4 +1,5 @@
 import type { GymEquipmentId, GymEquipmentProfile, LiftFocus } from '../types'
+import { MAX_DEFAULT_EXERCISES } from '../data/programs'
 
 type EquipmentCategory = 'Machines' | 'Free Weights' | 'Cardio'
 
@@ -89,13 +90,6 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      label: 'Shoulder Press',
-      candidates: [
-        { exerciseId: 'machine-shoulder-press', isAvailable: (profile) => has(profile, 'shoulder-press-machine') },
-        { exerciseId: 'overhead-press', isAvailable: (profile) => has(profile, 'barbells') },
-      ],
-    },
-    {
       label: 'Lateral Raise',
       candidates: [
         { exerciseId: 'machine-lateral-raise', isAvailable: (profile) => has(profile, 'lateral-raise') },
@@ -137,13 +131,6 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
         { exerciseId: 'machine-high-row', isAvailable: (profile) => has(profile, 'high-row-machine') },
         { exerciseId: 'seated-cable-row', isAvailable: (profile) => hasAny(profile, ['row-machine', 'dual-adjustable-pulley']) },
         { exerciseId: 'barbell-row', isAvailable: (profile) => has(profile, 'barbells') },
-      ],
-    },
-    {
-      label: 'Rear Delt',
-      candidates: [
-        { exerciseId: 'rear-delt-machine', isAvailable: (profile) => has(profile, 'rear-deltoid-machine') },
-        { exerciseId: 'rear-delt-fly', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
     {
@@ -241,5 +228,5 @@ export function curateWorkoutForFocus(focus: LiftFocus, profile: GymEquipmentPro
     }
   }
 
-  return { exerciseIds, skippedSlots }
+  return { exerciseIds: exerciseIds.slice(0, MAX_DEFAULT_EXERCISES), skippedSlots }
 }
