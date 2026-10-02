@@ -87,7 +87,7 @@ function useMeasuredHeight<T extends HTMLElement>() {
 }
 
 /** Opaque floating surface for bottom bars / toasts so content scrolling underneath stays out of the text. */
-const floatingSurface = "border border-white/[0.08] bg-bg-elevated/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.35)]";
+const floatingSurface = "glass bg-bg-elevated/95";
 
 const iconProps = {
   viewBox: "0 0 24 24",
@@ -134,14 +134,14 @@ function CardioRecoveryView({
 
   return (
     <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
-      <header className="flex items-start justify-between gap-4 pt-1">
-        <div className="flex min-w-0 flex-col gap-1">
-          {day.duration && <p className="text-[13px] tabular-nums text-text-muted">{day.duration}</p>}
+      <header className="flex items-start justify-between gap-4 px-1 pt-2">
+        <div className="min-w-0">
           <h1 className="page-title">{day.focus}</h1>
+          {day.duration && <p className="mt-1 text-[13px] tabular-nums text-text-muted">{day.duration}</p>}
         </div>
         {isDoneToday && (
-          <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-green/12 px-2.5 py-1 text-[12px] font-medium text-accent-green">
-            <svg {...iconProps} strokeWidth={2.25} className="h-3.5 w-3.5">
+          <span className="mt-1.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-green/12 px-2 py-0.5 text-[12px] font-medium leading-tight text-accent-green">
+            <svg {...iconProps} strokeWidth={2.25} className="h-3 w-3">
               <path d="M20 6L9 17l-5-5" />
             </svg>
             Done today
@@ -152,10 +152,10 @@ function CardioRecoveryView({
       {(day.description || day.tips) && (
         <div className="-mt-2 flex flex-col gap-4">
           {day.description && (
-            <p className="text-[15px] leading-relaxed text-text-secondary">{day.description}</p>
+            <p className="px-1 text-[15px] leading-relaxed text-text-secondary">{day.description}</p>
           )}
           {day.tips && (
-            <section className="flex flex-col gap-1">
+            <section className="flex flex-col gap-1 px-1">
               <h2 className="section-label">Tips</h2>
               <p className="text-[14px] leading-relaxed text-text-muted">{day.tips}</p>
             </section>
@@ -166,7 +166,9 @@ function CardioRecoveryView({
       {/* Activity suggestions — tap to select */}
       {activities.length > 0 && (
         <section className="flex flex-col gap-2.5">
-          <h2 className="section-label">Pick an activity</h2>
+          <div className="flex min-h-6 items-center justify-between gap-3 px-1">
+            <h2 className="section-label">Pick an activity</h2>
+          </div>
           <div className="list-group">
             {activities.map((activity, idx) => {
               const isSelected = selectedActivity === activity.name;
@@ -175,7 +177,7 @@ function CardioRecoveryView({
                   key={idx}
                   onClick={() => setSelectedActivity(isSelected ? null : activity.name)}
                   aria-pressed={isSelected}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+                  className={`flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
                     isSelected ? "bg-fill" : "active:bg-fill"
                   }`}
                 >
@@ -186,11 +188,11 @@ function CardioRecoveryView({
                   <span
                     aria-hidden="true"
                     className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full transition-colors ${
-                      isSelected ? "bg-text-primary text-bg-primary" : "border border-white/[0.18]"
+                      isSelected ? "bg-text-primary" : "border-[1.5px] border-text-dim"
                     }`}
                   >
                     {isSelected && (
-                      <svg {...iconProps} strokeWidth={2.5} className="h-3 w-3">
+                      <svg {...iconProps} stroke="#0b0b0c" strokeWidth={3} className="h-3 w-3">
                         <path d="M5 13l4 4L19 7" />
                       </svg>
                     )}
@@ -232,12 +234,14 @@ function CardioRecoveryView({
                   {logError}
                 </p>
               )}
-              <button
-                onClick={handleMarkDone}
-                className="btn-primary pointer-events-auto w-full px-5 text-[15px] shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
-              >
-                <span className="truncate">{selectedActivity ? `Done: ${selectedActivity}` : "Mark as done"}</span>
-              </button>
+              <div className={`${floatingSurface} pointer-events-auto rounded-full p-1.5`}>
+                <button
+                  onClick={handleMarkDone}
+                  className="btn-primary w-full px-5 text-[15px]"
+                >
+                  <span className="truncate">{selectedActivity ? `Done: ${selectedActivity}` : "Mark as done"}</span>
+                </button>
+              </div>
             </div>
           </div>
         </>
@@ -673,16 +677,16 @@ export function Workout() {
   if (todayHasCompletedSession && !activeWorkout) {
     return (
       <PageLayout withBottomNavPadding={false}>
-        <div className="sheet-surface mx-auto mt-[18vh] flex max-w-[400px] flex-col gap-2 rounded-[1.25rem] p-6 text-center">
+        <div className="sheet-surface mx-auto mt-[18vh] flex max-w-[400px] flex-col gap-1.5 rounded-[1.25rem] p-5 text-center">
           <p className="section-title">Today already has a logged session</p>
-          <p className="text-[14px] leading-relaxed text-text-muted">
+          <p className="text-[15px] leading-relaxed text-text-muted">
             One day can only hold one workout, cardio, or rest entry. Use the Home calendar to undo that day or move it.
           </p>
           <div className="mt-4 flex flex-col gap-2">
-            <button type="button" onClick={() => navigate("/")} className="btn-primary touch-target w-full px-5 text-[15px]">
+            <button type="button" onClick={() => navigate("/")} className="btn-primary w-full px-5 text-[15px]">
               Back to Home
             </button>
-            <button type="button" onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/"))} className="btn-secondary touch-target w-full px-5 text-[15px]">
+            <button type="button" onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/"))} className="btn-secondary w-full px-5 text-[15px]">
               Go back
             </button>
           </div>
@@ -763,7 +767,7 @@ export function Workout() {
       {timer.isRunning && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-3 animate-fade-in"
-          style={{ ...sheetBottomPadding, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }}
+          style={sheetBottomPadding}
         >
           <div
             role="dialog"
@@ -790,7 +794,7 @@ export function Workout() {
                 <button
                   key={seconds}
                   onClick={() => timer.start(seconds, timer.label)}
-                  className="btn-secondary min-h-11! px-0 text-[14px] tabular-nums text-text-secondary!"
+                  className="btn-secondary min-h-11 px-0 text-[14px] tabular-nums text-text-secondary"
                 >
                   {formatDuration(seconds)}
                 </button>
@@ -902,9 +906,10 @@ export function Workout() {
 
       <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
         {/* Header */}
-        <header className="flex items-center justify-between gap-3 pt-1">
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="truncate text-[13px] text-text-muted">
+        <header className="flex items-center justify-between gap-3 px-1 pt-2">
+          <div className="min-w-0">
+            <h1 className="page-title truncate">{isOpen ? "Open workout" : day!.focus}</h1>
+            <p className="mt-1 truncate text-[13px] text-text-muted">
               {/* The elapsed time belongs to the active session, which is a different day during a conflict */}
               {!hasDayConflict && (
                 <span className="tabular-nums">
@@ -914,14 +919,13 @@ export function Workout() {
               {!hasDayConflict && dayDetail && " · "}
               {dayDetail}
             </p>
-            <h1 className="page-title truncate">{isOpen ? "Open workout" : day!.focus}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={() => setShowWorkoutSetup((value) => !value)}
               aria-expanded={showWorkoutSetup}
-              className={`chip min-h-11! gap-1.5! px-3.5! text-[14px]! ${
-                showWorkoutSetup ? "bg-fill-strong! text-text-primary" : "text-text-secondary active:bg-fill-strong!"
+              className={`chip min-h-11 gap-1.5 px-3.5 text-[14px] font-medium text-text-primary ${
+                showWorkoutSetup ? "bg-fill-strong" : "active:bg-fill-strong"
               }`}
             >
               <svg {...iconProps} className="h-[18px] w-[18px]">
@@ -945,10 +949,10 @@ export function Workout() {
 
         {/* Day conflict dialog */}
         {hasDayConflict && activeWorkout && (
-          <section className="hero-surface flex flex-col gap-4 rounded-[1.25rem] p-4 animate-slide-up">
-            <div className="flex flex-col gap-0.5 px-1">
-              <p className="text-[13px] text-text-muted">You have a workout in progress</p>
-              <p className="section-title">{activeWorkout.dayName}</p>
+          <section className="hero-surface flex flex-col gap-4 rounded-[1.25rem] p-5 animate-slide-up">
+            <div className="min-w-0">
+              <p className="section-title">You have a workout in progress</p>
+              <p className="mt-1 text-[13px] text-text-muted">{activeWorkout.dayName}</p>
             </div>
             <div className="flex flex-col gap-1">
               <button
@@ -957,7 +961,7 @@ export function Workout() {
               >
                 Resume
               </button>
-              <button onClick={handleDiscardAndStart} className="btn-tertiary w-full text-[15px] text-accent-red!">
+              <button onClick={handleDiscardAndStart} className="btn-tertiary w-full text-[15px] text-accent-red">
                 Discard & start new
               </button>
             </div>
@@ -977,7 +981,7 @@ export function Workout() {
               <SwitchIndicator on={showCoachingHints} />
             </button>
 
-            <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <div className="flex min-h-[3.25rem] items-center justify-between gap-3 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-[15px] text-text-primary">Back off today</p>
                 <p className="text-[13px] leading-snug text-text-muted">Use if warm-up feels heavy or form feels off.</p>
@@ -985,7 +989,7 @@ export function Workout() {
               <button
                 onClick={handleBackOffWorkout}
                 disabled={!canBackOffWorkout}
-                className="btn-secondary min-h-10! shrink-0 px-4 text-[14px]"
+                className="btn-secondary min-h-11 shrink-0 px-4 text-[14px]"
               >
                 Back off
               </button>
@@ -1002,7 +1006,7 @@ export function Workout() {
                   </div>
                   <button
                     onClick={() => navigate("/my-gym")}
-                    className="btn-tertiary -mr-2 -mt-1.5 shrink-0 gap-1! px-3 text-[14px]"
+                    className="btn-tertiary -mr-2 -mt-1.5 shrink-0 gap-1 px-3 text-[14px]"
                   >
                     My Gym
                     <svg {...iconProps} className="h-4 w-4">
@@ -1012,15 +1016,15 @@ export function Workout() {
                 </div>
 
                 {hasLoggedSets && (
-                  <p className="flex items-center gap-2 text-[13px] text-text-secondary">
+                  <p className="flex items-center gap-2.5 text-[13px] text-text-secondary">
                     <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-yellow" />
                     Locked after set changes
                   </p>
                 )}
 
                 {curatedResult && curatedResult.skippedSlots.length > 0 && !hasLoggedSets && (
-                  <p className="flex items-start gap-2 text-[13px] leading-snug text-text-secondary">
-                    <span aria-hidden="true" className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent-yellow" />
+                  <p className="flex items-start gap-2.5 text-[13px] leading-relaxed text-text-secondary">
+                    <span aria-hidden="true" className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-accent-yellow" />
                     <span>Missing equipment for: {curatedResult.skippedSlots.join(", ")}</span>
                   </p>
                 )}
@@ -1029,14 +1033,14 @@ export function Workout() {
                   <button
                     onClick={() => handleCurateWorkout(false)}
                     disabled={hasLoggedSets || curatedExerciseIds.length === 0}
-                    className="btn-secondary min-h-11! px-3 text-[14px]"
+                    className="btn-secondary min-h-11 px-3 text-[14px]"
                   >
                     Build workout
                   </button>
                   <button
                     onClick={() => handleCurateWorkout(true)}
                     disabled={hasLoggedSets || curatedExerciseIds.length === 0}
-                    className="btn-secondary min-h-11! px-3 text-[14px]"
+                    className="btn-secondary min-h-11 px-3 text-[14px]"
                   >
                     Try another split
                   </button>
@@ -1049,9 +1053,9 @@ export function Workout() {
         {/* Recovery note */}
         {recoveringGroups.length > 0 && (
           <section className="surface-card-muted flex flex-col rounded-[1.25rem] px-4 py-3">
-            <div className="flex items-start gap-3">
-              <span aria-hidden="true" className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-accent-orange" />
-              <p className="min-w-0 flex-1 text-[14px] leading-snug text-text-secondary">
+            <div className="flex items-start gap-2.5">
+              <span aria-hidden="true" className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-accent-orange" />
+              <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-text-secondary">
                 {recoveringGroups.length === 1
                   ? `${recoveringGroups[0].group} was trained recently. Review it before pushing hard again.`
                   : `${recoveringGroups.length} target muscle groups were trained recently. Review them before logging.`}
@@ -1059,7 +1063,7 @@ export function Workout() {
               <button
                 onClick={() => setShowRecoveryActions((value) => !value)}
                 aria-expanded={showRecoveryActions}
-                className="btn-tertiary -my-2.5 -mr-2 shrink-0 px-3 text-[14px] text-text-primary!"
+                className="btn-tertiary -my-2.5 -mr-2 shrink-0 px-3 text-[13px] text-text-primary"
               >
                 {showRecoveryActions ? "Hide" : "Review"}
               </button>
@@ -1090,7 +1094,7 @@ export function Workout() {
                           const sorted = [...exerciseIndices].sort((a, b) => b - a);
                           for (const idx of sorted) skipExercise(idx);
                         }}
-                        className="btn-secondary min-h-11! self-start px-4 text-[14px] text-accent-orange!"
+                        className="btn-secondary min-h-11 self-start px-4 text-[14px] text-accent-orange"
                       >
                         Skip anyway ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
                       </button>
@@ -1101,7 +1105,7 @@ export function Workout() {
                         const sorted = [...exerciseIndices].sort((a, b) => b - a);
                         for (const idx of sorted) skipExercise(idx);
                       }}
-                      className="btn-secondary min-h-11! self-start px-4 text-[14px]"
+                      className="btn-secondary min-h-11 self-start px-4 text-[14px]"
                     >
                       Skip {groupStatus.group} this week ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
                     </button>
@@ -1113,15 +1117,20 @@ export function Workout() {
         )}
 
         {activeWorkout.exercises.length === 0 && (
-          <section className="flex flex-col items-center gap-1 px-6 py-4 text-center">
-            <p className="section-title">No exercises yet</p>
-            <p className="text-[14px] leading-relaxed text-text-muted">
-              {isOpen ? "Add your first exercise to start logging." : "No lift exercises are loaded for this day."}
-            </p>
+          <section className="flex flex-col items-center gap-5 px-6 pt-12 text-center">
+            <svg {...iconProps} aria-hidden="true" className="h-7 w-7 text-text-muted">
+              <path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" />
+            </svg>
+            <div className="flex max-w-[18rem] flex-col gap-1.5">
+              <p className="section-title">No exercises yet</p>
+              <p className="text-[15px] leading-relaxed text-text-muted">
+                {isOpen ? "Add your first exercise to start logging." : "No lift exercises are loaded for this day."}
+              </p>
+            </div>
             {!showWorkoutSetup && (
               <button
                 onClick={() => setShowAddExercise(true)}
-                className={`${hasDayConflict ? "btn-secondary" : "btn-primary"} mt-4 px-5 text-[15px]`}
+                className={`${hasDayConflict ? "btn-secondary" : "btn-primary"} px-6 text-[15px]`}
               >
                 <svg {...iconProps} className="h-[18px] w-[18px]">
                   <path d="M12 5v14M5 12h14" />

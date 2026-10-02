@@ -53,8 +53,8 @@ function MoreButton({ open, onClick }: { open: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors active:bg-fill ${
-        open ? "bg-fill text-text-primary" : "text-text-muted"
+      className={`btn-icon transition-colors ${
+        open ? "bg-fill text-text-primary" : "bg-transparent text-text-muted active:bg-fill"
       }`}
       aria-label="Exercise options"
       aria-expanded={open}
@@ -166,14 +166,14 @@ const TrashIcon = () => (
 
 function RemoveConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-3 animate-fade-in">
-      <p className="text-[14px] text-text-secondary">Remove this exercise?</p>
-      <div className="flex shrink-0 items-center gap-1">
-        <button onClick={onCancel} className="btn-tertiary px-3.5 text-[14px]">
-          Cancel
-        </button>
-        <button onClick={onConfirm} className="btn-danger min-h-11! px-4 text-[14px]">
+    <div className="flex flex-col gap-3 animate-fade-in">
+      <p className="text-[15px] font-semibold text-text-primary">Remove this exercise?</p>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={onConfirm} className="btn-danger min-h-11 px-4 text-[14px]">
           Remove
+        </button>
+        <button onClick={onCancel} className="btn-secondary min-h-11 px-4 text-[14px]">
+          Cancel
         </button>
       </div>
     </div>
@@ -247,7 +247,7 @@ export function ExerciseCard({
       <div className="surface-card-muted relative rounded-[1.25rem]">
         <div className="flex min-h-14 items-center gap-2.5 py-1.5 pl-4 pr-1.5">
           <h2 className="min-w-0 flex-1 text-[15px] font-medium leading-snug text-text-muted">{entry.name}</h2>
-          <span className="shrink-0 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium text-text-muted">
+          <span className="shrink-0 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium leading-tight text-text-muted">
             Skipped
           </span>
           <div className="relative shrink-0" ref={menuRef}>
@@ -281,7 +281,7 @@ export function ExerciseCard({
           </div>
         </div>
         {removeConfirm && (
-          <div className="border-t border-separator px-4 py-2">
+          <div className="border-t border-separator px-4 pb-4 pt-3">
             <RemoveConfirm
               onConfirm={() => { onRemove(exerciseIndex); setRemoveConfirm(false); }}
               onCancel={() => setRemoveConfirm(false)}
@@ -380,8 +380,8 @@ export function ExerciseCard({
             <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-text-muted">
               <button
                 onClick={() => setShowDetails((prev) => !prev)}
-                className={`relative inline-flex items-center gap-1 rounded-full py-1 pl-2.5 pr-2 text-[12px] font-medium transition-colors after:absolute after:-inset-x-1 after:-inset-y-2 after:content-[''] ${
-                  showDetails ? "bg-fill-strong text-text-primary" : "chip-muted text-text-secondary active:bg-fill-strong"
+                className={`chip chip-muted relative min-h-8 gap-1 py-0 pl-2.5 pr-2 text-[12px] font-medium transition-colors after:absolute after:-inset-x-1 after:-inset-y-1.5 after:content-[''] ${
+                  showDetails ? "bg-fill-strong text-text-primary" : "text-text-secondary active:bg-fill-strong"
                 }`}
                 aria-expanded={showDetails}
                 aria-label={`Equipment: ${equipmentLabel}. ${toolsLabel}`}
@@ -483,7 +483,7 @@ export function ExerciseCard({
         {/* Exercise tools: equipment + bodyweight logging mode */}
         {showDetails && (
           <div className="-mt-1 flex flex-col gap-3 animate-fade-in">
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {EQUIPMENT_OPTIONS.map((eq) => {
                 const isActive = exercise.equipment === eq;
                 const hasOverride = !!equipmentOverride[entry.id];
@@ -495,14 +495,14 @@ export function ExerciseCard({
                       setWeightOverride(undefined);
                     }}
                     aria-pressed={isActive}
-                    className={`min-h-9 shrink-0 rounded-full px-3 text-[13px] font-medium transition-colors ${
-                      isActive
-                        ? hasOverride
-                          ? "bg-accent-blue/15 text-accent-blue"
-                          : "bg-white/[0.14] text-text-primary ring-1 ring-inset ring-white/20"
-                        : "bg-fill text-text-muted active:bg-fill-strong"
+                    className={`chip h-9 shrink-0 px-3.5 font-medium transition-colors ${
+                      isActive ? "bg-[#f4f4f5] text-[#0b0b0c]" : "text-text-secondary active:bg-fill-strong"
                     }`}
                   >
+                    {/* A blue dot marks equipment switched away from the exercise's default. */}
+                    {isActive && hasOverride && (
+                      <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-blue" />
+                    )}
                     {formatEquipment(eq)}
                   </button>
                 );
@@ -516,7 +516,7 @@ export function ExerciseCard({
                 </span>
                 <button
                   onClick={toggleWeightMode}
-                  className="min-h-9 shrink-0 rounded-full bg-fill px-3 text-[13px] font-medium text-text-primary transition-colors active:bg-fill-strong"
+                  className="btn-secondary min-h-11 shrink-0 px-4 text-[14px]"
                 >
                   {bwMode ? "Add weight" : "BW only"}
                 </button>
@@ -527,8 +527,8 @@ export function ExerciseCard({
 
         {/* Overload suggestion */}
         {showOverloadBanner && overloadSuggestion && (
-          <div className="-mt-1 flex gap-2.5 text-[13px] leading-[1.45]">
-            <span aria-hidden className={`mt-[6px] h-2 w-2 shrink-0 rounded-full ${overloadDotClass}`} />
+          <div className="-mt-1 flex items-start gap-2.5 text-[13px] leading-relaxed">
+            <span aria-hidden className={`mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full ${overloadDotClass}`} />
             <p className="min-w-0 text-text-secondary">
               <span className="font-medium text-text-primary">
                 {overloadSuggestion.type === "increase"
@@ -648,7 +648,7 @@ export function ExerciseCard({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ type: "spring", stiffness: 600, damping: 20 }}
-                      className={`mb-1 mt-0.5 inline-block ${showSetRemoval ? "ml-9" : "ml-[2.375rem]"} self-start rounded-full bg-accent-red/12 px-2 py-0.5 text-[11px] font-medium text-accent-red`}
+                      className={`mb-1 mt-0.5 inline-block ${showSetRemoval ? "ml-9" : "ml-[2.375rem]"} self-start rounded-full bg-accent-red/12 px-2 py-0.5 text-[12px] font-medium leading-tight text-accent-red`}
                     >
                       {prLabel}
                     </motion.span>
@@ -677,7 +677,7 @@ export function ExerciseCard({
                 <button
                   key={i}
                   onClick={btn.onClick}
-                  className="btn-secondary min-h-11! px-3.5 text-[14px] tabular-nums"
+                  className="btn-secondary min-h-11 px-3.5 text-[14px] tabular-nums"
                 >
                   <svg {...iconProps} className="h-4 w-4 text-text-secondary">
                     <circle cx="12" cy="13" r="8" />
