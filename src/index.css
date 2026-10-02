@@ -212,7 +212,13 @@
   .page-shell {
     position: relative;
   }
+}
 
+/*
+ * Component classes live in the components layer so that any Tailwind utility on the
+ * same element (e.g. `chip bg-text-primary`, `btn-primary min-h-11`) overrides them.
+ */
+@layer components {
   /* ---------- Typography ---------- */
 
   /* Large screen title (one per page). */
