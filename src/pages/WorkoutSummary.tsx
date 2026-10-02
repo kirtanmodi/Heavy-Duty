@@ -1,9 +1,22 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
+import { formatDayDate } from "../lib/dates";
 import { prefetchRoute } from "../lib/routePrefetch";
 import { calcProgress, calcStats, findPrevSession } from "../lib/stats";
 import { useWorkoutStore } from "../store/workoutStore";
+import type { ExerciseEntry } from "../types";
+
+function describeExercise(exercise: ExerciseEntry): string {
+  if (exercise.skipped) return "Skipped";
+  if (exercise.sets.length === 0) return "No sets logged";
+  const best = exercise.sets.reduce(
+    (top, s) => (s.weight * s.reps > top.weight * top.reps ? s : top),
+    exercise.sets[0],
+  );
+  const setLabel = `${exercise.sets.length} set${exercise.sets.length !== 1 ? "s" : ""}`;
+  return `${setLabel} · best ${best.weight > 0 ? `${best.weight}kg` : "BW"} × ${best.reps}`;
+}
 
 export function WorkoutSummary() {
   const navigate = useNavigate();
@@ -38,54 +51,63 @@ export function WorkoutSummary() {
   })();
 
   return (
-    <PageLayout withBottomNavPadding={false} className="flex flex-col gap-5">
-      <section className="surface-card rounded-[1.9rem] p-5 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent-green/15">
-          <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8">
-            <path d="M8 12l3 3 5-5" stroke="var(--color-accent-green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6 overflow-x-clip!">
+      <header className="flex flex-col items-center px-2 pt-8 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-green/12">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6 text-accent-green"
+            aria-hidden="true"
+          >
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
           </svg>
         </div>
-        <p className="section-label mt-4 text-accent-green">Workout Saved</p>
-        <h1 className="mt-2 font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{lastWorkout.day}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-muted">
-          Saved to your history{duration ? ` · ${duration}` : ""}. You can head home now or open history if you want the full session breakdown.
+        <h1 className="page-title mt-5">Workout complete</h1>
+        <p className="mt-2 text-[15px] leading-snug text-text-secondary">
+          {lastWorkout.day.includes(" — ") ? lastWorkout.day.split(" — ")[1] : lastWorkout.day}
         </p>
-      </section>
+        <p className="mt-1 text-[13px] tabular-nums text-text-muted">
+          Saved to history · {formatDayDate(lastWorkout.date)}
+          {duration ? ` · ${duration}` : ""}
+        </p>
+      </header>
 
-      <section className="surface-card rounded-[1.6rem] p-5">
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="rounded-[1.2rem] border border-white/[0.06] bg-white/[0.03] px-3 py-4">
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-text-dim">Exercises</p>
-            <p className="mt-2 font-[var(--font-display)] text-3xl tabular-nums text-text-primary">{stats.totalExercises}</p>
+      <section className="surface-card overflow-hidden rounded-[1.25rem]">
+        <div className="grid grid-cols-3 divide-x divide-separator py-4 text-center">
+          <div className="flex flex-col items-center gap-1.5 px-2">
+            <p className="stat-value text-[24px] text-text-primary">{stats.totalExercises}</p>
+            <p className="text-[12px] text-text-muted">Exercises</p>
           </div>
-          <div className="rounded-[1.2rem] border border-white/[0.06] bg-white/[0.03] px-3 py-4">
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-text-dim">Sets</p>
-            <p className="mt-2 font-[var(--font-display)] text-3xl tabular-nums text-text-primary">{stats.totalSets}</p>
+          <div className="flex flex-col items-center gap-1.5 px-2">
+            <p className="stat-value text-[24px] text-text-primary">{stats.totalSets}</p>
+            <p className="text-[12px] text-text-muted">Sets</p>
           </div>
-          <div className="rounded-[1.2rem] border border-white/[0.06] bg-white/[0.03] px-3 py-4">
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-text-dim">Volume</p>
-            <p className="mt-2 font-[var(--font-display)] text-3xl tabular-nums text-text-primary">{stats.totalVolume.toLocaleString()}</p>
-            <p className="text-[11px] font-medium text-text-dim">kg</p>
+          <div className="flex min-w-0 flex-col items-center gap-1.5 px-2">
+            <p className="stat-value max-w-full truncate text-[24px] text-text-primary">
+              {stats.totalVolume.toLocaleString()}
+              <span className="ml-0.5 text-[13px] font-medium tracking-normal text-text-muted">kg</span>
+            </p>
+            <p className="text-[12px] text-text-muted">Volume</p>
           </div>
         </div>
-      </section>
 
-      {progress && (
-        <section className="surface-card-muted rounded-[1.6rem] p-4">
-          <p className="section-label">Compared With Last Time</p>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="text-sm leading-relaxed text-text-secondary">
-              {progress.type === "increase" && "You lifted more total volume than the last matching session."}
-              {progress.type === "decrease" && "This session came in below the last matching session."}
-              {progress.type === "same" && "This session matched the last matching session."}
+        {progress && (
+          <div className="flex items-center gap-3 border-t border-separator px-4 py-3">
+            <p className="min-w-0 flex-1 text-[13px] leading-snug text-text-secondary">
+              {progress.type === "same" ? "Volume matched last session" : "Volume vs. last session"}
             </p>
             <span
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums ${
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums ${
                 progress.type === "increase"
                   ? "bg-accent-green/12 text-accent-green"
                   : progress.type === "decrease"
-                    ? "bg-accent-red/12 text-accent-red"
-                    : "bg-white/[0.06] text-text-secondary"
+                    ? "bg-accent-orange/12 text-accent-orange"
+                    : "bg-fill text-text-secondary"
               }`}
             >
               {progress.type === "increase" && "↑ "}
@@ -94,31 +116,48 @@ export function WorkoutSummary() {
               {Math.abs(progress.volumePercent).toFixed(0)}%
             </span>
           </div>
+        )}
+      </section>
+
+      {lastWorkout.exercises.length > 0 && (
+        <section className="list-group">
+          {lastWorkout.exercises.map((exercise, index) => (
+            <div key={`${exercise.id}-${index}`} className="flex min-h-[3.25rem] flex-col justify-center px-4 py-2.5">
+              <p
+                className={`truncate text-[15px] font-medium ${
+                  exercise.skipped ? "text-text-muted line-through" : "text-text-primary"
+                }`}
+              >
+                {exercise.name}
+              </p>
+              <p className="mt-0.5 text-[13px] tabular-nums text-text-muted">{describeExercise(exercise)}</p>
+            </div>
+          ))}
         </section>
       )}
 
-      <div className="flex flex-col gap-2.5">
-        <button
-          onClick={() => navigate("/")}
-          onMouseEnter={() => prefetchRoute("/")}
-          onFocus={() => prefetchRoute("/")}
-          onTouchStart={() => prefetchRoute("/")}
-          className="w-full rounded-[14px] btn-primary py-4 text-sm font-semibold tracking-wide text-white"
-        >
-          Back Home
-        </button>
-        <button
-          onClick={() => navigate("/history")}
-          onMouseEnter={() => prefetchRoute("/history")}
-          onFocus={() => prefetchRoute("/history")}
-          onTouchStart={() => prefetchRoute("/history")}
-          className="w-full rounded-[14px] border border-white/[0.08] bg-transparent py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-        >
-          View in History
-        </button>
+      <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-10 mt-auto">
+        <div className="glass flex flex-col gap-1 rounded-[1.25rem] p-2">
+          <button
+            onClick={() => navigate("/")}
+            onMouseEnter={() => prefetchRoute("/")}
+            onFocus={() => prefetchRoute("/")}
+            onTouchStart={() => prefetchRoute("/")}
+            className="btn-primary w-full text-[15px]"
+          >
+            Done
+          </button>
+          <button
+            onClick={() => navigate("/history")}
+            onMouseEnter={() => prefetchRoute("/history")}
+            onFocus={() => prefetchRoute("/history")}
+            onTouchStart={() => prefetchRoute("/history")}
+            className="btn-tertiary w-full text-[15px]"
+          >
+            View history
+          </button>
+        </div>
       </div>
-
-      <div className="h-4" />
     </PageLayout>
   );
 }

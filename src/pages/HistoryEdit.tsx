@@ -105,7 +105,7 @@ export function HistoryEdit() {
   if (!workout) {
     return (
       <PageLayout withBottomNavPadding={false}>
-        <div className="pt-20 text-center text-text-muted">Workout not found</div>
+        <div className="pt-20 text-center text-[15px] text-text-muted">Workout not found</div>
       </PageLayout>
     );
   }
@@ -140,73 +140,58 @@ export function HistoryEdit() {
         />
       )}
 
-      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-5 pb-28">
-        <header className="surface-card rounded-[1.75rem] p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="section-label">Edit Logged Workout</p>
-              <h1 className="mt-1 font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{workout.day}</h1>
-              <p className="mt-1 text-sm leading-relaxed text-text-muted">Adjust the saved session, then save the cleaned-up version back to history.</p>
-            </div>
+      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6 overflow-x-clip!">
+        <header className="flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-3">
             <button
               onClick={() => navigate("/history")}
-              className="btn-ghost shrink-0 px-4 py-2 text-sm font-semibold"
+              className="btn-icon"
+              aria-label="Cancel and return to history"
             >
-              Cancel
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowReorderControls((prev) => !prev)}
+              aria-pressed={showReorderControls}
+              className={`btn-tertiary -mr-2 px-3.5 text-[15px] ${showReorderControls ? "text-text-primary!" : ""}`}
+            >
+              {showReorderControls ? "Done reordering" : "Reorder"}
             </button>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
+          <div className="min-w-0">
+            <h1 className="page-title">
+              {workout.day.includes(" — ") ? workout.day.split(" — ")[1] : workout.day}
+            </h1>
+            <p className="mt-1.5 text-[13px] tabular-nums text-text-muted">
               {formatRelativeDate(workout.date)}
-            </span>
-            <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
+              <span className="text-text-dim"> · </span>
               {workoutTypeLabel}
-            </span>
-            <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
-              {exercises.length} exercise{exercises.length !== 1 ? "s" : ""} · {totalSetCount} set{totalSetCount !== 1 ? "s" : ""}
-            </span>
+              <span className="text-text-dim"> · </span>
+              {exercises.length} exercise{exercises.length !== 1 ? "s" : ""}
+              <span className="text-text-dim"> · </span>
+              {totalSetCount} set{totalSetCount !== 1 ? "s" : ""}
+            </p>
           </div>
         </header>
 
-        <section className="surface-card rounded-[1.6rem] p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="section-label">Edit Tools</p>
-              <p className="text-sm font-semibold text-text-primary">Keep the controls simple while you review the workout.</p>
-              <p className="mt-1 text-sm leading-relaxed text-text-muted">
-                Add exercises here, and only turn on reordering when you actually need to move blocks around.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowReorderControls((prev) => !prev)}
-              className="btn-ghost shrink-0 px-4 py-2 text-sm font-semibold"
-            >
-              {showReorderControls ? "Done Reordering" : "Reorder"}
-            </button>
-          </div>
-
-          <button onClick={() => setShowAddExercise(true)} className="btn-secondary mt-4 w-full py-3 text-sm font-semibold">
-            Add Exercise
-          </button>
-        </section>
-
         {exercises.length === 0 ? (
-          <section className="surface-card flex flex-col items-center gap-4 rounded-[1.6rem] p-7 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/[0.04]">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-6 w-6 text-text-dim">
-                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div className="flex max-w-[18rem] flex-col gap-2">
-              <p className="font-semibold text-text-primary">No exercises in this workout</p>
-              <p className="text-sm leading-relaxed text-text-muted">
-                Add an exercise if you want this logged session to include set details.
-              </p>
-            </div>
-            <button onClick={() => setShowAddExercise(true)} className="btn-secondary px-5 py-3 text-sm font-semibold">
-              Add Exercise
-            </button>
+          <section className="flex flex-col items-center gap-1.5 px-6 py-8 text-center">
+            <p className="section-title">No exercises in this workout</p>
+            <p className="max-w-[18rem] text-[15px] leading-relaxed text-text-muted">
+              Add an exercise if you want this logged session to include set details.
+            </p>
           </section>
         ) : (
           <div className="flex flex-col gap-4">
@@ -215,29 +200,47 @@ export function HistoryEdit() {
               const isLast = exIndex === exercises.length - 1;
 
               return (
-                <section key={`s-${exIndex}`} className="flex flex-col gap-3">
+                <section key={`s-${exIndex}`} className="flex flex-col gap-2">
                   {showReorderControls && (
-                    <div className="flex items-center justify-between gap-3 px-1">
-                      <span className="chip chip-muted px-3 py-2 text-[11px] font-semibold text-text-secondary">
-                        Exercise {String(exIndex + 1).padStart(2, "0")}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[13px] font-medium tabular-nums text-text-muted">
+                        Exercise {exIndex + 1}
                       </span>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleMoveGroup(exIndex, "up")}
-                          className={`btn-ghost flex h-10 w-10 items-center justify-center ${isFirst ? "pointer-events-none opacity-20" : ""}`}
+                          className={`btn-icon ${isFirst ? "pointer-events-none opacity-30" : ""}`}
                           aria-label="Move up"
                         >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.75"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-[18px] w-[18px]"
+                            aria-hidden="true"
+                          >
                             <path d="M18 15l-6-6-6 6" />
                           </svg>
                         </button>
                         <button
                           onClick={() => handleMoveGroup(exIndex, "down")}
-                          className={`btn-ghost flex h-10 w-10 items-center justify-center ${isLast ? "pointer-events-none opacity-20" : ""}`}
+                          className={`btn-icon ${isLast ? "pointer-events-none opacity-30" : ""}`}
                           aria-label="Move down"
                         >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.75"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-[18px] w-[18px]"
+                            aria-hidden="true"
+                          >
                             <path d="M6 9l6 6 6-6" />
                           </svg>
                         </button>
@@ -261,37 +264,30 @@ export function HistoryEdit() {
           </div>
         )}
 
-        <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-10 mt-1">
-          <section className="glass rounded-[1.6rem] p-3.5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-text-primary">Save this workout</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-text-muted">Exercises without reps are removed when you save.</p>
-              </div>
-              <button onClick={handleSave} className="btn-primary shrink-0 px-5 py-3 text-sm font-semibold tracking-wide text-white">
-                Save Changes
-              </button>
-            </div>
-          </section>
-        </div>
-
-        <section className="surface-card rounded-[1.6rem] p-4">
-          <div className="flex flex-col gap-1">
-            <p className="section-label text-accent-red">Danger Zone</p>
-            <p className="text-sm font-semibold text-text-primary">Delete Workout</p>
-            <p className="text-sm leading-relaxed text-text-muted">
-              Permanently removes this logged workout from history.
-            </p>
-          </div>
+        <div className="flex flex-col gap-3">
+          <button onClick={() => setShowAddExercise(true)} className="btn-secondary w-full text-[15px]">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              className="h-[18px] w-[18px]"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add exercise
+          </button>
 
           {showDeleteConfirm ? (
-            <div className="mt-4 flex flex-col gap-3 rounded-[1.3rem] border border-accent-red/15 bg-accent-red/8 p-4">
-              <p className="text-sm text-text-secondary">Delete this workout permanently?</p>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button onClick={handleDelete} className="btn-primary py-3 text-sm font-semibold text-white">
+            <div className="flex flex-col gap-3 pt-1">
+              <p className="text-center text-[15px] font-semibold text-text-primary">Delete this workout permanently?</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={handleDelete} className="btn-danger text-[15px]">
                   Delete
                 </button>
-                <button onClick={() => setShowDeleteConfirm(false)} className="btn-ghost py-3 text-sm font-medium">
+                <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary text-[15px]">
                   Cancel
                 </button>
               </div>
@@ -299,12 +295,23 @@ export function HistoryEdit() {
           ) : (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="btn-ghost mt-4 w-full py-3 text-sm font-semibold text-accent-red"
+              className="btn-tertiary w-full text-[15px] text-accent-red/90!"
             >
-              Delete Workout
+              Delete workout
             </button>
           )}
-        </section>
+        </div>
+
+        <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-10 mt-auto">
+          <div className="glass flex flex-col gap-1 rounded-[1.25rem] p-2">
+            <button onClick={handleSave} className="btn-primary w-full text-[15px]">
+              Save changes
+            </button>
+            <p className="px-3 pb-1 text-center text-[12px] leading-snug text-text-muted">
+              Exercises without reps are removed when you save.
+            </p>
+          </div>
+        </div>
       </PageLayout>
     </>
   );
