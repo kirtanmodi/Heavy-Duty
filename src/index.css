@@ -283,10 +283,10 @@
   .glass,
   .floating-nav {
     border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(24, 24, 27, 0.72);
+    background: rgba(24, 24, 27, 0.82);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    /* Unprefixed only: Lightning CSS adds -webkit- for Safari. Declaring both makes it drop the standard one. */
     backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
   }
 
   .sheet-surface {
