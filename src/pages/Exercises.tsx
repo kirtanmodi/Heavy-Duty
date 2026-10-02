@@ -148,7 +148,7 @@ function ExerciseRow({ exercise, isCustom }: { exercise: Exercise; isCustom: boo
                 {exercise.name}
               </span>
               {isCustom && (
-                <span className="chip chip-muted !min-h-0 shrink-0 !px-2 !py-0.5 text-[11px] text-text-muted">
+                <span className="shrink-0 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium leading-tight text-text-muted">
                   Custom
                 </span>
               )}
@@ -198,16 +198,14 @@ function ExerciseRow({ exercise, isCustom }: { exercise: Exercise; isCustom: boo
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="btn-secondary !min-h-11 px-4 text-[14px]"
+              className="btn-secondary min-h-11 px-4 text-[14px]"
             >
               Rename
             </button>
             <button
               type="button"
               onClick={handleRemove}
-              className={`btn-danger !min-h-11 px-4 text-[14px] ${
-                confirmRemove ? "!bg-accent-red !text-white" : ""
-              }`}
+              className="btn-danger min-h-11 px-4 text-[14px]"
             >
               {confirmRemove ? "Confirm delete" : "Delete"}
             </button>
@@ -215,7 +213,7 @@ function ExerciseRow({ exercise, isCustom }: { exercise: Exercise; isCustom: boo
               <button
                 type="button"
                 onClick={() => setConfirmRemove(false)}
-                className="btn-tertiary !min-h-11 px-3 text-[14px]"
+                className="btn-tertiary min-h-11 px-3 text-[14px]"
               >
                 Cancel
               </button>
@@ -272,13 +270,10 @@ function AddExerciseSheet({
           role="dialog"
           aria-modal="true"
           aria-labelledby="new-exercise-title"
-          className="sheet-surface mx-auto max-w-[460px] rounded-t-[1.5rem] border-b-0 px-5 pt-3"
-          style={{
-            paddingBottom: "calc(1.25rem + max(0.75rem, env(safe-area-inset-bottom)))",
-          }}
+          className="sheet-surface mx-auto max-w-[460px] rounded-t-[1.25rem] border-b-0 px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
         >
           {/* Handle */}
-          <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-fill-strong" />
+          <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill-strong" />
 
           <h2 id="new-exercise-title" className="section-title px-1">
             Add exercise
@@ -389,8 +384,8 @@ export function Exercises() {
   return (
     <PageLayout className="flex flex-col gap-7">
       {/* Header */}
-      <header className="flex flex-col gap-4 pt-2">
-        <div className="flex items-end justify-between gap-3 px-1">
+      <div className="flex flex-col gap-4">
+        <header className="flex items-center justify-between gap-3 px-1 pt-2">
           <div className="min-w-0">
             <h1 className="page-title">Exercises</h1>
             <p className="mt-1 text-[13px] tabular-nums text-text-muted">
@@ -415,7 +410,7 @@ export function Exercises() {
               <path d="M12 5v14M5 12h14" />
             </svg>
           </button>
-        </div>
+        </header>
 
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
@@ -443,13 +438,13 @@ export function Exercises() {
                 }}
                 placeholder="Search exercises"
                 aria-label="Search exercises"
-                className="input-shell input-focus !rounded-full h-12 w-full pl-11 pr-11 text-[15px] text-text-primary"
+                className="input-shell input-focus h-11 w-full rounded-full pl-10 pr-11 text-[15px] text-text-primary placeholder:text-text-dim"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-text-muted active:bg-fill"
+                  className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-full text-text-muted"
                   aria-label="Clear search"
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fill-strong">
@@ -475,9 +470,9 @@ export function Exercises() {
                 type="button"
                 onClick={() => setShowFilters((value) => !value)}
                 aria-expanded={showFilters}
-                className={`btn-secondary !min-h-12 w-[7.5rem] shrink-0 gap-1.5 pl-3 pr-3.5 text-[14px] ${
-                  showFilters || activeGroup ? "!bg-fill-strong" : ""
-                } ${activeGroup && !showFilters ? "text-text-primary" : ""}`}
+                className={`btn-secondary min-h-11 w-[7.5rem] shrink-0 gap-1.5 pl-3 pr-3.5 text-[14px] ${
+                  showFilters || activeGroup ? "bg-fill-strong" : ""
+                }`}
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -509,10 +504,10 @@ export function Exercises() {
                 type="button"
                 onClick={() => setActiveGroup(null)}
                 aria-pressed={!activeGroup}
-                className={`chip shrink-0 !min-h-9 px-3.5 text-[13px] ${
+                className={`chip h-9 shrink-0 px-3.5 font-medium transition-colors ${
                   !activeGroup
-                    ? "bg-[#f4f4f5]! font-medium text-[#0b0b0c]"
-                    : "chip-muted text-text-secondary active:bg-fill-strong"
+                    ? "bg-[#f4f4f5] text-[#0b0b0c]"
+                    : "text-text-secondary active:bg-fill-strong"
                 }`}
               >
                 All
@@ -530,10 +525,10 @@ export function Exercises() {
                       setActiveGroup(isActive ? null : group.label)
                     }
                     aria-pressed={isActive}
-                    className={`chip shrink-0 !min-h-9 px-3.5 text-[13px] ${
+                    className={`chip h-9 shrink-0 px-3.5 font-medium transition-colors ${
                       isActive
-                        ? "bg-[#f4f4f5]! font-medium text-[#0b0b0c]"
-                        : "chip-muted text-text-secondary active:bg-fill-strong"
+                        ? "bg-[#f4f4f5] text-[#0b0b0c]"
+                        : "text-text-secondary active:bg-fill-strong"
                     }`}
                   >
                     {group.label}
@@ -550,16 +545,18 @@ export function Exercises() {
             </div>
           )}
         </div>
-      </header>
+      </div>
 
       {/* Exercise list */}
       {filteredExercises ? (
         filteredExercises.length > 0 ? (
-          <section className="flex flex-col gap-2">
-            <p className="section-label px-1 tabular-nums">
-              {filteredExercises.length} result
-              {filteredExercises.length !== 1 ? "s" : ""}
-            </p>
+          <section className="flex flex-col gap-2.5">
+            <div className="flex min-h-6 items-center justify-between gap-3 px-1">
+              <h2 className="section-label tabular-nums">
+                {filteredExercises.length} result
+                {filteredExercises.length !== 1 ? "s" : ""}
+              </h2>
+            </div>
             <div className="list-group">
               {filteredExercises.map((exercise) => (
                 <ExerciseRow
@@ -571,15 +568,27 @@ export function Exercises() {
             </div>
           </section>
         ) : (
-          <div className="surface-card flex flex-col items-center gap-5 rounded-[1.25rem] px-5 py-7 text-center">
-            <p className="text-[15px] font-medium text-text-primary">
+          <div className="flex flex-col items-center gap-3 px-6 pt-10 text-center">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              className="h-7 w-7 text-text-muted"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+            <p className="section-title mt-1 max-w-full break-words">
               No exercises match &ldquo;{search}&rdquo;
             </p>
-            <div className="flex w-full gap-3">
+            <div className="mt-2 grid w-full max-w-[20rem] grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                className="btn-secondary flex-1 text-[15px]"
+                className="btn-secondary text-[15px]"
               >
                 Clear search
               </button>
@@ -589,7 +598,7 @@ export function Exercises() {
                   setSearch("");
                   setShowAdd(true);
                 }}
-                className="btn-primary flex-1 text-[15px]"
+                className="btn-primary text-[15px]"
               >
                 Create new
               </button>
@@ -602,8 +611,8 @@ export function Exercises() {
           if (groupExercises.length === 0) return null;
 
           return (
-            <section key={group.label} className="flex flex-col gap-2">
-              <div className="flex min-h-6 items-center gap-2 px-1">
+            <section key={group.label} className="flex flex-col gap-2.5">
+              <div className="flex min-h-6 items-center justify-between gap-3 px-1">
                 <h2 className="section-label">{group.label}</h2>
                 <span className="text-[13px] tabular-nums text-text-muted">
                   {groupExercises.length}

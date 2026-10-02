@@ -94,12 +94,9 @@ function EquipmentSheet({
           role="dialog"
           aria-modal="true"
           aria-labelledby="equipment-sheet-title"
-          className="sheet-surface mx-auto max-w-[460px] rounded-t-[1.5rem] border-b-0 px-5 pt-3"
-          style={{
-            paddingBottom: "calc(1.25rem + max(0.75rem, env(safe-area-inset-bottom)))",
-          }}
+          className="sheet-surface mx-auto max-w-[460px] rounded-t-[1.25rem] border-b-0 px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
         >
-          <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-fill-strong" />
+          <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill-strong" />
 
           <h2 id="equipment-sheet-title" className="section-title px-1">
             {title}
@@ -137,10 +134,10 @@ function EquipmentSheet({
                       type="button"
                       onClick={() => setCategory(c.value)}
                       aria-pressed={active}
-                      className={`chip min-h-11 px-4 text-[14px] ${
+                      className={`chip min-h-11 px-4 text-[14px] font-medium transition-colors ${
                         active
-                          ? "bg-[#f4f4f5]! font-medium text-[#0b0b0c]"
-                          : "chip-muted text-text-secondary active:bg-fill-strong"
+                          ? "bg-[#f4f4f5] text-[#0b0b0c]"
+                          : "text-text-secondary active:bg-fill-strong"
                       }`}
                     >
                       {c.label}
@@ -221,12 +218,12 @@ function EquipmentRow({
   const showRowActions = isCustom && !bulkMode;
 
   return (
-    <div className={`flex min-h-[52px] items-center ${showRowActions ? "pr-1.5" : ""}`}>
+    <div className={`flex min-h-[3.25rem] items-center ${showRowActions ? "pr-1.5" : ""}`}>
       <button
         type="button"
         onClick={handleClick}
         aria-pressed={bulkMode ? !!bulkSelected : available}
-        className={`flex min-h-[52px] min-w-0 flex-1 items-center gap-3.5 py-2 pl-4 text-left transition-colors active:bg-fill ${
+        className={`flex min-h-[3.25rem] min-w-0 flex-1 items-center gap-3 py-3 pl-4 text-left transition-colors active:bg-fill ${
           showRowActions ? "pr-2" : "pr-4"
         }`}
       >
@@ -284,7 +281,7 @@ function EquipmentRow({
           }}
           className={`shrink-0 transition-colors ${
             confirmRemove
-              ? "btn-danger mr-1.5 ml-1 !min-h-11 !bg-accent-red px-3.5 text-[13px] !text-white animate-fade-in"
+              ? "btn-danger mr-1.5 ml-1 min-h-11 px-3.5 text-[13px] animate-fade-in"
               : "flex h-11 w-11 items-center justify-center rounded-full text-text-muted active:bg-fill"
           }`}
           aria-label={confirmRemove ? "Confirm remove" : "Remove equipment"}
@@ -329,18 +326,20 @@ function CategoryHeader({
   const allSelected = availableCount === totalCount;
 
   return (
-    <div className="flex min-h-8 items-center gap-2 px-1">
+    <div className="flex min-h-6 items-center justify-between gap-3 px-1">
       <h2 className="section-label">{label}</h2>
-      <span className="text-[13px] tabular-nums text-text-muted">
-        {availableCount}/{totalCount}
-      </span>
-      <button
-        type="button"
-        onClick={allSelected ? onDeselectAll : onSelectAll}
-        className="btn-tertiary -my-1.5 -mr-2 ml-auto px-2 text-[13px]"
-      >
-        {allSelected ? "Deselect all" : "Select all"}
-      </button>
+      <div className="flex items-center gap-1">
+        <span className="text-[13px] tabular-nums text-text-muted">
+          {availableCount}/{totalCount}
+        </span>
+        <button
+          type="button"
+          onClick={allSelected ? onDeselectAll : onSelectAll}
+          className="btn-tertiary -my-2.5 -mr-2 gap-1 px-2 text-[13px]"
+        >
+          {allSelected ? "Deselect all" : "Select all"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -424,7 +423,7 @@ export function MyGym() {
   return (
     <PageLayout className="flex flex-col gap-7">
       {/* Header */}
-      <header className="flex items-end justify-between gap-3 px-1 pt-2">
+      <header className="flex items-center justify-between gap-3 px-1 pt-2">
         <div className="min-w-0">
           <h1 className="page-title">My Gym</h1>
           <p className="mt-1 text-[13px] tabular-nums text-text-muted">
@@ -448,7 +447,7 @@ export function MyGym() {
         const catAvailable = items.filter((i) => gymEquipment[i.id]).length;
 
         return (
-          <section key={cat} className="flex flex-col gap-2">
+          <section key={cat} className="flex flex-col gap-2.5">
             <CategoryHeader
               label={cat}
               availableCount={catAvailable}
@@ -472,14 +471,14 @@ export function MyGym() {
 
       {/* Custom equipment section */}
       {hasCustom && (
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-2.5">
           {bulkMode ? (
             /* Bulk selection bar */
-            <div className="flex min-h-8 items-center gap-1 px-1 animate-fade-in">
+            <div className="flex min-h-6 items-center justify-between gap-3 px-1 animate-fade-in">
               <h2 className="section-label tabular-nums text-text-secondary">
                 {bulkSelected.size} selected
               </h2>
-              <div className="-my-1.5 -mr-2 ml-auto flex items-center">
+              <div className="-my-2.5 -mr-2 flex items-center">
                 <button
                   type="button"
                   onClick={handleBulkSelectAllCustom}
@@ -504,19 +503,21 @@ export function MyGym() {
               </div>
             </div>
           ) : (
-            <div className="flex min-h-8 items-center gap-2 px-1">
+            <div className="flex min-h-6 items-center justify-between gap-3 px-1">
               <h2 className="section-label">Custom</h2>
-              <span className="text-[13px] tabular-nums text-text-muted">
-                {customGymEquipment.filter((c) => gymEquipment[c.id]).length}/{customGymEquipment.length}
-              </span>
-              {/* Bulk mode toggle */}
-              <button
-                type="button"
-                onClick={() => (bulkMode ? exitBulkMode() : setBulkMode(true))}
-                className="btn-tertiary -my-1.5 -mr-2 ml-auto px-2 text-[13px]"
-              >
-                Select
-              </button>
+              <div className="flex items-center gap-1">
+                <span className="text-[13px] tabular-nums text-text-muted">
+                  {customGymEquipment.filter((c) => gymEquipment[c.id]).length}/{customGymEquipment.length}
+                </span>
+                {/* Bulk mode toggle */}
+                <button
+                  type="button"
+                  onClick={() => (bulkMode ? exitBulkMode() : setBulkMode(true))}
+                  className="btn-tertiary -my-2.5 -mr-2 gap-1 px-2 text-[13px]"
+                >
+                  Select
+                </button>
+              </div>
             </div>
           )}
 
@@ -542,9 +543,7 @@ export function MyGym() {
             <button
               type="button"
               onClick={handleBulkDelete}
-              className={`btn-danger mt-1 w-full text-[15px] animate-fade-in ${
-                confirmBulkDelete ? "!bg-accent-red !text-white" : ""
-              }`}
+              className="btn-danger mt-1 w-full text-[15px] animate-fade-in"
             >
               {confirmBulkDelete
                 ? `Confirm delete (${bulkSelected.size})`
@@ -554,12 +553,12 @@ export function MyGym() {
         </section>
       )}
 
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-2.5">
         <div className="list-group">
           <button
             type="button"
             onClick={resetGymEquipment}
-            className="flex min-h-[52px] w-full items-center px-4 text-left text-[15px] text-accent-red transition-colors active:bg-fill"
+            className="flex min-h-[3.25rem] w-full items-center px-4 py-3 text-left text-[15px] text-accent-red transition-colors active:bg-fill"
           >
             Reset all equipment
           </button>

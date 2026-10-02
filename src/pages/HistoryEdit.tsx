@@ -105,7 +105,21 @@ export function HistoryEdit() {
   if (!workout) {
     return (
       <PageLayout withBottomNavPadding={false}>
-        <div className="pt-20 text-center text-[15px] text-text-muted">Workout not found</div>
+        <section className="flex flex-col items-center gap-3 px-6 pt-20 text-center">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            className="h-7 w-7 text-text-muted"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M16.5 16.5L21 21" />
+          </svg>
+          <p className="section-title">Workout not found</p>
+        </section>
       </PageLayout>
     );
   }
@@ -164,17 +178,31 @@ export function HistoryEdit() {
             <button
               onClick={() => setShowReorderControls((prev) => !prev)}
               aria-pressed={showReorderControls}
-              className={`btn-tertiary -mr-2 px-3.5 text-[15px] ${showReorderControls ? "text-text-primary!" : ""}`}
+              className={`chip min-h-11 shrink-0 gap-1.5 px-3.5 text-[14px] font-medium ${
+                showReorderControls ? "bg-fill-strong text-text-primary" : "text-text-secondary active:bg-fill-strong"
+              }`}
             >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-[18px] w-[18px]"
+                aria-hidden="true"
+              >
+                <path d="M8 4v16M4 8l4-4 4 4M16 20V4M20 16l-4 4-4-4" />
+              </svg>
               {showReorderControls ? "Done reordering" : "Reorder"}
             </button>
           </div>
 
-          <div className="min-w-0">
+          <div className="min-w-0 px-1">
             <h1 className="page-title">
               {workout.day.includes(" — ") ? workout.day.split(" — ")[1] : workout.day}
             </h1>
-            <p className="mt-1.5 text-[13px] tabular-nums text-text-muted">
+            <p className="mt-1 text-[13px] tabular-nums text-text-muted">
               {formatRelativeDate(workout.date)}
               <span className="text-text-dim"> · </span>
               {workoutTypeLabel}
@@ -187,11 +215,25 @@ export function HistoryEdit() {
         </header>
 
         {exercises.length === 0 ? (
-          <section className="flex flex-col items-center gap-1.5 px-6 py-8 text-center">
-            <p className="section-title">No exercises in this workout</p>
-            <p className="max-w-[18rem] text-[15px] leading-relaxed text-text-muted">
-              Add an exercise if you want this logged session to include set details.
-            </p>
+          <section className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-7 w-7 text-text-muted"
+              aria-hidden="true"
+            >
+              <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+            </svg>
+            <div className="flex max-w-[18rem] flex-col gap-1">
+              <p className="section-title">No exercises in this workout</p>
+              <p className="text-[15px] leading-relaxed text-text-muted">
+                Add an exercise if you want this logged session to include set details.
+              </p>
+            </div>
           </section>
         ) : (
           <div className="flex flex-col gap-4">
@@ -200,12 +242,10 @@ export function HistoryEdit() {
               const isLast = exIndex === exercises.length - 1;
 
               return (
-                <section key={`s-${exIndex}`} className="flex flex-col gap-2">
+                <section key={`s-${exIndex}`} className="flex flex-col gap-2.5">
                   {showReorderControls && (
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[13px] font-medium tabular-nums text-text-muted">
-                        Exercise {exIndex + 1}
-                      </span>
+                    <div className="flex items-center justify-between gap-3 pl-1">
+                      <span className="section-label tabular-nums">Exercise {exIndex + 1}</span>
 
                       <div className="flex items-center gap-1.5">
                         <button
@@ -295,15 +335,15 @@ export function HistoryEdit() {
           ) : (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="btn-tertiary w-full text-[15px] text-accent-red/90!"
+              className="btn-tertiary w-full text-[15px] text-accent-red"
             >
               Delete workout
             </button>
           )}
         </div>
 
-        <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-10 mt-auto">
-          <div className="glass flex flex-col gap-1 rounded-[1.25rem] p-2">
+        <div className="sticky z-10 mt-auto" style={{ bottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.5rem))" }}>
+          <div className="glass flex flex-col gap-1 rounded-[1.25rem] bg-bg-elevated/95 p-2">
             <button onClick={handleSave} className="btn-primary w-full text-[15px]">
               Save changes
             </button>

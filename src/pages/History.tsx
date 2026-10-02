@@ -81,9 +81,9 @@ function getWorkoutTypeLabel(workout: WorkoutEntry): string {
   return dayType.charAt(0).toUpperCase() + dayType.slice(1);
 }
 
-const filterChipBase = "chip shrink-0 min-h-9! px-3.5! font-medium transition-colors";
-const filterChipActive = "bg-[#f4f4f5]! text-[#0b0b0c]";
-const filterChipIdle = "text-text-secondary active:bg-fill-strong!";
+const filterChipBase = "chip h-9 shrink-0 px-3.5 font-medium transition-colors";
+const filterChipActive = "bg-[#f4f4f5] text-[#0b0b0c]";
+const filterChipIdle = "text-text-secondary active:bg-fill-strong";
 
 function filterChipClass(active: boolean): string {
   return `${filterChipBase} ${active ? filterChipActive : filterChipIdle}`;
@@ -144,14 +144,14 @@ export function History() {
   };
 
   return (
-    <PageLayout className="flex flex-col gap-6">
+    <PageLayout className="flex flex-col gap-7">
       <header className="flex flex-col gap-4 pt-2">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="min-w-0 px-1">
           <h1 className="page-title">History</h1>
           {history.length > 0 && (
-            <span className="shrink-0 text-[13px] tabular-nums text-text-muted">
+            <p className="mt-1 text-[13px] tabular-nums text-text-muted">
               {history.length} session{history.length !== 1 ? "s" : ""}
-            </span>
+            </p>
           )}
         </div>
 
@@ -200,12 +200,12 @@ export function History() {
             </div>
 
             {hasActiveFilters && (
-              <div className="flex min-h-9 items-center justify-between gap-3">
+              <div className={`flex min-h-9 items-center justify-between gap-3 ${exerciseFilterLabel ? "" : "pl-1"}`}>
                 <div className="flex min-w-0 items-center gap-2.5">
                   {exerciseFilterLabel && (
                     <button
                       onClick={() => setExerciseFilter(null)}
-                      className={`${filterChipBase} ${filterChipActive} min-w-0 pr-2.5!`}
+                      className={`${filterChipBase} ${filterChipActive} min-w-0 pr-2.5`}
                       aria-label={`Remove ${exerciseFilterLabel} filter`}
                     >
                       <span className="truncate">{exerciseFilterLabel}</span>
@@ -226,7 +226,7 @@ export function History() {
                     {filteredHistory.length} of {history.length}
                   </span>
                 </div>
-                <button onClick={clearFilters} className="btn-tertiary min-h-9! shrink-0 px-2 text-[13px]">
+                <button onClick={clearFilters} className="btn-tertiary -my-1 -mr-1 shrink-0 px-2 text-[13px]">
                   Clear
                 </button>
               </div>
@@ -236,31 +236,31 @@ export function History() {
       </header>
 
       {history.length === 0 ? (
-        <section className="flex flex-col items-center gap-5 px-6 pt-16 text-center">
+        <section className="flex flex-col items-center gap-3 px-6 pt-12 text-center">
           <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.75"
             strokeLinecap="round"
-            className="h-8 w-8 text-text-muted"
+            className="h-7 w-7 text-text-muted"
             aria-hidden="true"
           >
             <path d="M12 8v4l3 3" />
             <circle cx="12" cy="12" r="9" />
           </svg>
-          <div className="flex max-w-[18rem] flex-col gap-1.5">
+          <div className="flex max-w-[18rem] flex-col gap-1">
             <p className="section-title">No workouts yet</p>
             <p className="text-[15px] leading-relaxed text-text-muted">
               Finish a workout and it will show up here.
             </p>
           </div>
-          <button onClick={() => navigate("/")} className="btn-primary px-7 text-[15px]">
+          <button onClick={() => navigate("/")} className="btn-primary mt-2 px-7 text-[15px]">
             Start workout
           </button>
         </section>
       ) : filteredHistory.length === 0 ? (
-        <section className="flex flex-col items-center gap-5 px-6 pt-12 text-center">
+        <section className="flex flex-col items-center gap-3 px-6 pt-12 text-center">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -273,13 +273,13 @@ export function History() {
             <circle cx="11" cy="11" r="7" />
             <path d="M16.5 16.5L21 21" />
           </svg>
-          <div className="flex max-w-[18rem] flex-col gap-1.5">
+          <div className="flex max-w-[18rem] flex-col gap-1">
             <p className="section-title">No matching sessions</p>
             <p className="text-[15px] leading-relaxed text-text-muted">
               Try another filter, or clear everything to see your full history.
             </p>
           </div>
-          <button onClick={clearFilters} className="btn-secondary px-6 text-[15px]">
+          <button onClick={clearFilters} className="btn-secondary mt-2 px-6 text-[15px]">
             Reset filters
           </button>
         </section>
@@ -287,8 +287,8 @@ export function History() {
         <div className="flex flex-col gap-7">
           {monthGroups.map((group) => (
             <section key={group.label} className="flex flex-col gap-2.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="section-label font-semibold">{group.label}</h2>
+              <div className="flex min-h-6 items-center justify-between gap-3 px-1">
+                <h2 className="section-label">{group.label}</h2>
                 <span className="shrink-0 text-[13px] tabular-nums text-text-muted">
                   {group.workouts.length} session{group.workouts.length !== 1 ? "s" : ""}
                 </span>
@@ -323,7 +323,7 @@ export function History() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span className={`h-2 w-2 shrink-0 rounded-full ${getDotClass(workout)}`} aria-hidden="true" />
-                            <h3 className="min-w-0 truncate text-[16px] font-semibold leading-snug tracking-tight text-text-primary">
+                            <h3 className="section-title min-w-0 truncate">
                               {title}
                             </h3>
                           </div>
@@ -393,7 +393,7 @@ export function History() {
                               <span
                                 key={ex.id}
                                 onClick={(e) => e.stopPropagation()}
-                                className="chip chip-muted shrink-0 min-h-8! text-[12px]! font-medium text-text-muted line-through"
+                                className="chip chip-muted min-h-8 shrink-0 text-[12px] font-medium text-text-muted line-through"
                               >
                                 {ex.name}
                               </span>
@@ -406,10 +406,10 @@ export function History() {
                                   e.stopPropagation();
                                   setExerciseFilter((prev) => (prev === ex.id ? null : ex.id));
                                 }}
-                                className={`chip chip-muted shrink-0 min-h-8! text-[12px]! font-medium transition-colors ${
+                                className={`chip chip-muted min-h-8 shrink-0 text-[12px] font-medium transition-colors ${
                                   exerciseFilter === ex.id
-                                    ? "bg-fill-strong! text-text-primary ring-1 ring-inset ring-white/15"
-                                    : "text-text-secondary active:bg-fill-strong!"
+                                    ? "bg-fill-strong text-text-primary ring-1 ring-inset ring-white/15"
+                                    : "text-text-secondary active:bg-fill-strong"
                                 }`}
                               >
                                 {ex.name}
@@ -528,7 +528,7 @@ export function History() {
           ) : (
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="btn-tertiary px-4 text-[14px] text-accent-red/90!"
+              className="btn-tertiary px-4 text-[14px] text-accent-red"
             >
               Clear all data
             </button>
@@ -549,8 +549,10 @@ function ExerciseSummaryRow({
   if (exercise.skipped) {
     return (
       <div className="flex items-center justify-between gap-3 py-3">
-        <p className="min-w-0 truncate text-[14px] text-text-muted line-through">{exercise.name}</p>
-        <span className="shrink-0 rounded-full bg-fill px-2 py-0.5 text-[12px] text-text-muted">Skipped</span>
+        <p className="min-w-0 truncate text-[15px] text-text-muted line-through">{exercise.name}</p>
+        <span className="shrink-0 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium leading-tight text-text-muted">
+          Skipped
+        </span>
       </div>
     );
   }
@@ -558,7 +560,7 @@ function ExerciseSummaryRow({
   if (exercise.sets.length === 0) {
     return (
       <div className="flex items-center justify-between gap-3 py-3">
-        <p className="min-w-0 truncate text-[14px] font-semibold text-text-primary">{exercise.name}</p>
+        <p className="min-w-0 truncate text-[15px] font-medium text-text-primary">{exercise.name}</p>
         <span className="shrink-0 text-[13px] text-text-muted">No sets logged</span>
       </div>
     );
@@ -572,7 +574,7 @@ function ExerciseSummaryRow({
   return (
     <div className="py-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h4 className="min-w-0 truncate text-[14px] font-semibold text-text-primary">{exercise.name}</h4>
+        <h4 className="min-w-0 truncate text-[15px] font-medium text-text-primary">{exercise.name}</h4>
         <span className="shrink-0 text-[12px] tabular-nums text-text-muted">
           Best {bestSet.weight > 0 ? `${bestSet.weight}kg` : "BW"} × {bestSet.reps}
         </span>

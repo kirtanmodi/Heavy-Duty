@@ -53,21 +53,19 @@ export function WorkoutSummary() {
   return (
     <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6 overflow-x-clip!">
       <header className="flex flex-col items-center px-2 pt-8 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-green/12">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-6 w-6 text-accent-green"
-            aria-hidden="true"
-          >
-            <path d="M5 12.5l4.5 4.5L19 7.5" />
-          </svg>
-        </div>
-        <h1 className="page-title mt-5">Workout complete</h1>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-8 w-8 text-accent-green"
+          aria-hidden="true"
+        >
+          <path d="M5 12.5l4.5 4.5L19 7.5" />
+        </svg>
+        <h1 className="page-title mt-4">Workout complete</h1>
         <p className="mt-2 text-[15px] leading-snug text-text-secondary">
           {lastWorkout.day.includes(" — ") ? lastWorkout.day.split(" — ")[1] : lastWorkout.day}
         </p>
@@ -102,7 +100,7 @@ export function WorkoutSummary() {
               {progress.type === "same" ? "Volume matched last session" : "Volume vs. last session"}
             </p>
             <span
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums ${
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium leading-tight tabular-nums ${
                 progress.type === "increase"
                   ? "bg-accent-green/12 text-accent-green"
                   : progress.type === "decrease"
@@ -122,7 +120,7 @@ export function WorkoutSummary() {
       {lastWorkout.exercises.length > 0 && (
         <section className="list-group">
           {lastWorkout.exercises.map((exercise, index) => (
-            <div key={`${exercise.id}-${index}`} className="flex min-h-[3.25rem] flex-col justify-center px-4 py-2.5">
+            <div key={`${exercise.id}-${index}`} className="flex min-h-[3.25rem] flex-col justify-center px-4 py-3">
               <p
                 className={`truncate text-[15px] font-medium ${
                   exercise.skipped ? "text-text-muted line-through" : "text-text-primary"
@@ -136,8 +134,8 @@ export function WorkoutSummary() {
         </section>
       )}
 
-      <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-10 mt-auto">
-        <div className="glass flex flex-col gap-1 rounded-[1.25rem] p-2">
+      <div className="sticky z-10 mt-auto" style={{ bottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.5rem))" }}>
+        <div className="glass flex flex-col gap-1 rounded-[1.25rem] bg-bg-elevated/95 p-2">
           <button
             onClick={() => navigate("/")}
             onMouseEnter={() => prefetchRoute("/")}
