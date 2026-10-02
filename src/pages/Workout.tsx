@@ -7,11 +7,13 @@ import { getAutoReplacement, getEffectiveExercise } from "../data/exercises";
 import { cardioActivities, getDefaultExerciseIds, programs } from "../data/programs";
 
 import { useElapsedTimer } from "../hooks/useElapsedTimer";
-import { useTimer } from "../hooks/useTimer";
+import { useTimer, type TimerCompleteInfo } from "../hooks/useTimer";
+import { useWakeLock } from "../hooks/useWakeLock";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { formatDateKey, getIsoDateKey } from "../lib/dates";
 import { backOffSetsByOneStep, createMentzerSets, getOverloadSuggestion, needsWarmUpSet } from "../lib/overload";
 import { getMuscleRecoveryStatus, getGroupSkipHistory, muscleToGroup } from "../lib/recovery";
+import { playRestAlert, primeRestAlert } from "../lib/restAlert";
 import { useExerciseStore } from "../store/exerciseStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { getDaysSinceExercise, getLastSets, getRecentSessionSets, useWorkoutStore } from "../store/workoutStore";
@@ -88,6 +90,9 @@ function useMeasuredHeight<T extends HTMLElement>() {
 
 /** Opaque floating surface for bottom bars / toasts so content scrolling underneath stays out of the text. */
 const floatingSurface = "glass bg-bg-elevated/95";
+// Ticks run every 250ms (about 1s when the page is in the background on Android), so a
+// later finish means the page was paused while the rest ran out.
+const REST_ALERT_GRACE_MS = 5000;
 
 const iconProps = {
   viewBox: "0 0 24 24",
@@ -269,29 +274,15 @@ export function Workout() {
     history,
   } = useWorkoutStore();
   const restTimerSound = useSettingsStore((s) => s.restTimerSound);
-  const playTimerSound = useCallback(() => {
-    if (!restTimerSound) return;
-    try {
-      const ctx = new AudioContext();
-      const playBeep = (time: number, freq: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.3, time);
-        gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
-        osc.start(time);
-        osc.stop(time + duration);
-      };
-      const now = ctx.currentTime;
-      playBeep(now, 880, 0.15);
-      playBeep(now + 0.18, 880, 0.15);
-      playBeep(now + 0.36, 1174.66, 0.3);
-    } catch { /* audio not available */ }
+  // A rest end noticed late (the user came back after the phone locked) gets no alert —
+  // they're already looking at the screen.
+  const handleRestComplete = useCallback(({ lateMs }: TimerCompleteInfo) => {
+    if (lateMs > REST_ALERT_GRACE_MS) return;
+    playRestAlert({ sound: restTimerSound });
   }, [restTimerSound]);
-  const timer = useTimer(playTimerSound);
+  const timer = useTimer(handleRestComplete, activeWorkout?.startedAt);
+  // Keep the screen awake during rest: a locked phone pauses the app and the alert can't play.
+  useWakeLock(timer.isRunning);
   const autoStartTimer = useSettingsStore((s) => s.autoStartTimer);
   const gymEquipment = useSettingsStore((s) => s.gymEquipment);
   const weightMode = useExerciseStore((s) => s.weightMode);
@@ -556,11 +547,17 @@ export function Workout() {
     navigate("/");
   };
 
+  // Always called from a tap, so the sound alert can be unlocked for when the rest ends.
+  const startRest = (seconds: number, label: string) => {
+    if (restTimerSound) primeRestAlert();
+    timer.start(seconds, label);
+  };
+
   const handleRest = (exerciseId: string) => {
     const exercise = getEffectiveExercise(exerciseId);
     if (!exercise) return;
     const seconds = exercise.restSeconds || 120;
-    timer.start(seconds, "Rest");
+    startRest(seconds, "Rest");
   };
 
   const handleSetComplete = (exerciseIndex: number) => {
@@ -572,7 +569,7 @@ export function Workout() {
     const exercise = getEffectiveExercise(entry.id);
     if (!exercise) return;
     const seconds = exercise.restSeconds || 120;
-    timer.start(seconds, "Rest");
+    startRest(seconds, "Rest");
   };
 
   const handleMoveGroup = (groupIndex: number, direction: "up" | "down") => {
@@ -793,7 +790,7 @@ export function Workout() {
               {restPresets.map((seconds) => (
                 <button
                   key={seconds}
-                  onClick={() => timer.start(seconds, timer.label)}
+                  onClick={() => startRest(seconds, timer.label)}
                   className="btn-secondary min-h-11 px-0 text-[14px] tabular-nums text-text-secondary"
                 >
                   {formatDuration(seconds)}
@@ -818,7 +815,10 @@ export function Workout() {
               <button
                 role="switch"
                 aria-checked={restTimerSound}
-                onClick={() => useSettingsStore.getState().setRestTimerSound(!restTimerSound)}
+                onClick={() => {
+                  if (!restTimerSound) primeRestAlert();
+                  useSettingsStore.getState().setRestTimerSound(!restTimerSound);
+                }}
                 className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[0.875rem] px-1 text-left text-[14px] text-text-secondary"
               >
                 Sound alert
