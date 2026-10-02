@@ -2,16 +2,18 @@ import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
-  Line,
-  LineChart,
+  Rectangle,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import type { BarShapeProps } from "recharts";
 import { PageLayout } from "../components/layout/PageLayout";
 import { Schedule } from "../components/Schedule";
 import {
@@ -19,14 +21,9 @@ import {
   getExerciseSessions,
   getExercisePRs,
 } from "../lib/charts";
-import {
-  muscleColors,
-  getEffectiveExercise,
-  exerciseGroups,
-} from "../data/exercises";
+import { getEffectiveExercise, exerciseGroups } from "../data/exercises";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { PRRecord } from "../lib/charts";
-import type { MuscleGroup } from "../types";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -46,24 +43,29 @@ function formatMetricValue(value: number): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}k kg` : `${value}kg`;
 }
 
+function formatAxisVolume(value: number): string {
+  return value >= 1000 ? `${Number((value / 1000).toFixed(1))}k` : `${value}`;
+}
+
 function humanizeLabel(value: string): string {
   return value.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-const tooltipStyle = {
-  background: "rgba(15, 18, 27, 0.96)",
-  border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: "16px",
-  fontSize: "12px",
-  color: "white",
-  boxShadow: "0 14px 28px rgba(0,0,0,0.28)",
-};
+const CHART_ACCENT = "#ff453a";
+const AXIS_TICK = { fontSize: 11, fill: "#85858d" };
+const GRID_STROKE = "rgba(255,255,255,0.05)";
 
-const prIcons: Record<string, string> = {
-  weight: "W",
-  "1rm": "1",
-  volume: "V",
+const tooltipStyle = {
+  background: "#1c1c1f",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: "12px",
+  fontSize: "13px",
+  color: "#ededef",
+  padding: "8px 12px",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
 };
+const tooltipLabelStyle = { color: "#85858d", marginBottom: 2 };
+const tooltipItemStyle = { color: "#ededef", padding: 0 };
 
 const muscleToGroup = new Map<string, string>();
 for (const g of exerciseGroups) {
@@ -82,37 +84,52 @@ function getExerciseGroupLabel(exerciseId: string): string {
   return "Other";
 }
 
-const groupColors: Record<string, string> = {
-  Chest: "#FF4444",
-  Back: "#4488FF",
-  Shoulders: "#FFAA00",
-  Arms: "#44DD44",
-  Traps: "#88CCFF",
-  Legs: "#FF8844",
-  Abs: "#CCCC44",
-};
+function splitMetric(value: number, mode: "1rm" | "volume"): { amount: string; unit: string } {
+  if (mode === "volume" && value >= 1000) {
+    return { amount: `${(value / 1000).toFixed(1)}k`, unit: "kg" };
+  }
+  return { amount: `${value}`, unit: "kg" };
+}
 
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-  trailing,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  trailing?: ReactNode;
-}) {
+function ChevronDownIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="section-label">{eyebrow}</p>
-        <h2 className="mt-2 text-[1.05rem] font-semibold tracking-[-0.02em] text-text-primary">
-          {title}
-        </h2>
-        <p className="section-caption mt-1 max-w-[24rem]">{description}</p>
-      </div>
-      {trailing ? <div className="shrink-0">{trailing}</div> : null}
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={className}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={`h-[18px] w-[18px] ${className}`}
+    >
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
+
+function SectionLabel({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex min-h-6 items-center justify-between gap-3 px-1">
+      <h2 className="section-label">{children}</h2>
+      {action}
     </div>
   );
 }
@@ -130,11 +147,16 @@ function SegmentedControl({
   fullWidth?: boolean;
   compact?: boolean;
 }) {
-  const sizeClass = compact ? "px-3.5 py-2 text-[11px]" : "px-4 py-2.5 text-sm";
+  // Full-width: 44px pill with 34px segments. Compact: 40px pill with 32px segments.
+  // Each segment's hit area is stretched to 44px with an invisible pseudo-element.
+  const containerSize = compact ? "h-10 p-[3px]" : "h-11 p-1";
+  const buttonSize = compact
+    ? "px-3 text-[13px] before:-inset-y-1.5"
+    : "px-4 text-[14px] before:-inset-y-[5px]";
 
   return (
     <div
-      className={`segmented-surface inline-flex ${fullWidth ? "w-full" : ""} gap-1 rounded-full p-1`}
+      className={`segmented-surface ${fullWidth ? "flex w-full" : "inline-flex shrink-0"} ${containerSize} gap-1 rounded-full`}
     >
       {options.map((option) => {
         const active = option.value === value;
@@ -142,8 +164,9 @@ function SegmentedControl({
           <button
             key={option.value}
             type="button"
+            aria-pressed={active}
             onClick={() => onChange(option.value)}
-            className={`${fullWidth ? "flex-1" : ""} touch-target rounded-full font-semibold transition-all ${sizeClass} ${active ? "segmented-active" : "text-text-muted"}`}
+            className={`${fullWidth ? "flex-1" : ""} relative h-full rounded-full font-medium transition-colors before:absolute before:inset-x-0 ${buttonSize} ${active ? "segmented-active" : "text-text-muted active:text-text-secondary"}`}
           >
             {option.label}
           </button>
@@ -153,144 +176,53 @@ function SegmentedControl({
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-  accent,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  accent?: string;
-}) {
+function EmptyStateCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="surface-card-muted rounded-[1.2rem] p-3">
-      <p className="text-[11px] font-medium text-text-dim">{label}</p>
-      <p
-        className="mt-2 text-[1rem] font-semibold tabular-nums text-text-primary"
-        style={accent ? { color: accent } : undefined}
+    <div className="surface-card flex flex-col items-center gap-3 rounded-[1.25rem] px-6 py-10 text-center">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+        className="h-6 w-6 text-text-muted"
       >
-        {value}
-      </p>
-      {hint ? <p className="mt-1 text-[11px] text-text-dim">{hint}</p> : null}
-    </div>
-  );
-}
-
-function EmptyStateCard({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="surface-card flex flex-col gap-4 rounded-[1.75rem] p-5">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.05] text-text-secondary">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className="h-5 w-5"
-        >
-          <path d="M3 3v18h18" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M7 16l4-4 4 4 5-5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
+        <path d="M3 3v18h18" />
+        <path d="M7 16l4-4 4 4 5-5" />
+      </svg>
       <div>
-        <p className="section-label">{eyebrow}</p>
-        <h2 className="mt-2 text-lg font-semibold text-text-primary">{title}</h2>
-        <p className="section-caption mt-1.5">{description}</p>
+        <h2 className="section-title">{title}</h2>
+        <p className="section-caption mt-1">{description}</p>
       </div>
     </div>
   );
 }
 
-function PRBadge({ pr, color }: { pr: PRRecord; color: string }) {
-  const labels = {
-    weight: "Best Weight",
-    "1rm": "Est. 1RM",
-    volume: "Best Volume",
-  };
-  const units = {
+const prLabels: Record<PRRecord["type"], string> = {
+  weight: "Best weight",
+  "1rm": "Est. 1RM",
+  volume: "Best volume",
+};
+
+function PRRow({ pr }: { pr: PRRecord }) {
+  const values = {
     weight: `${pr.value}kg${pr.reps ? ` × ${pr.reps}` : ""}`,
     "1rm": `${pr.value}kg`,
     volume: formatMetricValue(pr.value),
   };
 
   return (
-    <div className="surface-card-muted relative overflow-hidden rounded-[1.35rem] p-3.5">
-      <div
-        className="absolute inset-x-0 top-0 h-px"
-        style={{ background: `${color}99` }}
-      />
-      <div className="flex items-start gap-3">
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-[11px] font-bold"
-          style={{ background: `${color}22`, color }}
-        >
-          {prIcons[pr.type]}
+    <div className="flex min-h-[3.75rem] items-center justify-between gap-3 px-4 py-3">
+      <span className="min-w-0 truncate text-[15px] text-text-secondary">{prLabels[pr.type]}</span>
+      <span className="shrink-0 text-right">
+        <span className="block text-[15px] font-semibold tabular-nums text-text-primary">
+          {values[pr.type]}
         </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-dim">
-            {labels[pr.type]}
-          </p>
-          <p
-            className="mt-2 text-[1rem] font-semibold tabular-nums"
-            style={{ color }}
-          >
-            {units[pr.type]}
-          </p>
-          <p className="mt-1 text-[11px] text-text-dim">{formatPRDate(pr.date)}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ExerciseChip({
-  active,
-  color,
-  name,
-  sessionCount,
-  onClick,
-  fullWidth = false,
-}: {
-  active: boolean;
-  color: string;
-  name: string;
-  sessionCount: number;
-  onClick: () => void;
-  fullWidth?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`touch-target ${fullWidth ? "flex w-full items-center justify-between" : "inline-flex items-center"} rounded-full border px-3 py-2 text-left transition-all ${
-        active
-          ? "text-text-primary"
-          : "border-white/[0.08] bg-white/[0.03] text-text-secondary"
-      }`}
-      style={
-        active
-          ? {
-              background: `linear-gradient(135deg, ${color}22 0%, ${color}38 100%)`,
-              borderColor: `${color}66`,
-              boxShadow: `0 12px 22px ${color}22`,
-            }
-          : undefined
-      }
-    >
-      <span className="text-[13px] font-medium">{name}</span>
-      <span className={`${fullWidth ? "" : "ml-2"} text-[10px] font-semibold ${active ? "text-white/70" : "text-text-dim"}`}>
-        {sessionCount}x
+        <span className="mt-0.5 block text-[12px] text-text-muted">{formatPRDate(pr.date)}</span>
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -361,13 +293,6 @@ export function Progress() {
   );
 
   const exercise = activeId ? getEffectiveExercise(activeId) : null;
-  const activeGroup =
-    activeId ? getExerciseGroupLabel(activeId) : selectedGroup === "All" ? "Other" : selectedGroup;
-  const color = exercise
-    ? muscleColors[exercise.primaryMuscles[0] as MuscleGroup] ||
-      groupColors[activeGroup] ||
-      "#8F93A2"
-    : groupColors[activeGroup] || "#8F93A2";
 
   const chartData = sessions.map((s) => ({
     date: formatDate(s.date),
@@ -377,7 +302,15 @@ export function Progress() {
   }));
 
   const latestSession = sessions[sessions.length - 1] ?? null;
-  const bestWeightPR = prs.find((pr) => pr.type === "weight");
+  const latestChartPoint = chartData[chartData.length - 1] ?? null;
+  const latestMetric = latestChartPoint ? splitMetric(latestChartPoint.value, chartMode) : null;
+  const chartCaption = [
+    chartMode === "1rm" ? "Est. 1RM" : "Volume",
+    `${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`,
+    latestSession ? `latest ${formatDate(latestSession.date)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const exerciseTitle = exercise?.name ?? activeTrackedExercise?.name ?? "Exercise";
   const exerciseMeta = exercise
     ? `${exercise.primaryMuscles.map(humanizeLabel).join(", ")} · ${humanizeLabel(exercise.equipment)} · ${humanizeLabel(exercise.type)}`
@@ -389,19 +322,12 @@ export function Progress() {
   );
 
   return (
-    <PageLayout className="flex flex-col gap-5">
-      <header className="flex flex-col gap-4 pt-1">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="font-[var(--font-display)] text-[2rem] tracking-wider text-text-primary">
-              Progress
-            </h1>
-            <p className="mt-1 max-w-[22rem] text-sm leading-6 text-text-secondary">
-              Review charts, personal bests, and your weekly plan in one place.
-            </p>
-          </div>
-          <span className="chip chip-muted shrink-0 text-[11px] font-medium text-text-secondary">
-            {tracked.length} tracked
+    <PageLayout className="flex flex-col gap-6">
+      <header className="flex flex-col gap-4 pt-2">
+        <div className="flex items-baseline justify-between gap-3 px-1">
+          <h1 className="page-title">Progress</h1>
+          <span className="shrink-0 text-[13px] tabular-nums text-text-muted">
+            {tracked.length} {tracked.length === 1 ? "exercise" : "exercises"}
           </span>
         </div>
 
@@ -420,286 +346,252 @@ export function Progress() {
         <Schedule />
       ) : tracked.length === 0 ? (
         <EmptyStateCard
-          eyebrow="Charts"
           title="No progress yet"
-          description="Log a few workouts to unlock charts and PRs. The Schedule tab is ready whenever you want to preview the week."
+          description="Log a few workouts to unlock charts and PRs."
         />
       ) : (
         <>
-          <section className="hero-surface rounded-[1.75rem] p-[1.125rem] animate-fade-up">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="section-label text-white/60">Selected</p>
-                <h2
-                  className="mt-2 font-[var(--font-display)] text-[1.75rem] leading-[0.92] tracking-[0.08em]"
-                  style={{ color }}
-                >
-                  {exerciseTitle}
-                </h2>
-                <p className="mt-2 max-w-[19rem] text-[13px] leading-5 text-text-secondary">{exerciseMeta}</p>
-              </div>
-              <div
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.2rem] border border-white/[0.08] bg-white/[0.05]"
-                style={{ boxShadow: `0 0 0 1px ${color}22 inset` }}
+          <section className="px-1 animate-fade-up">
+            <h2 className="-ml-1">
+              <button
+                type="button"
+                onClick={() => setShowExercisePicker((value) => !value)}
+                aria-expanded={showExercisePicker}
+                aria-haspopup="dialog"
+                className="flex min-h-11 max-w-full items-center gap-1.5 rounded-[0.875rem] px-1 text-left active:bg-fill"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  className="h-5 w-5"
-                  style={{ color }}
-                >
-                  <path d="M3 3v18h18" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M7 16l4-4 4 4 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {exercise ? (
-                <>
-                  {exercise.primaryMuscles.slice(0, 2).map((muscle) => (
-                    <span
-                      key={muscle}
-                      className="chip chip-muted text-[11px] text-text-secondary"
-                    >
-                      {humanizeLabel(muscle)}
-                    </span>
-                  ))}
-                  <span className="chip chip-muted text-[11px] text-text-secondary">
-                    {humanizeLabel(exercise.equipment)}
-                  </span>
-                  <span className="chip chip-muted text-[11px] text-text-secondary">
-                    {humanizeLabel(exercise.type)}
-                  </span>
-                </>
-              ) : (
-                <span className="chip chip-muted text-[11px] text-text-secondary">
-                  Workout history
+                <span className="min-w-0 text-[22px] font-semibold leading-tight tracking-tight text-text-primary">
+                  {exerciseTitle}
                 </span>
-              )}
-            </div>
-
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <StatCard label="Sessions" value={`${sessions.length}`} hint="Logged" />
-              <StatCard
-                label="Latest"
-                value={latestSession ? formatDate(latestSession.date) : "—"}
-                hint="Most recent"
-              />
-              <StatCard
-                label="Best Weight"
-                value={bestWeightPR ? `${bestWeightPR.value}kg` : "—"}
-                hint={bestWeightPR?.reps ? `${bestWeightPR.reps} reps` : "All-time"}
-                accent={color}
-              />
-            </div>
+                <ChevronDownIcon
+                  className={`h-5 w-5 shrink-0 text-text-muted transition-transform ${showExercisePicker ? "rotate-180" : ""}`}
+                />
+                <span className="sr-only">
+                  {showExercisePicker ? ", hide exercise picker" : ", change exercise"}
+                </span>
+              </button>
+            </h2>
+            <p className="text-[13px] text-text-muted">{exerciseMeta}</p>
           </section>
 
-          <section className="flex flex-col gap-3 animate-fade-up">
-            <SectionHeading
-              eyebrow="Exercise"
-              title="Switch exercise"
-              description="Keep the picker closed by default and open it only when you need a different chart."
-              trailing={
-                <button
-                  type="button"
-                  onClick={() => setShowExercisePicker((value) => !value)}
-                  className="btn-ghost px-3 py-2 text-xs font-semibold"
+          {showExercisePicker ? (
+            <>
+              <div
+                className="fixed inset-0 z-[60] bg-black/60 animate-fade-in"
+                onClick={() => setShowExercisePicker(false)}
+                aria-hidden
+              />
+              <div className="fixed inset-x-0 bottom-0 z-[70] animate-slide-up">
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="exercise-picker-title"
+                  className="sheet-surface mx-auto flex max-h-[78dvh] max-w-[460px] flex-col rounded-t-[1.5rem] border-b-0"
                 >
-                  {showExercisePicker ? "Hide" : "Change"}
-                </button>
-              }
-            />
-
-            {showExercisePicker ? (
-              <>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedGroup("All")}
-                    className="chip shrink-0 touch-target text-[11px] font-semibold"
-                    style={
-                      selectedGroup === "All"
-                        ? {
-                            background:
-                              "linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.08) 100%)",
-                            borderColor: "rgba(255,255,255,0.14)",
-                            color: "#FFFFFF",
-                          }
-                        : undefined
-                    }
-                  >
-                    All
-                    <span className={selectedGroup === "All" ? "text-white/70" : "text-text-dim"}>
-                      {tracked.length}
-                    </span>
-                  </button>
-                  {groupedExercises.map((group) => {
-                    const groupColor = groupColors[group.label] || "#8F93A2";
-                    const active = selectedGroup === group.label;
-
-                    return (
+                  <div className="shrink-0 px-[1.125rem] pt-3">
+                    <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-fill-strong" aria-hidden />
+                    <div className="flex items-center justify-between gap-3 px-1">
+                      <h2 id="exercise-picker-title" className="section-title">
+                        Choose exercise
+                      </h2>
                       <button
-                        key={group.label}
                         type="button"
-                        onClick={() => setSelectedGroup(group.label)}
-                        className={`chip shrink-0 touch-target text-[11px] font-semibold ${
-                          active ? "" : "chip-muted text-text-secondary"
-                        }`}
-                        style={
-                          active
-                            ? {
-                                background: `linear-gradient(135deg, ${groupColor}20 0%, ${groupColor}38 100%)`,
-                                borderColor: `${groupColor}66`,
-                                color: groupColor,
-                                boxShadow: `0 10px 20px ${groupColor}22`,
-                              }
-                            : undefined
-                        }
+                        onClick={() => setShowExercisePicker(false)}
+                        className="btn-tertiary -mr-3 px-3 text-[15px] text-text-primary"
                       >
-                        {group.label}
-                        <span className={active ? "opacity-70" : "text-text-dim"}>
-                          {group.exercises.length}
-                        </span>
+                        Done
                       </button>
-                    );
-                  })}
-                </div>
-
-                <div className="surface-card rounded-[1.6rem] p-3.5">
-                  {visibleExercises.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {visibleExercises.map((visibleExercise) => (
-                        <ExerciseChip
-                          key={visibleExercise.id}
-                          active={visibleExercise.id === activeId}
-                          color={groupColors[getExerciseGroupLabel(visibleExercise.id)] || "#8F93A2"}
-                          name={visibleExercise.name}
-                          sessionCount={visibleExercise.sessionCount}
-                          fullWidth
-                          onClick={() => {
-                            setSelectedId(visibleExercise.id);
-                            setShowExercisePicker(false);
-                            setShowAllSessions(false);
-                          }}
-                        />
-                      ))}
                     </div>
-                  ) : (
-                    <p className="text-sm text-text-muted">
-                      Nothing logged in this group yet.
-                    </p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="surface-card-muted rounded-[1.4rem] p-4">
-                <p className="text-sm font-semibold text-text-primary">{exerciseTitle}</p>
-                <p className="mt-1 text-sm leading-6 text-text-muted">
-                  {selectedGroup === "All"
-                    ? `Browsing ${tracked.length} tracked exercises.`
-                    : `${visibleExercises.length} exercises in ${selectedGroup}.`}
-                </p>
-              </div>
-            )}
-          </section>
-
-          {prs.length > 0 ? (
-            <section className="flex flex-col gap-3 animate-fade-up">
-              <SectionHeading
-                eyebrow="Personal Bests"
-                title={`${exerciseTitle} PRs`}
-                description="All-time milestones for this exercise."
-              />
-              <div className="scrollbar-hide -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                {prs.map((pr) => (
-                  <div key={pr.type} className="min-w-[10.75rem] shrink-0">
-                    <PRBadge pr={pr} color={color} />
+                    <div
+                      role="group"
+                      aria-label="Filter by muscle group"
+                      className="scrollbar-hide -mx-[1.125rem] mt-1 flex gap-2 overflow-x-auto px-[1.125rem] pb-2"
+                    >
+                      {[
+                        { label: "All", count: tracked.length },
+                        ...groupedExercises.map((group) => ({
+                          label: group.label,
+                          count: group.exercises.length,
+                        })),
+                      ].map((group) => {
+                        const active = selectedGroup === group.label;
+                        return (
+                          <button
+                            key={group.label}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setSelectedGroup(group.label)}
+                            className="group flex min-h-11 shrink-0 items-center"
+                          >
+                            <span
+                              className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors ${
+                                active
+                                  ? "bg-text-primary text-bg-primary"
+                                  : "bg-fill text-text-secondary group-active:bg-fill-strong"
+                              }`}
+                            >
+                              {group.label}
+                              <span
+                                className={`tabular-nums ${active ? "text-bg-primary/55" : "text-text-muted"}`}
+                              >
+                                {group.count}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                ))}
+
+                  <div
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[1.125rem] pt-1"
+                    style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+                  >
+                    <div className="list-group">
+                      {visibleExercises.length > 0 ? (
+                        visibleExercises.map((visibleExercise) => {
+                          const active = visibleExercise.id === activeId;
+                          return (
+                            <button
+                              key={visibleExercise.id}
+                              type="button"
+                              aria-pressed={active}
+                              onClick={() => {
+                                setSelectedId(visibleExercise.id);
+                                setShowExercisePicker(false);
+                                setShowAllSessions(false);
+                              }}
+                              className="flex min-h-[3.25rem] w-full items-center justify-between gap-3 px-4 text-left active:bg-fill"
+                            >
+                              <span
+                                className={`truncate text-[15px] ${active ? "font-medium text-text-primary" : "text-text-secondary"}`}
+                              >
+                                {visibleExercise.name}
+                              </span>
+                              <span className="flex shrink-0 items-center gap-3">
+                                <span className="text-[13px] tabular-nums text-text-muted">
+                                  {visibleExercise.sessionCount}{" "}
+                                  {visibleExercise.sessionCount === 1 ? "session" : "sessions"}
+                                </span>
+                                <span className="flex w-[18px] justify-center">
+                                  {active ? <CheckIcon className="text-text-primary" /> : null}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="px-4 py-3.5 text-[15px] text-text-muted">
+                          Nothing logged in this group yet.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </section>
+            </>
           ) : null}
 
-          <section className="flex flex-col gap-3 animate-fade-up">
-            <SectionHeading
-              eyebrow="Trend"
-              title={chartMode === "1rm" ? "Estimated 1RM trend" : "Volume trend"}
-              description={
-                sessions.length >= 2
-                  ? `Last ${sessions.length} logged sessions for ${exerciseTitle}.`
-                  : "Charts unlock after two logged sessions for the selected exercise."
-              }
-              trailing={
+          <section className="surface-card flex flex-col gap-4 rounded-[1.25rem] p-4 animate-fade-up">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <p className="stat-value min-w-0 truncate text-[28px] text-text-primary">
+                  {latestMetric ? (
+                    <>
+                      {latestMetric.amount}
+                      <span className="ml-1 text-[15px] font-medium tracking-normal text-text-muted">
+                        {latestMetric.unit}
+                      </span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </p>
                 <SegmentedControl
                   options={[
-                    { value: "1rm", label: "Est. 1RM" },
+                    { value: "1rm", label: "1RM" },
                     { value: "volume", label: "Volume" },
                   ]}
                   value={chartMode}
                   onChange={(next) => setChartMode(next as "1rm" | "volume")}
                   compact
                 />
-              }
-            />
+              </div>
+              <p className="mt-1.5 text-[13px] text-text-muted">{chartCaption}</p>
+            </div>
 
-            <div className="surface-card rounded-[1.85rem] p-4">
-              {sessions.length >= 2 ? (
-                <ResponsiveContainer width="100%" height={220} minWidth={0}>
+            {sessions.length >= 2 ? (
+              <div className="-mx-1">
+                <ResponsiveContainer width="100%" height={200} minWidth={0}>
                   {chartMode === "1rm" ? (
-                    <LineChart data={chartData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="rgba(255,255,255,0.05)"
-                      />
+                    <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="progress-1rm-fill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={CHART_ACCENT} stopOpacity={0.22} />
+                          <stop offset="100%" stopColor={CHART_ACCENT} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} stroke={GRID_STROKE} />
                       <XAxis
                         dataKey="date"
-                        tick={{ fontSize: 10, fill: "rgba(255,255,255,0.38)" }}
+                        tick={AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
+                        tickMargin={8}
+                        interval="preserveStartEnd"
                       />
                       <YAxis
-                        tick={{ fontSize: 10, fill: "rgba(255,255,255,0.38)" }}
+                        tick={AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
-                        domain={["dataMin - 5", "dataMax + 5"]}
-                        width={40}
+                        domain={[
+                          (dataMin: number) => Math.floor((dataMin - 5) / 5) * 5,
+                          (dataMax: number) => Math.ceil((dataMax + 5) / 5) * 5,
+                        ]}
+                        tickCount={4}
+                        width={36}
                       />
                       <Tooltip
                         contentStyle={tooltipStyle}
+                        labelStyle={tooltipLabelStyle}
+                        itemStyle={tooltipItemStyle}
+                        cursor={{ stroke: "rgba(255,255,255,0.12)", strokeWidth: 1 }}
                         formatter={(value) => [`${value}kg`, "Est. 1RM"]}
                       />
-                      <Line
+                      <Area
                         type="monotone"
                         dataKey="value"
-                        stroke={color}
-                        strokeWidth={2.75}
-                        dot={{ fill: color, r: 4 }}
-                        activeDot={{ r: 6, fill: color }}
+                        stroke={CHART_ACCENT}
+                        strokeWidth={2}
+                        fill="url(#progress-1rm-fill)"
+                        dot={{ r: 2.5, fill: CHART_ACCENT, stroke: "none" }}
+                        activeDot={{ r: 5, fill: CHART_ACCENT, stroke: "#151517", strokeWidth: 2 }}
                       />
-                    </LineChart>
+                    </AreaChart>
                   ) : (
-                    <BarChart data={chartData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="rgba(255,255,255,0.05)"
-                      />
+                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke={GRID_STROKE} />
                       <XAxis
                         dataKey="date"
-                        tick={{ fontSize: 10, fill: "rgba(255,255,255,0.38)" }}
+                        tick={AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
+                        tickMargin={8}
+                        interval="preserveStartEnd"
                       />
                       <YAxis
-                        tick={{ fontSize: 10, fill: "rgba(255,255,255,0.38)" }}
+                        tick={AXIS_TICK}
                         axisLine={false}
                         tickLine={false}
-                        width={45}
+                        tickFormatter={(value: number) => formatAxisVolume(value)}
+                        tickCount={4}
+                        width={36}
                       />
                       <Tooltip
                         contentStyle={tooltipStyle}
+                        labelStyle={tooltipLabelStyle}
+                        itemStyle={tooltipItemStyle}
+                        cursor={{ fill: "rgba(255,255,255,0.04)" }}
                         formatter={(value) => [
                           Number(value) >= 1000
                             ? `${(Number(value) / 1000).toFixed(1)}k kg`
@@ -709,103 +601,85 @@ export function Progress() {
                       />
                       <Bar
                         dataKey="value"
-                        fill={`${color}CC`}
-                        radius={[10, 10, 0, 0]}
+                        maxBarSize={28}
+                        shape={(props: BarShapeProps) => (
+                          <Rectangle
+                            x={props.x}
+                            y={props.y}
+                            width={props.width}
+                            height={props.height}
+                            radius={[6, 6, 0, 0]}
+                            fill={props.index === chartData.length - 1 ? CHART_ACCENT : "rgba(255,255,255,0.16)"}
+                          />
+                        )}
                       />
                     </BarChart>
                   )}
                 </ResponsiveContainer>
-              ) : (
-                <div className="flex min-h-[220px] items-center justify-center">
-                  <div className="surface-card-muted max-w-[18rem] rounded-[1.5rem] p-5 text-center">
-                    <p className="text-sm font-semibold text-text-primary">
-                      Need at least 2 sessions to show a chart.
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-text-muted">
-                      Keep logging this exercise and the trend view will fill in automatically.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex min-h-[8.5rem] items-center justify-center px-6 text-center">
+                <p className="text-[15px] text-text-muted">
+                  Need at least 2 sessions to show a chart.
+                </p>
+              </div>
+            )}
           </section>
 
-          <section className="flex flex-col gap-3 animate-fade-up">
-            <SectionHeading
-              eyebrow="Recent Sessions"
-              title={`${exerciseTitle} history`}
-              description={
-                showAllSessions
-                  ? `Showing all ${sessions.length} logged sessions for ${exerciseTitle}.`
-                  : `Showing the latest ${collapsedSessionCount} logged sessions for ${exerciseTitle}.`
-              }
-              trailing={
-                sessions.length > 3 ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllSessions((value) => !value)}
-                    className="btn-ghost px-3 py-2 text-xs font-semibold"
-                  >
-                    {showAllSessions ? "Show Less" : "Show All"}
-                  </button>
-                ) : (
-                  <span className="chip chip-muted text-[11px] text-text-secondary">
-                    {sessions.length} sessions
-                  </span>
-                )
-              }
-            />
-
-            <div className="flex flex-col gap-2.5">
-              {displayedSessions.map((session, index) => (
-                  <div
-                    key={`${session.date}-${index}`}
-                    className="surface-card rounded-[1.6rem] p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-[15px] font-semibold text-text-primary">
-                            {formatDate(session.date)}
-                          </p>
-                          {index === 0 ? (
-                            <span className="chip chip-muted min-h-0 px-2 py-1 text-[10px] font-semibold text-accent-blue">
-                              Latest
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-1 text-[12px] text-text-dim">
-                          {session.totalSets} working sets logged
-                        </p>
-                      </div>
-
-                      <div className="rounded-[1rem] border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-right">
-                        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-text-dim">
-                          Est. 1RM
-                        </p>
-                        <p
-                          className="mt-1 text-[15px] font-semibold tabular-nums"
-                          style={{ color }}
-                        >
-                          {session.estimated1RM}kg
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      <StatCard
-                        label="Best Set"
-                        value={`${session.bestWeight}kg × ${session.bestReps}`}
-                      />
-                      <StatCard
-                        label="Volume"
-                        value={formatMetricValue(session.totalVolume)}
-                      />
-                      <StatCard label="Sets" value={`${session.totalSets}`} />
-                    </div>
-                  </div>
+          {prs.length > 0 ? (
+            <section className="flex flex-col gap-2.5 animate-fade-up">
+              <SectionLabel>Personal bests</SectionLabel>
+              <div className="list-group">
+                {prs.map((pr) => (
+                  <PRRow key={pr.type} pr={pr} />
                 ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="flex flex-col gap-2.5 animate-fade-up">
+            <SectionLabel
+              action={<span className="pr-3 text-[13px] text-text-muted">Est. 1RM</span>}
+            >
+              Recent sessions
+            </SectionLabel>
+
+            <div className="list-group">
+              {displayedSessions.map((session, index) => (
+                <div
+                  key={`${session.date}-${index}`}
+                  className="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-medium text-text-primary">
+                      {formatDate(session.date)}
+                    </p>
+                    <p className="mt-0.5 text-[13px] tabular-nums text-text-muted">
+                      {session.totalSets} working sets · {session.bestWeight}kg × {session.bestReps} ·{" "}
+                      {formatMetricValue(session.totalVolume)}
+                    </p>
+                  </div>
+
+                  <p className="shrink-0 text-right text-[15px] font-semibold tabular-nums text-text-primary">
+                    {session.estimated1RM}kg
+                  </p>
+                </div>
+              ))}
             </div>
+
+            {sessions.length > collapsedSessionCount ? (
+              <button
+                type="button"
+                onClick={() => setShowAllSessions((value) => !value)}
+                aria-expanded={showAllSessions}
+                className="btn-tertiary self-center px-4 text-[14px]"
+              >
+                {showAllSessions ? "Show less" : `Show all ${sessions.length}`}
+                <ChevronDownIcon
+                  className={`h-4 w-4 text-text-muted transition-transform ${showAllSessions ? "rotate-180" : ""}`}
+                />
+              </button>
+            ) : null}
           </section>
         </>
       )}

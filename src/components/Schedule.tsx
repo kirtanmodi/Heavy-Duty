@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { exerciseGroups, getEffectiveExercise, muscleColors } from "../data/exercises";
+import { getEffectiveExercise } from "../data/exercises";
 import { getProgram } from "../data/programs";
 import {
   addDaysToDateKey,
@@ -16,53 +17,15 @@ import { getUpcomingRollingDays } from "../lib/rollingSchedule";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { ProgramDay } from "../types";
 
-const typeBadge: Record<
-  string,
-  { label: string; bg: string; border: string; text: string }
-> = {
-  lift: {
-    label: "Lift",
-    bg: "rgba(48, 209, 88, 0.12)",
-    border: "rgba(48, 209, 88, 0.24)",
-    text: "#30D158",
-  },
-  cardio: {
-    label: "Cardio",
-    bg: "rgba(10, 132, 255, 0.12)",
-    border: "rgba(10, 132, 255, 0.24)",
-    text: "#0A84FF",
-  },
-  recovery: {
-    label: "Recovery",
-    bg: "rgba(100, 210, 255, 0.12)",
-    border: "rgba(100, 210, 255, 0.24)",
-    text: "#64D2FF",
-  },
-  rest: {
-    label: "Rest",
-    bg: "rgba(255, 255, 255, 0.06)",
-    border: "rgba(255, 255, 255, 0.08)",
-    text: "#A0A0A8",
-  },
+const typeBadge: Record<string, { label: string; dot: string }> = {
+  lift: { label: "Lift", dot: "bg-accent-green" },
+  cardio: { label: "Cardio", dot: "bg-accent-blue" },
+  recovery: { label: "Recovery", dot: "bg-accent-blue/60" },
+  rest: { label: "Rest", dot: "bg-text-dim" },
 };
-
-function getGroupPrimaryMuscle(groupLabel: string): string | undefined {
-  const group = exerciseGroups.find((entry) => entry.label === groupLabel);
-  return group?.muscles[0];
-}
 
 function humanizeLabel(value: string): string {
   return value.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function getDaySummary(day: ProgramDay): string {
-  if (day.type === "lift") {
-    return `${day.exercises.length} planned exercises for your ${day.focus.toLowerCase()} day.`;
-  }
-  if (day.type === "cardio" || day.type === "recovery") {
-    return day.description ?? day.focus;
-  }
-  return day.description ?? day.focus;
 }
 
 function getLoggedSummary(day: ProgramDay, activityName?: string): string {
@@ -119,18 +82,16 @@ function getCycleReason(cycleIndex: number, programDays: ProgramDay[]): string {
   return `Day ${cycleIndex + 1} of ${total} in your cycle.`;
 }
 
+function StatusDot({ className }: { className: string }) {
+  return <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${className}`} aria-hidden />;
+}
+
 function DayTypeBadge({ type }: { type: string }) {
   const badge = typeBadge[type] ?? typeBadge.rest;
 
   return (
-    <span
-      className="inline-flex min-h-[2rem] items-center rounded-full border px-3 py-1 text-[11px] font-semibold"
-      style={{
-        background: badge.bg,
-        borderColor: badge.border,
-        color: badge.text,
-      }}
-    >
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium leading-tight text-text-secondary">
+      <StatusDot className={badge.dot} />
       {badge.label}
     </span>
   );
@@ -146,26 +107,41 @@ function RecoveryPill({
   status: "recovering" | "recovered" | "never";
 }) {
   const isRecovering = status === "recovering";
-  const muscle = getGroupPrimaryMuscle(group);
-  const baseColor = muscle ? muscleColors[muscle] : "#8F93A2";
 
   return (
-    <span
-      className="chip text-[11px]"
-      style={{
-        background: `${baseColor}${isRecovering ? "18" : "12"}`,
-        borderColor: `${baseColor}${isRecovering ? "32" : "26"}`,
-      }}
-    >
-      <span
-        className="inline-block h-2 w-2 rounded-full"
-        style={{ backgroundColor: isRecovering ? "#FF9F0A" : "#30D158" }}
-      />
-      <span className="font-medium text-text-primary">{group}</span>
-      <span className="text-text-dim">
+    <span className="inline-flex items-center gap-1.5 text-[13px]">
+      <StatusDot className={isRecovering ? "bg-accent-orange" : "bg-accent-green"} />
+      <span className="text-text-secondary">{group}</span>
+      <span className="tabular-nums text-text-muted">
         {daysSinceLastTrained === null ? "Never" : `${daysSinceLastTrained}d`}
       </span>
     </span>
+  );
+}
+
+function DetailSection({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="section-label">{label}</p>
+      <div className="mt-1.5">{children}</div>
+    </div>
+  );
+}
+
+function ChevronDownIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={`h-[18px] w-[18px] ${className}`}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
   );
 }
 
@@ -191,279 +167,296 @@ export function Schedule() {
     [rollingDays],
   );
 
+  const renderDay = (
+    { day, cycleIndex, dateKey, source, workout }: (typeof rollingDays)[number],
+    index: number,
+  ) => {
+    const leadDays = daysBetweenDateKeys(dateKey, todayDateKey);
+    const isLogged = source !== "planned";
+    const isNextUp = index === firstPlannedIndex;
+    const isExpanded = isNextUp || expandedDates.has(dateKey);
+    const isRest = day.type === "rest";
+    const daysAgo = daysSinceLastSession(day.id, history);
+    const stalenessText =
+      isLogged ? "Already logged" : daysAgo === null ? "Never done" : daysAgo === 0 ? "Done today" : `Last done ${daysAgo}d ago`;
+    const leadTimeLabel =
+      leadDays === 0 ? (isLogged ? "Today" : "Starts now") : leadDays === 1 ? "Tomorrow" : `In ${leadDays}d`;
+    const compactStat =
+      day.type === "lift"
+        ? `${day.exercises.length} exercises`
+        : day.duration ?? typeBadge[day.type]?.label ?? "Planned";
+    const pillGroups =
+      day.type === "lift"
+        ? getLiftDayGroups(day)
+            .map((group) => recoveryStatuses.find((status) => status.group === group))
+            .filter((status): status is NonNullable<typeof status> => !!status)
+        : recoveryStatuses.filter((status) => status.status !== "never");
+    const smartSuggestion = isLogged
+      ? null
+      : getSmartProgramDaySuggestion(
+          day,
+          program.days,
+          recoveryStatuses,
+          leadDays <= 2,
+        );
+    const liftExercises =
+      day.type === "lift"
+        ? day.exercises
+            .map((exerciseId) => getEffectiveExercise(exerciseId))
+            .filter((exercise): exercise is NonNullable<typeof exercise> => !!exercise)
+        : [];
+    const toggleExpanded = () => {
+      setExpandedDates((prev) => {
+        const next = new Set(prev);
+        if (next.has(dateKey)) next.delete(dateKey);
+        else next.add(dateKey);
+        return next;
+      });
+    };
+
+    const dateLabel = formatDayDate(createSessionIso(dateKey));
+    // Drop the stat when it would only repeat the type badge (e.g. "Rest").
+    const statText = isLogged
+      ? getLoggedSummary(day, workout?.activityName)
+      : compactStat !== typeBadge[day.type]?.label
+        ? compactStat
+        : null;
+
+    const loggedBadge = isLogged ? (
+      <span className="shrink-0 rounded-full bg-accent-green/12 px-2 py-0.5 text-[12px] font-medium leading-tight text-accent-green">
+        Logged
+      </span>
+    ) : null;
+
+    // The Start button (or, while another session is active, the note that replaces it)
+    // only appears on an open slot dated today.
+    const startBlock =
+      !isRest && !isLogged && leadDays === 0 ? (
+        activeWorkout ? (
+          <p className="px-4 pb-4 text-[13px] text-text-muted">
+            Start unavailable · finish or cancel the active session first.
+          </p>
+        ) : (
+          <div className="px-4 pb-4">
+            <button
+              type="button"
+              onClick={() => navigate(`/workout/${day.id}`)}
+              className={`${isNextUp ? "btn-primary" : "btn-secondary"} w-full text-[15px]`}
+            >
+              Start workout
+            </button>
+          </div>
+        )
+      ) : null;
+
+    const details = isExpanded ? (
+      <div className={`flex flex-col gap-5 px-4 pb-4 ${isNextUp ? "pt-1" : ""}`}>
+        <DetailSection label="Why this day">
+          <p className="text-[14px] leading-relaxed text-text-secondary">
+            {getCycleReason(cycleIndex, program.days)}
+          </p>
+          {!isLogged ? (
+            <p className="mt-1 text-[13px] text-text-muted">{stalenessText}</p>
+          ) : null}
+        </DetailSection>
+
+        {day.type === "lift" && liftExercises.length > 0 ? (
+          <DetailSection label="Exercises">
+            <div className="-mb-1 flex flex-col divide-y divide-separator">
+              {liftExercises.map((exercise) => (
+                <div
+                  key={exercise.id}
+                  className="flex items-center justify-between gap-3 py-1.5"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] leading-snug text-text-primary">{exercise.name}</p>
+                    <p className="truncate text-[12px] leading-snug text-text-muted">
+                      {exercise.primaryMuscles.slice(0, 2).map(humanizeLabel).join(", ")}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[13px] tabular-nums text-text-muted">
+                    {exercise.repRange[0]}–{exercise.repRange[1]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </DetailSection>
+        ) : null}
+
+        {(day.type === "cardio" || day.type === "recovery" || day.type === "rest") &&
+        (day.description || day.tips) ? (
+          <>
+            {day.description ? (
+              <DetailSection label="Plan">
+                <p className="text-[14px] leading-relaxed text-text-secondary">{day.description}</p>
+              </DetailSection>
+            ) : null}
+            {day.tips ? (
+              <DetailSection label="Tip">
+                <p className="text-[13px] leading-relaxed text-text-muted">{day.tips}</p>
+              </DetailSection>
+            ) : null}
+          </>
+        ) : null}
+
+        {pillGroups.length > 0 ? (
+          <DetailSection label="Recovery">
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+              {pillGroups.map((status) => (
+                <RecoveryPill
+                  key={status.group}
+                  group={status.group}
+                  daysSinceLastTrained={status.daysSinceLastTrained}
+                  status={status.status}
+                />
+              ))}
+            </div>
+          </DetailSection>
+        ) : null}
+
+        {!isLogged && smartSuggestion?.reason && smartSuggestion.suggestion ? (
+          <div className="rounded-[0.875rem] bg-accent-orange/10 px-3.5 py-3">
+            <p className="text-[13px] font-medium text-accent-orange">Recovery suggestion</p>
+            <p className="mt-0.5 text-[13px] leading-relaxed text-text-secondary">
+              {smartSuggestion.reason}. {smartSuggestion.suggestion}.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
+    if (isNextUp) {
+      return (
+        <section
+          key={`${day.id}-${dateKey}`}
+          className="hero-surface rounded-[1.25rem] animate-fade-up"
+          style={{ animationDelay: `${index * 35}ms` }}
+        >
+          <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-text-muted">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium leading-tight text-text-primary">
+                  <StatusDot className="bg-accent-red" />
+                  Next up
+                </span>
+                {loggedBadge}
+                <span>
+                  {dateLabel} · {leadTimeLabel}
+                </span>
+              </div>
+              <h3 className="mt-2 text-[20px] font-semibold leading-snug tracking-tight text-text-primary">
+                {day.focus}
+              </h3>
+              {statText ? <p className="mt-0.5 text-[13px] text-text-muted">{statText}</p> : null}
+            </div>
+            <span className="flex shrink-0 pt-0.5">
+              <DayTypeBadge type={day.type} />
+            </span>
+          </div>
+
+          {startBlock}
+          {details}
+        </section>
+      );
+    }
+
+    return (
+      <div key={`${day.id}-${dateKey}`}>
+        <div className="relative flex min-h-[3.75rem] items-center gap-3 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="min-w-0 text-[15px] font-semibold leading-snug tracking-tight text-text-primary">
+                {/* The pseudo-element stretches the toggle over the whole row. */}
+                <button
+                  type="button"
+                  onClick={toggleExpanded}
+                  aria-expanded={isExpanded}
+                  className="text-left after:absolute after:inset-0 active:after:bg-fill focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-white/40"
+                >
+                  {day.focus}
+                </button>
+              </h3>
+              {loggedBadge}
+            </div>
+            <p className="mt-0.5 text-[13px] text-text-muted">
+              {dateLabel} · {leadTimeLabel}
+              {statText ? ` · ${statText}` : ""}
+            </p>
+          </div>
+          <span className="flex shrink-0 items-center gap-1.5">
+            <DayTypeBadge type={day.type} />
+            <ChevronDownIcon
+              className={`text-text-dim transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            />
+          </span>
+        </div>
+
+        {details}
+        {startBlock}
+      </div>
+    );
+  };
+
+  const beforeNextUp = firstPlannedIndex === -1 ? rollingDays : rollingDays.slice(0, firstPlannedIndex);
+  const afterNextUp = firstPlannedIndex === -1 ? [] : rollingDays.slice(firstPlannedIndex + 1);
+
   return (
     <div className="flex flex-col gap-3">
-      <section className="surface-card rounded-[1.75rem] p-4 animate-fade-up">
-        <p className="section-label">Rolling Cycle</p>
-        <h2 className="mt-2 text-[1.05rem] font-semibold text-text-primary">
-          {program.name}
-        </h2>
-        <p className="section-caption mt-1 max-w-[24rem]">
-          Upcoming days advance from your history. Keep the list compact, then open details only when you need them.
-        </p>
-
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="text-sm leading-6 text-text-secondary">
-            The next planned day stays open by default.
-          </p>
+      <div className="flex flex-col gap-2 animate-fade-up">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <h2 className="section-label">Next {rollingDays.length} days</h2>
           <button
             type="button"
             onClick={() => setShowLegend((value) => !value)}
-            className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
+            aria-expanded={showLegend}
+            className="btn-tertiary -mr-2 px-2 text-[13px]"
           >
-            {showLegend ? "Hide Legend" : "Legend"}
+            {showLegend ? "Hide legend" : "Legend"}
           </button>
         </div>
 
         {showLegend ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              <span className="inline-block h-2 w-2 rounded-full bg-accent-green" />
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-1 pb-1 text-[13px] text-text-secondary animate-fade-in">
+            <span className="inline-flex items-center gap-1.5">
+              <StatusDot className="bg-accent-green" />
               Recovered
             </span>
-            <span className="chip chip-muted text-[11px] text-text-secondary">
-              <span className="inline-block h-2 w-2 rounded-full bg-accent-orange" />
+            <span className="inline-flex items-center gap-1.5">
+              <StatusDot className="bg-accent-orange" />
               Recovering
             </span>
           </div>
         ) : null}
 
         {activeWorkout ? (
-          <div className="surface-card-muted mt-3 rounded-[1.3rem] p-3.5">
-            <p className="text-sm font-semibold text-text-primary">Workout in progress</p>
-            <p className="mt-1 text-sm leading-6 text-text-secondary">
-              Finish or cancel {activeWorkout.dayName} before starting another day from here.
-            </p>
+          <div className="surface-card-muted flex items-start gap-2.5 rounded-[1.25rem] px-4 py-3">
+            <StatusDot className="mt-[7px] bg-accent-red" />
+            <div className="min-w-0">
+              <p className="text-[14px] font-medium text-text-primary">Workout in progress</p>
+              <p className="mt-0.5 text-[13px] text-text-muted">
+                Finish or cancel {activeWorkout.dayName} before starting another day from here.
+              </p>
+            </div>
           </div>
         ) : null}
-      </section>
+      </div>
 
-      {rollingDays.map(({ day, cycleIndex, dateKey, source, workout }, index) => {
-        const leadDays = daysBetweenDateKeys(dateKey, todayDateKey);
-        const isLogged = source !== "planned";
-        const isNextUp = index === firstPlannedIndex;
-        const isExpanded = isNextUp || expandedDates.has(dateKey);
-        const isRest = day.type === "rest";
-        const daysAgo = daysSinceLastSession(day.id, history);
-        const stalenessText =
-          isLogged ? "Already logged" : daysAgo === null ? "Never done" : daysAgo === 0 ? "Done today" : `Last done ${daysAgo}d ago`;
-        const leadTimeLabel =
-          leadDays === 0 ? (isLogged ? "Today" : "Starts now") : leadDays === 1 ? "Tomorrow" : `In ${leadDays}d`;
-        const compactStat =
-          day.type === "lift"
-            ? `${day.exercises.length} exercises`
-            : day.duration ?? typeBadge[day.type]?.label ?? "Planned";
-        const pillGroups =
-          day.type === "lift"
-            ? getLiftDayGroups(day)
-                .map((group) => recoveryStatuses.find((status) => status.group === group))
-                .filter((status): status is NonNullable<typeof status> => !!status)
-            : recoveryStatuses.filter((status) => status.status !== "never");
-        const smartSuggestion = isLogged
-          ? null
-          : getSmartProgramDaySuggestion(
-              day,
-              program.days,
-              recoveryStatuses,
-              leadDays <= 2,
-            );
-        const liftExercises =
-          day.type === "lift"
-            ? day.exercises
-                .map((exerciseId) => getEffectiveExercise(exerciseId))
-                .filter((exercise): exercise is NonNullable<typeof exercise> => !!exercise)
-            : [];
+      {beforeNextUp.length > 0 ? (
+        <div className="list-group animate-fade-up">
+          {beforeNextUp.map((slot, index) => renderDay(slot, index))}
+        </div>
+      ) : null}
 
-        return (
-          <section
-            key={`${day.id}-${dateKey}`}
-            className={`surface-card rounded-[1.75rem] p-4 animate-fade-up ${isNextUp ? "ring-1 ring-accent-red/40" : ""}`}
-            style={{ animationDelay: `${index * 35}ms` }}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[15px] font-semibold text-text-primary">
-                    {formatDayDate(createSessionIso(dateKey))}
-                  </span>
-                  {isNextUp ? (
-                    <span className="chip chip-muted min-h-0 px-2 py-1 text-[10px] font-semibold text-accent-red">
-                      Next Up
-                    </span>
-                  ) : null}
-                  {isLogged ? (
-                    <span className="chip chip-muted min-h-0 px-2 py-1 text-[10px] font-semibold text-text-secondary">
-                      Logged
-                    </span>
-                  ) : null}
-                </div>
-                <h3 className="mt-3 text-[1.1rem] font-semibold tracking-[-0.02em] text-text-primary">
-                  {day.focus}
-                </h3>
-                <p className="mt-1 text-sm leading-6 text-text-secondary">
-                  {isLogged ? getLoggedSummary(day, workout?.activityName) : getDaySummary(day)}
-                </p>
-              </div>
+      {firstPlannedIndex !== -1 ? renderDay(rollingDays[firstPlannedIndex], firstPlannedIndex) : null}
 
-              <DayTypeBadge type={day.type} />
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="chip chip-muted text-[11px] text-text-secondary">
-                {leadTimeLabel}
-              </span>
-              <span className="chip chip-muted text-[11px] text-text-secondary">
-                {compactStat}
-              </span>
-              {isLogged ? (
-                <span className="chip chip-muted text-[11px] text-text-secondary">
-                  {stalenessText}
-                </span>
-              ) : null}
-            </div>
-
-            {!isNextUp ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setExpandedDates((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(dateKey)) next.delete(dateKey);
-                    else next.add(dateKey);
-                    return next;
-                  });
-                }}
-                className="btn-ghost mt-4 px-3 py-2 text-xs font-semibold"
-              >
-                {isExpanded ? "Hide Details" : "Show Details"}
-              </button>
-            ) : null}
-
-            {isExpanded ? (
-              <div className="surface-card-muted mt-4 rounded-[1.25rem] p-3.5">
-                <p className="text-sm font-semibold text-text-primary">Why this day is here</p>
-                <p className="mt-1 text-sm leading-6 text-text-secondary">
-                  {getCycleReason(cycleIndex, program.days)}
-                </p>
-                {!isLogged ? (
-                  <p className="mt-2 text-[12px] leading-5 text-text-dim">{stalenessText}</p>
-                ) : null}
-              </div>
-            ) : null}
-
-            {isExpanded && day.type === "lift" && liftExercises.length > 0 ? (
-              <div className="surface-card-muted mt-4 rounded-[1.35rem] p-3.5">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="section-label">Exercises</p>
-                  <span className="text-[11px] text-text-dim">{liftExercises.length} planned</span>
-                </div>
-
-                <div className="mt-3 flex flex-col gap-2">
-                  {liftExercises.map((exercise) => (
-                    <div
-                      key={exercise.id}
-                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-white/[0.03] px-3 py-2.5"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-text-primary">
-                          {exercise.name}
-                        </p>
-                        <p className="mt-1 text-[11px] text-text-dim">
-                          {exercise.primaryMuscles.slice(0, 2).map(humanizeLabel).join(", ")}
-                        </p>
-                      </div>
-                      <span className="text-[11px] font-medium tabular-nums text-text-secondary">
-                        {exercise.repRange[0]}-{exercise.repRange[1]}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {isExpanded && (day.type === "cardio" || day.type === "recovery" || day.type === "rest") &&
-            (day.description || day.tips) ? (
-              <div className="surface-card-muted mt-4 rounded-[1.35rem] p-3.5">
-                {day.description ? (
-                  <p className="text-sm leading-6 text-text-secondary">{day.description}</p>
-                ) : null}
-                {day.tips ? (
-                  <div className={day.description ? "mt-3 border-t border-white/[0.06] pt-3" : ""}>
-                    <p className="section-label">Tip</p>
-                    <p className="mt-1 text-sm leading-6 text-text-muted">{day.tips}</p>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {isExpanded && pillGroups.length > 0 ? (
-              <div className="mt-4 flex flex-col gap-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="section-label">Recovery</p>
-                  <span className="text-[11px] text-text-dim">
-                    {day.type === "lift" ? "Targeted groups" : "Current status"}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {pillGroups.map((status) => (
-                    <RecoveryPill
-                      key={status.group}
-                      group={status.group}
-                      daysSinceLastTrained={status.daysSinceLastTrained}
-                      status={status.status}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {isExpanded && !isLogged && smartSuggestion?.reason && smartSuggestion.suggestion ? (
-              <div className="mt-4 rounded-[1.25rem] border border-accent-orange/20 bg-accent-orange/10 px-3.5 py-3">
-                <p className="text-[12px] font-semibold text-accent-orange">Recovery suggestion</p>
-                <p className="mt-1 text-sm leading-6 text-text-secondary">
-                  {smartSuggestion.reason}. {smartSuggestion.suggestion}.
-                </p>
-              </div>
-            ) : null}
-
-            {!isRest ? (
-              activeWorkout ? (
-                <div className="surface-card-muted mt-4 rounded-[1.25rem] p-3.5">
-                  <p className="text-sm font-semibold text-text-primary">
-                    Start unavailable
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-text-secondary">
-                    Finish or cancel the active session first.
-                  </p>
-                </div>
-              ) : !isLogged && leadDays === 0 ? (
-                <button
-                  type="button"
-                  onClick={() => navigate(`/workout/${day.id}`)}
-                  className="btn-primary mt-4 w-full text-sm font-semibold"
-                >
-                  Start Workout
-                </button>
-              ) : isLogged ? (
-                <div className="surface-card-muted mt-4 rounded-[1.25rem] p-3.5">
-                  <p className="text-sm font-semibold text-text-primary">Already logged</p>
-                  <p className="mt-1 text-sm leading-6 text-text-secondary">
-                    This day is already taken, so the next open training day moved further down the list.
-                  </p>
-                </div>
-              ) : (
-                <div className="surface-card-muted mt-4 rounded-[1.25rem] p-3.5">
-                  <p className="text-sm font-semibold text-text-primary">Scheduled later</p>
-                  <p className="mt-1 text-sm leading-6 text-text-secondary">
-                    This is the next planned slot for {formatDayDate(createSessionIso(dateKey))}.
-                  </p>
-                </div>
-              )
-            ) : null}
-          </section>
-        );
-      })}
+      {afterNextUp.length > 0 ? (
+        <div
+          className="list-group animate-fade-up"
+          style={{ animationDelay: `${(firstPlannedIndex + 1) * 35}ms` }}
+        >
+          {afterNextUp.map((slot, offset) => renderDay(slot, firstPlannedIndex + 1 + offset))}
+        </div>
+      ) : null}
     </div>
   );
 }

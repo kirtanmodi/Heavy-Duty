@@ -4,7 +4,6 @@ import {
   exerciseGroups,
   getEffectiveExercises,
   getEffectiveExercisesByGroup,
-  muscleColors,
 } from "../data/exercises";
 import { useExerciseStore } from "../store/exerciseStore";
 import type { Exercise, Equipment, MuscleGroup } from "../types";
@@ -17,12 +16,12 @@ const equipmentOptions: Equipment[] = [
   "bodyweight+",
 ];
 
-const equipmentIcons: Record<Equipment, string> = {
-  barbell: "B",
-  dumbbells: "D",
-  cable: "C",
-  machine: "M",
-  "bodyweight+": "BW",
+const equipmentLabels: Record<Equipment, string> = {
+  barbell: "Barbell",
+  dumbbells: "Dumbbells",
+  cable: "Cable",
+  machine: "Machine",
+  "bodyweight+": "Bodyweight+",
 };
 
 const muscleOptions: { label: string; value: MuscleGroup }[] = [
@@ -42,28 +41,37 @@ const muscleOptions: { label: string; value: MuscleGroup }[] = [
   { label: "Core", value: "core" },
 ];
 
-function getGroupColor(exercise: Exercise): string {
-  const primary = exercise.primaryMuscles[0];
-  return muscleColors[primary] || "#888";
+function formatMuscle(muscle: string): string {
+  return muscle
+    .split("-")
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
-function EquipmentBadge({ equipment }: { equipment: Equipment }) {
+function SelectChevron() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-      <span className="text-[9px] opacity-70">{equipmentIcons[equipment]}</span>
-      {equipment === "bodyweight+" ? "BW+" : equipment}
-    </span>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
+      aria-hidden="true"
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
   );
 }
 
-function ExerciseCard({ exercise }: { exercise: Exercise }) {
+function ExerciseRow({ exercise, isCustom }: { exercise: Exercise; isCustom: boolean }) {
   const { renameExercise, removeExercise } = useExerciseStore();
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(exercise.name);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const color = getGroupColor(exercise);
 
   useEffect(() => {
     if (!confirmRemove) return;
@@ -93,165 +101,128 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
     }
   };
 
+  const meta = [
+    equipmentLabels[exercise.equipment] ?? exercise.equipment,
+    `${exercise.repRange[0]}–${exercise.repRange[1]} reps`,
+    exercise.type === "compound" ? "Compound" : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const details = [
+    exercise.primaryMuscles.map(formatMuscle).join(", "),
+    `${exercise.restSeconds}s rest`,
+    `+${exercise.weightIncrement}kg increments`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div
-      className="group relative overflow-hidden rounded-2xl transition-all duration-200"
-      style={{
-        background: `linear-gradient(135deg, ${color}08 0%, transparent 60%)`,
-        border: `1px solid ${color}18`,
-      }}
-    >
-      {/* Color accent bar */}
-      <div
-        className="absolute left-0 top-0 h-full w-[3px]"
-        style={{ background: `linear-gradient(180deg, ${color}, ${color}40)` }}
-      />
-
-      {/* Main content */}
-      <div className="pl-4 pr-3 py-3">
-        <div className="flex items-start gap-3">
-          {/* Exercise info */}
-          <div
-            className="flex min-w-0 flex-1 flex-col gap-1.5 cursor-pointer"
-            onClick={() => !editing && setExpanded(!expanded)}
-          >
-            {editing ? (
-              <input
-                ref={inputRef}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={handleSave}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSave();
-                  if (e.key === "Escape") {
-                    setName(exercise.name);
-                    setEditing(false);
-                  }
-                }}
-                className="rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-white/20"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-[15px] font-semibold text-text-primary leading-tight">
-                  {exercise.name}
+    <div>
+      <div className="flex min-h-[52px] items-center gap-1 pr-1.5">
+        {/* Exercise info */}
+        <div
+          className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center gap-0.5 py-2.5 pl-4"
+          onClick={() => !editing && setExpanded(!expanded)}
+        >
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSave();
+                if (e.key === "Escape") {
+                  setName(exercise.name);
+                  setEditing(false);
+                }
+              }}
+              aria-label="Exercise name"
+              className="input-shell input-focus -mb-0.5 -ml-3 -mt-2 h-8 w-[calc(100%+0.75rem)] px-3 text-[15px] font-medium text-text-primary"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-[15px] font-medium leading-snug text-text-primary">
+                {exercise.name}
+              </span>
+              {isCustom && (
+                <span className="chip chip-muted !min-h-0 shrink-0 !px-2 !py-0.5 text-[11px] text-text-muted">
+                  Custom
                 </span>
-                {exercise.type === "compound" && (
-                  <span
-                    className="rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-widest"
-                    style={{ color, background: `${color}15` }}
-                  >
-                    C
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Meta row */}
-            <div className="flex items-center gap-2">
-              <EquipmentBadge equipment={exercise.equipment} />
-              <span className="text-[11px] text-text-dim">
-                {exercise.repRange[0]}–{exercise.repRange[1]} reps
-              </span>
-              <span className="text-[11px] text-text-dim">·</span>
-              <span className="text-[11px] text-text-dim">
-                {exercise.primaryMuscles
-                  .map((m) =>
-                    m
-                      .split("-")
-                      .map((w) => w[0].toUpperCase() + w.slice(1))
-                      .join(" ")
-                  )
-                  .join(", ")}
-              </span>
+              )}
             </div>
-          </div>
+          )}
 
-          <button
-            onClick={() => setExpanded((value) => !value)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-dim transition-colors active:bg-white/[0.06]"
-            aria-label={expanded ? "Hide exercise details" : "Show exercise details"}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-            >
-              <path d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+          <p className="truncate text-[13px] text-text-muted">{meta}</p>
         </div>
 
-        {/* Expandable details */}
-        {expanded && (
-          <div className="mt-3 animate-fade-in">
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setEditing(true)}
-                className="btn-ghost px-3 py-2 text-xs font-semibold"
-              >
-                Rename
-              </button>
-              <button
-                onClick={handleRemove}
-                className={`px-3 py-2 text-xs font-semibold rounded-xl transition-all ${
-                  confirmRemove
-                    ? "bg-accent-red/15 text-accent-red"
-                    : "btn-ghost text-accent-red"
-                }`}
-              >
-                {confirmRemove ? "Confirm Delete" : "Delete"}
-              </button>
-            </div>
-
-            {exercise.mentzerTips && (
-              <div
-                className="mt-3 rounded-xl px-3 py-2.5"
-                style={{ background: `${color}08`, border: `1px solid ${color}12` }}
-              >
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" style={{ color }}>
-                    <path
-                      d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>
-                    Mentzer Tip
-                  </span>
-                </div>
-                <p className="text-[12px] leading-relaxed text-text-secondary">
-                  {exercise.mentzerTips}
-                </p>
-              </div>
-            )}
-
-            <div className="mt-3 flex items-center gap-3 px-1">
-              <div className="flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3 w-3 text-text-dim">
-                  <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-[11px] text-text-muted">
-                  {exercise.restSeconds}s rest
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3 w-3 text-text-dim">
-                  <path d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
-                </svg>
-                <span className="text-[11px] text-text-muted">
-                  +{exercise.weightIncrement}kg increments
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-dim transition-colors active:bg-fill"
+          aria-label={expanded ? "Hide exercise details" : "Show exercise details"}
+          aria-expanded={expanded}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`h-[18px] w-[18px] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
       </div>
+
+      {/* Expandable details */}
+      {expanded && (
+        <div className="flex flex-col gap-3 px-4 pb-4 animate-fade-in">
+          <p className="text-[13px] leading-relaxed text-text-muted">{details}</p>
+
+          {exercise.mentzerTips && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[13px] font-medium text-text-muted">Mentzer tip</p>
+              <p className="text-[14px] leading-relaxed text-text-secondary">
+                {exercise.mentzerTips}
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="btn-secondary !min-h-11 px-4 text-[14px]"
+            >
+              Rename
+            </button>
+            <button
+              type="button"
+              onClick={handleRemove}
+              className={`btn-danger !min-h-11 px-4 text-[14px] ${
+                confirmRemove ? "!bg-accent-red !text-white" : ""
+              }`}
+            >
+              {confirmRemove ? "Confirm delete" : "Delete"}
+            </button>
+            {confirmRemove && (
+              <button
+                type="button"
+                onClick={() => setConfirmRemove(false)}
+                className="btn-tertiary !min-h-11 px-3 text-[14px]"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -265,7 +236,6 @@ function AddExerciseSheet({
   const [name, setName] = useState("");
   const [muscle, setMuscle] = useState<MuscleGroup>("chest");
   const [equipment, setEquipment] = useState<Equipment>("barbell");
-  const color = muscleColors[muscle] || "#888";
 
   const handleAdd = () => {
     const trimmed = name.trim();
@@ -299,43 +269,47 @@ function AddExerciseSheet({
       {/* Sheet — sits above bottom nav (z-50) */}
       <div className="fixed inset-x-0 bottom-0 z-[70] animate-slide-up">
         <div
-          className="mx-auto max-w-[460px] rounded-t-3xl border-t border-white/[0.08] px-6 pt-5"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-exercise-title"
+          className="sheet-surface mx-auto max-w-[460px] rounded-t-[1.5rem] border-b-0 px-5 pt-3"
           style={{
-            background: `linear-gradient(180deg, #1a1a20 0%, #111114 100%)`,
-            paddingBottom: "calc(5rem + max(0.5rem, env(safe-area-inset-bottom)))",
+            paddingBottom: "calc(1.25rem + max(0.75rem, env(safe-area-inset-bottom)))",
           }}
         >
           {/* Handle */}
-          <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/[0.12]" />
+          <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-fill-strong" />
 
-          <h3 className="mb-4 font-[var(--font-display)] text-xl tracking-wider text-text-primary">
-            NEW EXERCISE
-          </h3>
+          <h2 id="new-exercise-title" className="section-title px-1">
+            Add exercise
+          </h2>
 
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+          <div className="mt-5 flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="new-exercise-name" className="section-label px-1">
                 Name
               </label>
               <input
+                id="new-exercise-name"
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Cable Lateral Raise"
-                className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-text-primary placeholder:text-text-dim outline-none focus:border-white/20 transition-colors"
+                className="input-shell input-focus h-12 w-full px-4 text-[15px] text-text-primary"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-                  Muscle Group
+              <div className="flex min-w-0 flex-col gap-2">
+                <label htmlFor="new-exercise-muscle" className="section-label px-1">
+                  Muscle group
                 </label>
                 <div className="relative">
                   <select
+                    id="new-exercise-muscle"
                     value={muscle}
                     onChange={(e) => setMuscle(e.target.value as MuscleGroup)}
-                    className="w-full appearance-none rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 pr-8 text-sm text-text-primary outline-none"
+                    className="input-shell input-focus h-12 w-full appearance-none pl-4 pr-10 text-[15px] text-text-primary"
                   >
                     {muscleOptions.map((m) => (
                       <option key={m.value} value={m.value}>
@@ -343,73 +317,44 @@ function AddExerciseSheet({
                       </option>
                     ))}
                   </select>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-dim">
-                    <path d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <SelectChevron />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+              <div className="flex min-w-0 flex-col gap-2">
+                <label htmlFor="new-exercise-equipment" className="section-label px-1">
                   Equipment
                 </label>
                 <div className="relative">
                   <select
+                    id="new-exercise-equipment"
                     value={equipment}
                     onChange={(e) =>
                       setEquipment(e.target.value as Equipment)
                     }
-                    className="w-full appearance-none rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 pr-8 text-sm text-text-primary outline-none"
+                    className="input-shell input-focus h-12 w-full appearance-none pl-4 pr-10 text-[15px] text-text-primary"
                   >
                     {equipmentOptions.map((eq) => (
                       <option key={eq} value={eq}>
-                        {eq}
+                        {equipmentLabels[eq]}
                       </option>
                     ))}
                   </select>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-dim">
-                    <path d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <SelectChevron />
                 </div>
               </div>
             </div>
 
-            {/* Preview pill */}
-            {name.trim() && (
-              <div
-                className="flex items-center gap-2 rounded-xl px-4 py-2.5 animate-fade-in"
-                style={{ background: `${color}10`, border: `1px solid ${color}20` }}
-              >
-                <div
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: color }}
-                />
-                <span className="text-xs text-text-secondary">
-                  {name.trim()} will appear under{" "}
-                  <span style={{ color }}>
-                    {muscleOptions.find((m) => m.value === muscle)?.label}
-                  </span>
-                </span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <button
-                onClick={onClose}
-                className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-              >
+            <div className="flex gap-3 pt-1">
+              <button onClick={onClose} className="btn-secondary flex-1 text-[15px]">
                 Cancel
               </button>
               <button
                 onClick={handleAdd}
                 disabled={!name.trim()}
-                className="rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97] disabled:opacity-30"
-                style={{
-                  background: `linear-gradient(135deg, ${color}, ${color}CC)`,
-                  boxShadow: `0 4px 16px ${color}30`,
-                }}
+                className="btn-primary flex-1 text-[15px]"
               >
-                Add Exercise
+                Add exercise
               </button>
             </div>
           </div>
@@ -424,9 +369,10 @@ export function Exercises() {
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  useExerciseStore();
+  const { customExercises } = useExerciseStore();
 
   const allExercises = getEffectiveExercises();
+  const customIds = new Set(customExercises.map((e) => e.id));
 
   const filteredExercises = search
     ? allExercises.filter((e) =>
@@ -441,191 +387,211 @@ export function Exercises() {
   const totalCount = allExercises.length;
 
   return (
-    <PageLayout className="flex flex-col gap-5">
+    <PageLayout className="flex flex-col gap-7">
       {/* Header */}
-      <header className="flex items-end justify-between pt-1">
-        <div>
-          <h1 className="font-[var(--font-display)] text-[2rem] leading-none tracking-wider text-text-primary">
-            EXERCISES
-          </h1>
-          <p className="mt-1 text-[12px] text-text-dim">
-            {totalCount} exercises in your library
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-red/15 text-accent-red transition-all active:scale-90"
-          aria-label="Add exercise"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            className="h-5 w-5"
-          >
-            <path d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-        </button>
-      </header>
-
-      {/* Search */}
-      <div className="relative">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="M21 21l-4.35-4.35" />
-        </svg>
-        <input
-          type="text"
-          inputMode="search"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            if (e.target.value) setActiveGroup(null);
-          }}
-          placeholder="Search exercises..."
-          className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.03] py-3 pl-11 pr-10 text-sm text-text-primary placeholder:text-text-dim outline-none transition-colors focus:border-white/[0.12] focus:bg-white/[0.05]"
-        />
-        {search && (
+      <header className="flex flex-col gap-4 pt-2">
+        <div className="flex items-end justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <h1 className="page-title">Exercises</h1>
+            <p className="mt-1 text-[13px] tabular-nums text-text-muted">
+              {totalCount} exercises
+            </p>
+          </div>
           <button
-            onClick={() => setSearch("")}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 rounded-full bg-white/[0.08] p-1 text-text-muted"
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="btn-icon shrink-0 text-text-primary"
+            aria-label="Add exercise"
           >
             <svg
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.5"
-              className="h-3 w-3"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              className="h-5 w-5"
+              aria-hidden="true"
             >
-              <path d="M18 6L6 18M6 6l12 12" />
+              <path d="M12 5v14M5 12h14" />
             </svg>
           </button>
-        )}
-      </div>
-
-      {!search && (
-        <div className="surface-card-muted rounded-[1.35rem] p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-text-primary">
-                {activeGroup ? `${activeGroup} exercises` : "All muscle groups"}
-              </p>
-              <p className="mt-1 text-sm leading-6 text-text-muted">
-                Search is fastest. Open muscle filters only when you want to browse by category.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowFilters((value) => !value)}
-              className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
-            >
-              {showFilters ? "Hide" : "Filter"}
-            </button>
-          </div>
         </div>
-      )}
 
-      {/* Muscle group filter chips */}
-      {!search && showFilters && (
-        <div className="scrollbar-hide -mx-2 flex gap-2 overflow-x-auto px-2 pb-1">
-          <button
-            onClick={() => setActiveGroup(null)}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all ${
-              !activeGroup
-                ? "bg-white/[0.12] text-text-primary"
-                : "bg-white/[0.04] text-text-dim"
-            }`}
-          >
-            All
-          </button>
-          {exerciseGroups.map((group) => {
-            const groupColor = muscleColors[group.muscles[0]];
-            const isActive = activeGroup === group.label;
-            const count = getEffectiveExercisesByGroup(group.label).length;
-            if (count === 0) return null;
-
-            return (
-              <button
-                key={group.label}
-                onClick={() =>
-                  setActiveGroup(isActive ? null : group.label)
-                }
-                className="shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all"
-                style={
-                  isActive
-                    ? {
-                        background: `${groupColor}20`,
-                        color: groupColor,
-                        boxShadow: `0 0 12px ${groupColor}15`,
-                      }
-                    : {
-                        background: "rgba(255,255,255,0.04)",
-                        color: "var(--color-text-dim)",
-                      }
-                }
-              >
-                {group.label}
-                <span
-                  className="ml-1.5 text-[10px] opacity-60"
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Exercise list */}
-      {filteredExercises ? (
-        filteredExercises.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-[11px] text-text-dim">
-              {filteredExercises.length} result
-              {filteredExercises.length !== 1 ? "s" : ""}
-            </p>
-            {filteredExercises.map((exercise) => (
-              <ExerciseCard key={exercise.id} exercise={exercise} />
-            ))}
-          </div>
-        ) : (
-          <div className="surface-card flex flex-col items-center gap-4 rounded-[1.6rem] p-6 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04]">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div className="relative min-w-0 flex-1">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.5"
-                className="h-6 w-6 text-text-dim"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-text-muted"
+                aria-hidden="true"
               >
-                <path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20l-3.5-3.5" />
               </svg>
+              <input
+                type="text"
+                inputMode="search"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (e.target.value) setActiveGroup(null);
+                }}
+                placeholder="Search exercises"
+                aria-label="Search exercises"
+                className="input-shell input-focus !rounded-full h-12 w-full pl-11 pr-11 text-[15px] text-text-primary"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-text-muted active:bg-fill"
+                  aria-label="Clear search"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fill-strong">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      className="h-2.5 w-2.5"
+                      aria-hidden="true"
+                    >
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </span>
+                </button>
+              )}
             </div>
-            <div className="flex max-w-[18rem] flex-col gap-2">
-              <p className="text-sm font-semibold text-text-primary">No exercises match "{search}"</p>
-              <p className="text-sm leading-relaxed text-text-muted">
-                Clear the search to browse your full library, or create this as a new custom exercise.
-              </p>
+
+            {/* Muscle filter toggle */}
+            {!search && (
+              <button
+                type="button"
+                onClick={() => setShowFilters((value) => !value)}
+                aria-expanded={showFilters}
+                className={`btn-secondary !min-h-12 w-[7.5rem] shrink-0 gap-1.5 pl-3 pr-3.5 text-[14px] ${
+                  showFilters || activeGroup ? "!bg-fill-strong" : ""
+                } ${activeGroup && !showFilters ? "text-text-primary" : ""}`}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  className="h-[18px] w-[18px] shrink-0 text-text-secondary"
+                  aria-hidden="true"
+                >
+                  <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+                  <circle cx="16" cy="7" r="2" />
+                  <circle cx="10" cy="17" r="2" />
+                </svg>
+                <span className="truncate">
+                  {showFilters ? "Hide" : activeGroup ?? "Filter"}
+                </span>
+                {activeGroup && !showFilters && (
+                  <span className="sr-only">(filtered: {activeGroup})</span>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Muscle group filter chips */}
+          {!search && showFilters && (
+            <div className="scrollbar-hide -mx-[1.125rem] flex gap-2 overflow-x-auto px-[1.125rem] animate-fade-in">
+              <button
+                type="button"
+                onClick={() => setActiveGroup(null)}
+                aria-pressed={!activeGroup}
+                className={`chip shrink-0 !min-h-9 px-3.5 text-[13px] ${
+                  !activeGroup
+                    ? "bg-[#f4f4f5]! font-medium text-[#0b0b0c]"
+                    : "chip-muted text-text-secondary active:bg-fill-strong"
+                }`}
+              >
+                All
+              </button>
+              {exerciseGroups.map((group) => {
+                const isActive = activeGroup === group.label;
+                const count = getEffectiveExercisesByGroup(group.label).length;
+                if (count === 0) return null;
+
+                return (
+                  <button
+                    key={group.label}
+                    type="button"
+                    onClick={() =>
+                      setActiveGroup(isActive ? null : group.label)
+                    }
+                    aria-pressed={isActive}
+                    className={`chip shrink-0 !min-h-9 px-3.5 text-[13px] ${
+                      isActive
+                        ? "bg-[#f4f4f5]! font-medium text-[#0b0b0c]"
+                        : "chip-muted text-text-secondary active:bg-fill-strong"
+                    }`}
+                  >
+                    {group.label}
+                    <span
+                      className={`tabular-nums ${
+                        isActive ? "text-[#0b0b0c]/55" : "text-text-muted"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="grid w-full grid-cols-2 gap-2">
-              <button onClick={() => setSearch("")} className="btn-ghost py-3 text-sm font-semibold">
-                Clear Search
+          )}
+        </div>
+      </header>
+
+      {/* Exercise list */}
+      {filteredExercises ? (
+        filteredExercises.length > 0 ? (
+          <section className="flex flex-col gap-2">
+            <p className="section-label px-1 tabular-nums">
+              {filteredExercises.length} result
+              {filteredExercises.length !== 1 ? "s" : ""}
+            </p>
+            <div className="list-group">
+              {filteredExercises.map((exercise) => (
+                <ExerciseRow
+                  key={exercise.id}
+                  exercise={exercise}
+                  isCustom={customIds.has(exercise.id)}
+                />
+              ))}
+            </div>
+          </section>
+        ) : (
+          <div className="surface-card flex flex-col items-center gap-5 rounded-[1.25rem] px-5 py-7 text-center">
+            <p className="text-[15px] font-medium text-text-primary">
+              No exercises match &ldquo;{search}&rdquo;
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="btn-secondary flex-1 text-[15px]"
+              >
+                Clear search
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setSearch("");
                   setShowAdd(true);
                 }}
-                className="btn-secondary py-3 text-sm font-semibold"
+                className="btn-primary flex-1 text-[15px]"
               >
-                Create New
+                Create new
               </button>
             </div>
           </div>
@@ -634,25 +600,22 @@ export function Exercises() {
         groupsToShow.map((group) => {
           const groupExercises = getEffectiveExercisesByGroup(group.label);
           if (groupExercises.length === 0) return null;
-          const groupColor = muscleColors[group.muscles[0]];
 
           return (
             <section key={group.label} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 px-0.5">
-                <div
-                  className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: groupColor }}
-                />
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-muted">
-                  {group.label}
-                </h3>
-                <span className="text-[10px] text-text-dim">
+              <div className="flex min-h-6 items-center gap-2 px-1">
+                <h2 className="section-label">{group.label}</h2>
+                <span className="text-[13px] tabular-nums text-text-muted">
                   {groupExercises.length}
                 </span>
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="list-group">
                 {groupExercises.map((exercise) => (
-                  <ExerciseCard key={exercise.id} exercise={exercise} />
+                  <ExerciseRow
+                    key={exercise.id}
+                    exercise={exercise}
+                    isCustom={customIds.has(exercise.id)}
+                  />
                 ))}
               </div>
             </section>

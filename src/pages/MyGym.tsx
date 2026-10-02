@@ -4,18 +4,55 @@ import { gymEquipmentOptions } from "../lib/curatedWorkout";
 import { useSettingsStore } from "../store/settingsStore";
 import type { CustomGymEquipment } from "../types";
 
-const categoryColors: Record<string, string> = {
-  Machines: "#4488FF",
-  "Free Weights": "#FF6B35",
-  Cardio: "#46D369",
-  Custom: "#FFAA00",
-};
-
 const categoryOptions: { label: string; value: string }[] = [
   { label: "Machines", value: "Machines" },
   { label: "Free Weights", value: "Free Weights" },
   { label: "Cardio", value: "Cardio" },
 ];
+
+/* ── Small presentational pieces ───────────────────────────── */
+
+function PlusIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+/** Neutral selection mark: solid white with a dark check when on, a quiet ring when off. */
+function CheckMark({ on, shape = "circle" }: { on: boolean; shape?: "circle" | "square" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center transition-colors ${
+        shape === "circle" ? "rounded-full" : "rounded-[7px]"
+      } ${on ? "bg-text-primary" : "border-[1.5px] border-text-dim"}`}
+    >
+      {on && (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#0b0b0c"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-3 w-3"
+        >
+          <path d="M5 13l4 4L19 7" />
+        </svg>
+      )}
+    </span>
+  );
+}
 
 /* ── Bottom sheet for Add / Edit ───────────────────────────── */
 
@@ -43,9 +80,8 @@ function EquipmentSheet({
     onClose();
   };
 
-  const color = categoryColors[category] || "#888";
-  const title = mode === "edit" ? "EDIT EQUIPMENT" : "ADD EQUIPMENT";
-  const buttonLabel = mode === "edit" ? "Save Changes" : "Add Equipment";
+  const title = mode === "edit" ? "Edit equipment" : "Add equipment";
+  const buttonLabel = mode === "edit" ? "Save changes" : "Add equipment";
 
   return (
     <>
@@ -55,88 +91,73 @@ function EquipmentSheet({
       />
       <div className="fixed inset-x-0 bottom-0 z-[70] animate-slide-up">
         <div
-          className="mx-auto max-w-[460px] rounded-t-3xl border-t border-white/[0.08] px-6 pt-5"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="equipment-sheet-title"
+          className="sheet-surface mx-auto max-w-[460px] rounded-t-[1.5rem] border-b-0 px-5 pt-3"
           style={{
-            background: "linear-gradient(180deg, #1a1a20 0%, #111114 100%)",
-            paddingBottom: "calc(5rem + max(0.5rem, env(safe-area-inset-bottom)))",
+            paddingBottom: "calc(1.25rem + max(0.75rem, env(safe-area-inset-bottom)))",
           }}
         >
-          <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/[0.12]" />
+          <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-fill-strong" />
 
-          <h3 className="mb-4 font-[var(--font-display)] text-xl tracking-wider text-text-primary">
+          <h2 id="equipment-sheet-title" className="section-title px-1">
             {title}
-          </h3>
+          </h2>
 
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+          <div className="mt-5 flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="equipment-name" className="section-label px-1">
                 Name
               </label>
               <input
+                id="equipment-name"
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Smith Machine"
-                className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-text-primary placeholder:text-text-dim outline-none focus:border-white/20 transition-colors"
+                className="input-shell input-focus h-12 w-full px-4 text-[15px] text-text-primary"
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+            <div className="flex flex-col gap-2">
+              <span id="equipment-category-label" className="section-label px-1">
                 Category
-              </label>
-              <div className="relative">
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 pr-8 text-sm text-text-primary outline-none"
-                >
-                  {categoryOptions.map((c) => (
-                    <option key={c.value} value={c.value}>
+              </span>
+              <div
+                role="group"
+                aria-labelledby="equipment-category-label"
+                className="flex flex-wrap gap-2"
+              >
+                {categoryOptions.map((c) => {
+                  const active = category === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setCategory(c.value)}
+                      aria-pressed={active}
+                      className={`chip min-h-11 px-4 text-[14px] ${
+                        active
+                          ? "bg-[#f4f4f5]! font-medium text-[#0b0b0c]"
+                          : "chip-muted text-text-secondary active:bg-fill-strong"
+                      }`}
+                    >
                       {c.label}
-                    </option>
-                  ))}
-                </select>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-dim"
-                >
-                  <path d="M19 9l-7 7-7-7" />
-                </svg>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {name.trim() && (
-              <div
-                className="flex items-center gap-2 rounded-xl px-4 py-2.5 animate-fade-in"
-                style={{ background: `${color}10`, border: `1px solid ${color}20` }}
-              >
-                <div className="h-2 w-2 rounded-full" style={{ background: color }} />
-                <span className="text-xs text-text-secondary">
-                  {name.trim()} will be {mode === "edit" ? "updated in" : "added to"}{" "}
-                  <span style={{ color }}>{category}</span>
-                </span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <button
-                onClick={onClose}
-                className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-              >
+            <div className="flex gap-3 pt-1">
+              <button onClick={onClose} className="btn-secondary flex-1 text-[15px]">
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={!name.trim()}
-                className="rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97] disabled:opacity-30"
-                style={{
-                  background: `linear-gradient(135deg, ${color}, ${color}CC)`,
-                  boxShadow: `0 4px 16px ${color}30`,
-                }}
+                className="btn-primary flex-1 text-[15px]"
               >
                 {buttonLabel}
               </button>
@@ -152,8 +173,8 @@ function EquipmentSheet({
 
 function EquipmentRow({
   label,
+  meta,
   available,
-  color,
   onToggle,
   isCustom,
   onRemove,
@@ -163,8 +184,8 @@ function EquipmentRow({
   onBulkToggle,
 }: {
   label: string;
+  meta?: string;
   available: boolean;
-  color: string;
   onToggle: () => void;
   isCustom?: boolean;
   onRemove?: () => void;
@@ -197,94 +218,93 @@ function EquipmentRow({
     }
   };
 
-  return (
-    <div
-      className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors active:bg-white/[0.04] cursor-pointer"
-      onClick={handleClick}
-    >
-      {/* Bulk selection checkbox */}
-      {bulkMode ? (
-        <div
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all"
-          style={
-            bulkSelected
-              ? { borderColor: "#E53935", background: "#E5393520" }
-              : { borderColor: "rgba(255,255,255,0.12)", background: "transparent" }
-          }
-        >
-          {bulkSelected && (
-            <svg viewBox="0 0 24 24" fill="none" stroke="#E53935" strokeWidth="3" className="h-3 w-3">
-              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </div>
-      ) : (
-        /* Toggle indicator */
-        <div
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all"
-          style={
-            available
-              ? { borderColor: color, background: `${color}20` }
-              : { borderColor: "rgba(255,255,255,0.12)", background: "transparent" }
-          }
-        >
-          {available && (
-            <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" className="h-3 w-3">
-              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </div>
-      )}
+  const showRowActions = isCustom && !bulkMode;
 
-      {/* Label */}
-      <span
-        className={`flex-1 text-[14px] font-medium transition-colors ${
-          available ? "text-text-primary" : "text-text-dim"
+  return (
+    <div className={`flex min-h-[52px] items-center ${showRowActions ? "pr-1.5" : ""}`}>
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-pressed={bulkMode ? !!bulkSelected : available}
+        className={`flex min-h-[52px] min-w-0 flex-1 items-center gap-3.5 py-2 pl-4 text-left transition-colors active:bg-fill ${
+          showRowActions ? "pr-2" : "pr-4"
         }`}
       >
-        {label}
-      </span>
+        {bulkMode ? (
+          <CheckMark on={!!bulkSelected} shape="square" />
+        ) : (
+          <CheckMark on={available} />
+        )}
 
-      {/* Custom badge */}
-      {isCustom && !bulkMode && (
-        <span className="rounded-full bg-accent-yellow/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-accent-yellow">
-          Custom
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span
+            className={`truncate text-[15px] transition-colors ${
+              available ? "text-text-primary" : "text-text-muted"
+            }`}
+          >
+            {label}
+          </span>
+          {meta && <span className="truncate text-[13px] text-text-muted">{meta}</span>}
         </span>
-      )}
+      </button>
 
       {/* Edit button (custom only, not in bulk mode) */}
       {isCustom && onEdit && !bulkMode && (
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onEdit();
           }}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-text-dim hover:text-text-muted active:bg-white/[0.06] transition-all"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors active:bg-fill"
           aria-label="Edit equipment"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3.5 w-3.5">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-[18px] w-[18px]"
+            aria-hidden="true"
+          >
             <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
           </svg>
         </button>
       )}
 
-      {/* Remove button (custom only, not in bulk mode) */}
+      {/* Remove button (custom only, not in bulk mode) — tap twice to confirm */}
       {isCustom && onRemove && !bulkMode && (
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             handleRemove();
           }}
-          className={`flex h-7 w-7 items-center justify-center rounded-lg transition-all ${
+          className={`shrink-0 transition-colors ${
             confirmRemove
-              ? "bg-accent-red/15 text-accent-red scale-110"
-              : "text-text-dim hover:text-text-muted active:bg-white/[0.06]"
+              ? "btn-danger mr-1.5 ml-1 !min-h-11 !bg-accent-red px-3.5 text-[13px] !text-white animate-fade-in"
+              : "flex h-11 w-11 items-center justify-center rounded-full text-text-muted active:bg-fill"
           }`}
           aria-label={confirmRemove ? "Confirm remove" : "Remove equipment"}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3.5 w-3.5">
-            <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-          </svg>
+          {confirmRemove ? (
+            "Remove"
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-[18px] w-[18px]"
+              aria-hidden="true"
+            >
+              <path d="M4 7h16M10 11v6M14 11v6M5.5 7l.9 11.2A2 2 0 008.4 20h7.2a2 2 0 002-1.8L18.5 7M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2" />
+            </svg>
+          )}
         </button>
       )}
     </div>
@@ -295,14 +315,12 @@ function EquipmentRow({
 
 function CategoryHeader({
   label,
-  color,
   availableCount,
   totalCount,
   onSelectAll,
   onDeselectAll,
 }: {
   label: string;
-  color: string;
   availableCount: number;
   totalCount: number;
   onSelectAll: () => void;
@@ -311,20 +329,17 @@ function CategoryHeader({
   const allSelected = availableCount === totalCount;
 
   return (
-    <div className="flex items-center gap-2 px-0.5 mb-1">
-      <div className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-muted">
-        {label}
-      </h3>
-      <span className="text-[10px] text-text-dim">
+    <div className="flex min-h-8 items-center gap-2 px-1">
+      <h2 className="section-label">{label}</h2>
+      <span className="text-[13px] tabular-nums text-text-muted">
         {availableCount}/{totalCount}
       </span>
       <button
+        type="button"
         onClick={allSelected ? onDeselectAll : onSelectAll}
-        className="ml-auto text-[10px] font-semibold uppercase tracking-wider transition-colors active:opacity-70"
-        style={{ color }}
+        className="btn-tertiary -my-1.5 -mr-2 ml-auto px-2 text-[13px]"
       >
-        {allSelected ? "Deselect All" : "Select All"}
+        {allSelected ? "Deselect all" : "Select all"}
       </button>
     </div>
   );
@@ -407,71 +422,48 @@ export function MyGym() {
   };
 
   return (
-    <PageLayout className="flex flex-col gap-5">
+    <PageLayout className="flex flex-col gap-7">
       {/* Header */}
-      <header className="flex items-end justify-between pt-1">
-        <div>
-          <h1 className="font-[var(--font-display)] text-[2rem] leading-none tracking-wider text-text-primary">
-            MY GYM
-          </h1>
-          <p className="mt-1 text-[12px] text-text-dim">
-            {availableCount}/{totalItems} equipment available
+      <header className="flex items-end justify-between gap-3 px-1 pt-2">
+        <div className="min-w-0">
+          <h1 className="page-title">My Gym</h1>
+          <p className="mt-1 text-[13px] tabular-nums text-text-muted">
+            {availableCount} of {totalItems} available
           </p>
         </div>
         <button
+          type="button"
           onClick={() => setShowSheet({ mode: "add" })}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-red/15 text-accent-red transition-all active:scale-90"
+          className="btn-icon shrink-0 text-text-primary"
           aria-label="Add equipment"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-5 w-5">
-            <path d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
+          <PlusIcon />
         </button>
       </header>
-
-      <section className="surface-card-muted rounded-[1.35rem] p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-text-primary">Equipment setup</p>
-            <p className="mt-1 text-sm leading-6 text-text-muted">
-              Toggle what is available in your gym. Built-in equipment stays grouped below, and custom items live in their own section.
-            </p>
-          </div>
-          <div className="shrink-0 rounded-[1rem] border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">Available</p>
-            <p className="mt-1 text-sm font-semibold tabular-nums text-text-primary">{availableCount}/{totalItems}</p>
-          </div>
-        </div>
-      </section>
 
       {/* Equipment list by category */}
       {categories.map((cat) => {
         const items = groupedStatic[cat] || [];
         if (items.length === 0) return null;
-        const color = categoryColors[cat];
         const catAvailable = items.filter((i) => gymEquipment[i.id]).length;
 
         return (
-          <section key={cat} className="flex flex-col gap-1">
+          <section key={cat} className="flex flex-col gap-2">
             <CategoryHeader
               label={cat}
-              color={color}
               availableCount={catAvailable}
               totalCount={items.length}
               onSelectAll={() => bulkSetGymEquipmentAvailability(items.map((i) => i.id), true)}
               onDeselectAll={() => bulkSetGymEquipmentAvailability(items.map((i) => i.id), false)}
             />
-            <div className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-              {items.map((item, idx) => (
-                <div key={item.id}>
-                  {idx > 0 && <div className="mx-3 border-t border-white/[0.04]" />}
-                  <EquipmentRow
-                    label={item.label}
-                    available={gymEquipment[item.id] ?? true}
-                    color={color}
-                    onToggle={() => setGymEquipmentAvailability(item.id, !gymEquipment[item.id])}
-                  />
-                </div>
+            <div className="list-group">
+              {items.map((item) => (
+                <EquipmentRow
+                  key={item.id}
+                  label={item.label}
+                  available={gymEquipment[item.id] ?? true}
+                  onToggle={() => setGymEquipmentAvailability(item.id, !gymEquipment[item.id])}
+                />
               ))}
             </div>
           </section>
@@ -480,94 +472,101 @@ export function MyGym() {
 
       {/* Custom equipment section */}
       {hasCustom && (
-        <section className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 px-0.5 mb-1">
-            <div className="h-1.5 w-1.5 rounded-full" style={{ background: categoryColors.Custom }} />
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-muted">
-              Custom
-            </h3>
-            <span className="text-[10px] text-text-dim">
-              {customGymEquipment.filter((c) => gymEquipment[c.id]).length}/{customGymEquipment.length}
-            </span>
-            {/* Bulk mode toggle */}
-            <button
-              onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
-              className={`ml-auto text-[10px] font-semibold uppercase tracking-wider transition-colors active:opacity-70 ${
-                bulkMode ? "text-accent-red" : "text-accent-yellow"
-              }`}
-            >
-              {bulkMode ? "Done" : "Manage"}
-            </button>
-          </div>
-
-          {/* Bulk actions bar */}
-          {bulkMode && (
-            <div className="flex items-center gap-2 mb-1 animate-fade-in">
-              <button
-                onClick={handleBulkSelectAllCustom}
-                className="rounded-lg bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-text-secondary transition-colors active:bg-white/[0.1]"
-              >
-                Select All
-              </button>
-              <button
-                onClick={() => setBulkSelected(new Set())}
-                className="rounded-lg bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-text-secondary transition-colors active:bg-white/[0.1]"
-              >
-                Clear
-              </button>
-              {bulkSelected.size > 0 && (
+        <section className="flex flex-col gap-2">
+          {bulkMode ? (
+            /* Bulk selection bar */
+            <div className="flex min-h-8 items-center gap-1 px-1 animate-fade-in">
+              <h2 className="section-label tabular-nums text-text-secondary">
+                {bulkSelected.size} selected
+              </h2>
+              <div className="-my-1.5 -mr-2 ml-auto flex items-center">
                 <button
-                  onClick={handleBulkDelete}
-                  className={`ml-auto rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all active:scale-95 ${
-                    confirmBulkDelete
-                      ? "bg-accent-red text-white animate-pulse"
-                      : "bg-accent-red/15 text-accent-red"
-                  }`}
+                  type="button"
+                  onClick={handleBulkSelectAllCustom}
+                  className="btn-tertiary px-2 text-[13px]"
                 >
-                  {confirmBulkDelete
-                    ? `Confirm Delete (${bulkSelected.size})`
-                    : `Delete (${bulkSelected.size})`}
+                  Select all
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setBulkSelected(new Set())}
+                  className="btn-tertiary px-2 text-[13px]"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (bulkMode ? exitBulkMode() : setBulkMode(true))}
+                  className="btn-tertiary px-2 text-[13px] text-text-primary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-8 items-center gap-2 px-1">
+              <h2 className="section-label">Custom</h2>
+              <span className="text-[13px] tabular-nums text-text-muted">
+                {customGymEquipment.filter((c) => gymEquipment[c.id]).length}/{customGymEquipment.length}
+              </span>
+              {/* Bulk mode toggle */}
+              <button
+                type="button"
+                onClick={() => (bulkMode ? exitBulkMode() : setBulkMode(true))}
+                className="btn-tertiary -my-1.5 -mr-2 ml-auto px-2 text-[13px]"
+              >
+                Select
+              </button>
             </div>
           )}
 
-          <div className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-            {customGymEquipment.map((item, idx) => (
-              <div key={item.id}>
-                {idx > 0 && <div className="mx-3 border-t border-white/[0.04]" />}
-                <EquipmentRow
-                  label={item.label}
-                  available={gymEquipment[item.id] ?? true}
-                  color={categoryColors[item.category] || categoryColors.Custom}
-                  onToggle={() => setGymEquipmentAvailability(item.id, !gymEquipment[item.id])}
-                  isCustom
-                  onRemove={() => handleRemoveCustom(item.id)}
-                  onEdit={() => setShowSheet({ mode: "edit", item })}
-                  bulkMode={bulkMode}
-                  bulkSelected={bulkSelected.has(item.id)}
-                  onBulkToggle={() => handleBulkToggle(item.id)}
-                />
-              </div>
+          <div className="list-group">
+            {customGymEquipment.map((item) => (
+              <EquipmentRow
+                key={item.id}
+                label={item.label}
+                meta={item.category}
+                available={gymEquipment[item.id] ?? true}
+                onToggle={() => setGymEquipmentAvailability(item.id, !gymEquipment[item.id])}
+                isCustom
+                onRemove={() => handleRemoveCustom(item.id)}
+                onEdit={() => setShowSheet({ mode: "edit", item })}
+                bulkMode={bulkMode}
+                bulkSelected={bulkSelected.has(item.id)}
+                onBulkToggle={() => handleBulkToggle(item.id)}
+              />
             ))}
           </div>
+
+          {bulkMode && bulkSelected.size > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              className={`btn-danger mt-1 w-full text-[15px] animate-fade-in ${
+                confirmBulkDelete ? "!bg-accent-red !text-white" : ""
+              }`}
+            >
+              {confirmBulkDelete
+                ? `Confirm delete (${bulkSelected.size})`
+                : `Delete (${bulkSelected.size})`}
+            </button>
+          )}
         </section>
       )}
 
-      <section className="surface-card rounded-[1.45rem] p-4">
-        <div className="flex flex-col gap-1">
-          <p className="section-label">Reset</p>
-          <p className="text-sm font-semibold text-text-primary">Reset built-in equipment</p>
-          <p className="text-sm leading-relaxed text-text-muted">
-            Restore the default availability for built-in equipment. Custom equipment stays in your list.
-          </p>
+      <section className="flex flex-col gap-2">
+        <div className="list-group">
+          <button
+            type="button"
+            onClick={resetGymEquipment}
+            className="flex min-h-[52px] w-full items-center px-4 text-left text-[15px] text-accent-red transition-colors active:bg-fill"
+          >
+            Reset all equipment
+          </button>
         </div>
-        <button
-          onClick={resetGymEquipment}
-          className="btn-ghost mt-4 w-full py-3 text-sm font-semibold"
-        >
-          Reset All Equipment
-        </button>
+        <p className="section-caption px-1">
+          Turns built-in items back on and removes custom ones.
+        </p>
       </section>
 
       {showSheet && (
