@@ -8,11 +8,11 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, className = "", withBottomNavPadding = true }: PageLayoutProps) {
   const style: CSSProperties = {
-    paddingTop: "max(1.1rem, calc(env(safe-area-inset-top) + 0.4rem))",
-    paddingLeft: "max(1rem, calc(env(safe-area-inset-left) + 1rem))",
-    paddingRight: "max(1rem, calc(env(safe-area-inset-right) + 1rem))",
+    paddingTop: "max(1.25rem, calc(env(safe-area-inset-top) + 0.75rem))",
+    paddingLeft: "max(1.125rem, calc(env(safe-area-inset-left) + 1.125rem))",
+    paddingRight: "max(1.125rem, calc(env(safe-area-inset-right) + 1.125rem))",
     paddingBottom: withBottomNavPadding
-      ? "calc(7.8rem + env(safe-area-inset-bottom))"
+      ? "calc(7rem + env(safe-area-inset-bottom))"
       : "max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem))",
   };
 

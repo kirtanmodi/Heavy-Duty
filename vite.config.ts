@@ -25,8 +25,8 @@ export default defineConfig({
         name: 'Heavy Duty Workout Tracker',
         short_name: 'Heavy Duty',
         description: 'Track Mike Mentzer-inspired HIT workouts, progressive overload, and recovery on your phone.',
-        theme_color: '#090B11',
-        background_color: '#090B11',
+        theme_color: '#0B0B0C',
+        background_color: '#0B0B0C',
         display: 'standalone',
         display_override: ['window-controls-overlay', 'standalone', 'browser'],
         orientation: 'portrait',
@@ -79,24 +79,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-style',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-        ],
+        // Precache only the Latin font subset; other subsets load on demand via unicode-range.
+        globPatterns: ['**/*.{js,css,html}', '**/geist-latin-wght-normal-*.woff2'],
       },
     }),
   ],

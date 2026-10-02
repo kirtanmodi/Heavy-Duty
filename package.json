@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.1.18",
     "motion": "^12.34.1",
     "react": "^19.2.0",
