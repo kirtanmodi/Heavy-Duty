@@ -3,6 +3,8 @@
 // timer ends never makes a sound. primeRestAlert() unlocks the shared context during the
 // tap that starts the rest; playRestAlert() reuses it when the rest ends.
 
+const RESUME_TIMEOUT_MS = 1000
+
 let audioContext: AudioContext | null = null
 
 function getAudioContext(): AudioContext | null {
@@ -18,11 +20,12 @@ function getAudioContext(): AudioContext | null {
   return audioContext
 }
 
-// Call from a tap handler (completing a set, a rest preset) so the alert can play later.
+// Call from a tap handler (completing a set, a rest preset, any tap during rest) so the
+// alert can play later. Cheap no-op once the context is running.
 export function primeRestAlert() {
   const ctx = getAudioContext()
-  if (!ctx) return
-  if (ctx.state !== 'running') ctx.resume().catch(() => {})
+  if (!ctx || ctx.state === 'running') return
+  ctx.resume().catch(() => {})
   try {
     // A one-sample silent buffer started inside the tap fully unlocks output on iOS.
     const source = ctx.createBufferSource()
@@ -62,7 +65,15 @@ export function playRestAlert({ sound }: { sound: boolean }) {
   const ctx = getAudioContext()
   if (!ctx) return
   try {
-    if (ctx.state === 'running') playBeeps(ctx)
-    else ctx.resume().then(() => playBeeps(ctx)).catch(() => {})
+    if (ctx.state === 'running') {
+      playBeeps(ctx)
+      return
+    }
+    // Without a tap WebKit leaves resume() pending until the next tap, which would play
+    // this alert as the next rest starts — only beep if it resumes right away.
+    const requestedAt = performance.now()
+    ctx.resume().then(() => {
+      if (performance.now() - requestedAt < RESUME_TIMEOUT_MS) playBeeps(ctx)
+    }).catch(() => {})
   } catch { /* audio not available */ }
 }

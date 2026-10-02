@@ -22,6 +22,10 @@ export interface TimerCompleteInfo {
   lateMs: number
 }
 
+function secondsUntil(endsAt: number, now = Date.now()) {
+  return Math.max(0, Math.ceil((endsAt - now) / 1000))
+}
+
 function readStoredTimer(persistKey: string | null | undefined): RunningTimer | null {
   if (!persistKey) return null
   try {
@@ -48,7 +52,8 @@ function writeStoredTimer(stored: StoredTimer | null) {
 
 export function useTimer(onComplete?: (info: TimerCompleteInfo) => void, persistKey?: string | null) {
   const [timer, setTimer] = useState<RunningTimer | null>(() => readStoredTimer(persistKey))
-  const [now, setNow] = useState(() => Date.now())
+  // Only changes once a second, so the 250ms ticks don't re-render the page.
+  const [secondsLeft, setSecondsLeft] = useState(() => (timer ? secondsUntil(timer.endsAt) : 0))
   const onCompleteRef = useRef(onComplete)
   const persistKeyRef = useRef(persistKey)
 
@@ -66,9 +71,8 @@ export function useTimer(onComplete?: (info: TimerCompleteInfo) => void, persist
   }, [])
 
   const start = useCallback((seconds: number, timerLabel = 'REST BETWEEN EXERCISES') => {
-    const startedAt = Date.now()
-    const next = { endsAt: startedAt + seconds * 1000, label: timerLabel }
-    setNow(startedAt)
+    const next = { endsAt: Date.now() + seconds * 1000, label: timerLabel }
+    setSecondsLeft(seconds)
     setTimer(next)
     const key = persistKeyRef.current
     writeStoredTimer(key ? { ...next, key } : null)
@@ -81,7 +85,7 @@ export function useTimer(onComplete?: (info: TimerCompleteInfo) => void, persist
       if (completed) return
       const current = Date.now()
       if (current < timer.endsAt) {
-        setNow(current)
+        setSecondsLeft(secondsUntil(timer.endsAt, current))
         return
       }
       completed = true
@@ -103,13 +107,11 @@ export function useTimer(onComplete?: (info: TimerCompleteInfo) => void, persist
     }
   }, [timer])
 
-  const secondsLeft = timer ? Math.max(0, Math.ceil((timer.endsAt - now) / 1000)) : 0
-
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
     const s = seconds % 60
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  return { secondsLeft, isRunning: timer !== null, label: timer?.label ?? '', start, stop, formatTime }
+  return { secondsLeft: timer ? secondsLeft : 0, isRunning: timer !== null, label: timer?.label ?? '', start, stop, formatTime }
 }

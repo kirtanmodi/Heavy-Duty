@@ -283,6 +283,18 @@ export function Workout() {
   const timer = useTimer(handleRestComplete, activeWorkout?.startedAt);
   // Keep the screen awake during rest: a locked phone pauses the app and the alert can't play.
   useWakeLock(timer.isRunning);
+  // A rest restored after a reload never went through startRest(), so unlock the sound on
+  // mount (covers the tap on the resume banner) and on any tap while it runs.
+  useEffect(() => {
+    if (!timer.isRunning || !restTimerSound) return;
+    primeRestAlert();
+    document.addEventListener("click", primeRestAlert, true);
+    document.addEventListener("touchend", primeRestAlert, true);
+    return () => {
+      document.removeEventListener("click", primeRestAlert, true);
+      document.removeEventListener("touchend", primeRestAlert, true);
+    };
+  }, [timer.isRunning, restTimerSound]);
   const autoStartTimer = useSettingsStore((s) => s.autoStartTimer);
   const gymEquipment = useSettingsStore((s) => s.gymEquipment);
   const weightMode = useExerciseStore((s) => s.weightMode);
