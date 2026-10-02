@@ -38,7 +38,7 @@ export const gymEquipmentOptions: GymEquipmentOption[] = [
   { id: 'lat-pulldown', label: 'Lat Pulldown', category: 'Machines', focuses: ['Pull'] },
   { id: 'high-row-machine', label: 'High Row', category: 'Machines', focuses: ['Pull'] },
   { id: 'row-machine', label: 'Row', category: 'Machines', focuses: ['Pull'] },
-  { id: 'rear-deltoid-machine', label: 'Rear Deltoid', category: 'Machines', focuses: ['Pull'] },
+  { id: 'rear-deltoid-machine', label: 'Rear Deltoid', category: 'Machines', focuses: ['Push'] },
   { id: 'bicep-curl', label: 'Bicep Curl', category: 'Machines', focuses: ['Pull'] },
   { id: 'front-bicep-curl', label: 'Front Bicep Curl', category: 'Machines', focuses: ['Pull'] },
   { id: 'dual-adjustable-pulley', label: 'Dual Adjustable Pulley', category: 'Machines', focuses: ['Push', 'Pull', 'Legs & Abs'] },
@@ -97,15 +97,17 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      label: 'Tricep Isolation',
+      label: 'Rear Delt',
       candidates: [
-        { exerciseId: 'tricep-pushdown', isAvailable: (profile) => hasAny(profile, ['tricep-press-machine', 'dual-adjustable-pulley']) },
-        { exerciseId: 'skull-crushers', isAvailable: (profile) => has(profile, 'barbells') && hasAnyBench(profile) },
+        { exerciseId: 'rear-delt-machine', isAvailable: (profile) => has(profile, 'rear-deltoid-machine') },
+        { exerciseId: 'rear-delt-fly', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
     {
-      label: 'Tricep Compound',
+      label: 'Triceps',
       candidates: [
+        { exerciseId: 'tricep-pushdown', isAvailable: (profile) => hasAny(profile, ['tricep-press-machine', 'dual-adjustable-pulley']) },
+        { exerciseId: 'skull-crushers', isAvailable: (profile) => has(profile, 'barbells') && hasAnyBench(profile) },
         { exerciseId: 'weighted-dips', isAvailable: (profile) => hasAny(profile, ['assisted-dip-chin-up', 'pull-up-bar']) },
       ],
     },

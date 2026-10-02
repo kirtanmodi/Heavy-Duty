@@ -1,4 +1,4 @@
-import type { Program } from '../types'
+import type { Exercise, Program } from '../types'
 
 export const programs: Program[] = [
   {
@@ -14,12 +14,14 @@ export const programs: Program[] = [
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Push',
+        // Front delts are trained by the incline press; side and rear delts get
+        // direct work so all three heads are covered.
         exercises: [
           'dumbbell-flyes',
           'incline-bench-press',
           'side-lateral-raise',
+          'rear-delt-fly',
           'tricep-pushdown',
-          'weighted-dips',
         ],
       },
       {
@@ -111,24 +113,57 @@ export const programs: Program[] = [
 export const MAX_DEFAULT_EXERCISES = 5
 
 /**
- * Picks the exercise IDs a new session starts with. Reuses last session's
- * choices (keeps swaps) but caps at MAX_DEFAULT_EXERCISES, preferring exercises
- * that are still in the program day so legacy longer sessions collapse onto the
- * current program. Last session's order is preserved.
+ * Picks the exercise IDs a new session starts with. Each program exercise is a
+ * slot for one muscle. A slot keeps last session's pick when it's the same
+ * exercise or a swap with the same primary muscle (preferring the same
+ * compound/isolation type), so swaps and order carry over. An unfilled slot
+ * gets the program exercise back, so a body part that was removed or swapped
+ * away is never dropped for good. Last-session exercises that fill no slot
+ * (mid-session extras, retired program exercises) aren't carried over.
  */
-export function getDefaultExerciseIds(programExerciseIds: string[], lastSessionExerciseIds?: string[]): string[] {
-  const source = lastSessionExerciseIds && lastSessionExerciseIds.length > 0
-    ? [...new Set(lastSessionExerciseIds)]
-    : programExerciseIds
-  if (source.length <= MAX_DEFAULT_EXERCISES) return source
+export function getDefaultExerciseIds(
+  programExerciseIds: string[],
+  lastSessionExerciseIds: string[] | undefined,
+  resolveExercise: (id: string) => Exercise | undefined,
+): string[] {
+  const slots = programExerciseIds.slice(0, MAX_DEFAULT_EXERCISES)
+  const last = [...new Set(lastSessionExerciseIds ?? [])]
+  if (last.length === 0) return slots
 
-  const inProgram = new Set(programExerciseIds)
-  const keep = new Set(source.filter((id) => inProgram.has(id)).slice(0, MAX_DEFAULT_EXERCISES))
-  for (const id of source) {
-    if (keep.size >= MAX_DEFAULT_EXERCISES) break
-    keep.add(id)
-  }
-  return source.filter((id) => keep.has(id))
+  const filled = slots.map((id) => (last.includes(id) ? id : undefined))
+  const used = new Set(filled.filter((id): id is string => id !== undefined))
+
+  slots.forEach((id, slot) => {
+    if (filled[slot]) return
+    const target = resolveExercise(id)
+    if (!target) return
+    const swaps = last.filter((candidate) => (
+      !used.has(candidate) && resolveExercise(candidate)?.primaryMuscles[0] === target.primaryMuscles[0]
+    ))
+    const swap = swaps.find((candidate) => resolveExercise(candidate)?.type === target.type) ?? swaps[0]
+    if (swap) {
+      filled[slot] = swap
+      used.add(swap)
+    }
+  })
+
+  // Carried-over picks keep last session's order; a restored slot goes right
+  // after whatever fills the slot before it.
+  const ordered = last.filter((id) => used.has(id))
+  slots.forEach((id, slot) => {
+    if (filled[slot] || !resolveExercise(id)) return
+    let insertAt = 0
+    for (let prev = slot - 1; prev >= 0; prev--) {
+      const prevId = filled[prev]
+      if (prevId) {
+        insertAt = ordered.indexOf(prevId) + 1
+        break
+      }
+    }
+    ordered.splice(insertAt, 0, id)
+    filled[slot] = id
+  })
+  return ordered
 }
 
 export const programMap = new Map(programs.map(p => [p.id, p]))

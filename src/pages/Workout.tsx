@@ -370,6 +370,7 @@ export function Workout() {
     const exerciseIds = getDefaultExerciseIds(
       day.exercises,
       lastWorkoutForDay?.exercises.map((e) => e.id),
+      getEffectiveExercise,
     );
 
     const exercises = exerciseIds.map((id, i) => seedExerciseEntry(id, exerciseIds.slice(0, i)));
