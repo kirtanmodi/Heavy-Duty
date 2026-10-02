@@ -6,6 +6,7 @@ import { PageLayout } from "../components/layout/PageLayout";
 import { getAutoReplacement, getEffectiveExercise } from "../data/exercises";
 import { cardioActivities, getDefaultExerciseIds, programs } from "../data/programs";
 
+import { useElapsedTimer } from "../hooks/useElapsedTimer";
 import { useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { formatDateKey, getIsoDateKey } from "../lib/dates";
@@ -19,18 +20,6 @@ import type { Exercise, ExerciseEntry, LiftFocus, ProgramDay, Program, SetEntry,
 interface ExerciseGroup {
   index: number;
 }
-
-const focusColors: Record<string, string> = {
-  Push: "#E50914",
-  Pull: "#4488FF",
-  "Legs & Abs": "#FF8844",
-};
-
-const dayTypeColors: Record<string, string> = {
-  cardio: "#4488FF",
-  recovery: "#4488FF",
-  rest: "#46D369",
-};
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -53,15 +42,69 @@ function areSetsEqual(a: SetEntry[], b: SetEntry[]): boolean {
   });
 }
 
+/** iOS-style switch visual. The parent button owns role="switch" + aria-checked. */
+function SwitchIndicator({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-flex h-[26px] w-[44px] shrink-0 items-center rounded-full p-[2px] transition-colors ${
+        on ? "bg-accent-green" : "bg-fill-strong"
+      }`}
+    >
+      <span
+        className={`h-[22px] w-[22px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.3)] transition-transform ${
+          on ? "translate-x-[18px]" : "translate-x-0"
+        }`}
+      />
+    </span>
+  );
+}
+
+/** Isolated so only this text re-renders every second, not the whole workout page. */
+function ElapsedTime({ startedAt }: { startedAt: string }) {
+  const { formatted } = useElapsedTimer(startedAt);
+  return <>{formatted}</>;
+}
+
+/**
+ * Tracks an element's rendered height (via a callback ref) so in-flow spacers can clear
+ * fixed bottom bars whose height changes with toasts / errors. Layout only.
+ */
+function useMeasuredHeight<T extends HTMLElement>() {
+  const [height, setHeight] = useState(0);
+  const observerRef = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((node: T | null) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    if (!node) return;
+    setHeight(node.offsetHeight);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setHeight(node.offsetHeight));
+    observer.observe(node);
+    observerRef.current = observer;
+  }, []);
+  return [ref, height] as const;
+}
+
+/** Opaque floating surface for bottom bars / toasts so content scrolling underneath stays out of the text. */
+const floatingSurface = "border border-white/[0.08] bg-bg-elevated/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.35)]";
+
+const iconProps = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.75,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
 function CardioRecoveryView({
   day,
   program,
-  themeColor,
   history,
 }: {
   day: ProgramDay;
   program: Program;
-  themeColor: string;
   history: WorkoutEntry[];
 }) {
   const navigate = useNavigate();
@@ -72,6 +115,7 @@ function CardioRecoveryView({
   );
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [logError, setLogError] = useState<string | null>(null);
+  const [actionBarRef, actionBarHeight] = useMeasuredHeight<HTMLDivElement>();
 
   const handleMarkDone = () => {
     const didLog = useWorkoutStore.getState().logCardioSession(
@@ -91,82 +135,66 @@ function CardioRecoveryView({
   return (
     <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
       <header className="flex items-start justify-between gap-4 pt-1">
-        <div className="flex flex-col gap-1">
-          <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{day.type}</p>
-          <h1 className="font-[var(--font-display)] text-4xl tracking-wide text-text-primary">{day.focus}</h1>
+        <div className="flex min-w-0 flex-col gap-1">
+          {day.duration && <p className="text-[13px] tabular-nums text-text-muted">{day.duration}</p>}
+          <h1 className="page-title">{day.focus}</h1>
         </div>
         {isDoneToday && (
-          <div className="flex items-center gap-1.5 rounded-full bg-accent-green/15 px-3 py-1.5">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 text-accent-green">
+          <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-green/12 px-2.5 py-1 text-[12px] font-medium text-accent-green">
+            <svg {...iconProps} strokeWidth={2.25} className="h-3.5 w-3.5">
               <path d="M20 6L9 17l-5-5" />
             </svg>
-            <span className="text-[11px] font-semibold text-accent-green">Done Today</span>
-          </div>
+            Done today
+          </span>
         )}
       </header>
 
-      <section
-        className="flex flex-col gap-5 overflow-hidden rounded-2xl p-6"
-        style={{
-          background: `linear-gradient(135deg, ${themeColor}08 0%, transparent 60%)`,
-          border: `1px solid ${themeColor}15`,
-        }}
-      >
-        {day.description && <p className="text-sm leading-relaxed text-text-secondary">{day.description}</p>}
-        {day.duration && (
-          <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-4 py-3">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" style={{ color: themeColor }}>
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
-            </svg>
-            <span className="text-sm font-medium text-text-secondary">{day.duration}</span>
-          </div>
-        )}
-        {day.tips && (
-          <div className="flex flex-col gap-1.5">
-            <h3 className="text-[10px] font-bold tracking-widest uppercase" style={{ color: themeColor }}>Tips</h3>
-            <p className="text-sm leading-relaxed text-text-secondary">{day.tips}</p>
-          </div>
-        )}
-      </section>
+      {(day.description || day.tips) && (
+        <div className="-mt-2 flex flex-col gap-4">
+          {day.description && (
+            <p className="text-[15px] leading-relaxed text-text-secondary">{day.description}</p>
+          )}
+          {day.tips && (
+            <section className="flex flex-col gap-1">
+              <h2 className="section-label">Tips</h2>
+              <p className="text-[14px] leading-relaxed text-text-muted">{day.tips}</p>
+            </section>
+          )}
+        </div>
+      )}
 
       {/* Activity suggestions — tap to select */}
       {activities.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-[10px] font-bold tracking-widest text-text-muted uppercase">Pick an Activity</h2>
-          <div className="flex flex-col gap-1.5">
+        <section className="flex flex-col gap-2.5">
+          <h2 className="section-label">Pick an activity</h2>
+          <div className="list-group">
             {activities.map((activity, idx) => {
               const isSelected = selectedActivity === activity.name;
               return (
                 <button
                   key={idx}
                   onClick={() => setSelectedActivity(isSelected ? null : activity.name)}
-                  className={`flex items-start gap-3 rounded-xl px-4 py-3 text-left transition-all ${
-                    isSelected
-                      ? "ring-1"
-                      : "bg-bg-card card-surface"
+                  aria-pressed={isSelected}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+                    isSelected ? "bg-fill" : "active:bg-fill"
                   }`}
-                  style={isSelected ? {
-                    background: `${themeColor}10`,
-                    border: `1px solid ${themeColor}40`,
-                  } : undefined}
                 >
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-[15px] text-text-primary">{activity.name}</span>
+                    <span className="text-[13px] leading-snug text-text-muted">{activity.note}</span>
+                  </div>
                   <span
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold tabular-nums"
-                    style={{ background: `${themeColor}15`, color: themeColor }}
+                    aria-hidden="true"
+                    className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full transition-colors ${
+                      isSelected ? "bg-text-primary text-bg-primary" : "border border-white/[0.18]"
+                    }`}
                   >
-                    {isSelected ? (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-3 w-3">
-                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                    {isSelected && (
+                      <svg {...iconProps} strokeWidth={2.5} className="h-3 w-3">
+                        <path d="M5 13l4 4L19 7" />
                       </svg>
-                    ) : (
-                      idx + 1
                     )}
                   </span>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium text-text-primary">{activity.name}</span>
-                    <span className="text-xs leading-snug text-text-muted">{activity.note}</span>
-                  </div>
                 </button>
               );
             })}
@@ -174,27 +202,46 @@ function CardioRecoveryView({
         </section>
       )}
 
-      <div className="flex flex-col gap-2.5">
-        {!isDoneToday && (
-          <button
-            onClick={handleMarkDone}
-            className="w-full rounded-2xl py-4 text-sm font-bold tracking-wide text-white transition-all active:scale-[0.98]"
+      <button
+        onClick={() => navigate("/")}
+        className={`${isDoneToday ? "btn-secondary" : "btn-tertiary"} mt-auto w-full text-[15px]`}
+      >
+        Go back
+      </button>
+
+      {!isDoneToday && (
+        <>
+          {/* Spacer so the list clears the floating action bar (grows with the error line) */}
+          <div
+            aria-hidden="true"
+            className="shrink-0"
             style={{
-              background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
-              boxShadow: `0 4px 16px ${themeColor}30`,
+              height: actionBarHeight
+                ? Math.max(0, actionBarHeight - 24)
+                : "calc(2.5rem + env(safe-area-inset-bottom))",
             }}
+          />
+          <div
+            ref={actionBarRef}
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4"
+            style={{ paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.5rem))" }}
           >
-            {selectedActivity ? `Done: ${selectedActivity}` : "Mark as Done"}
-          </button>
-        )}
-        {logError && <p className="text-sm text-accent-orange">{logError}</p>}
-        <button
-          onClick={() => navigate("/")}
-          className="w-full rounded-2xl border border-white/[0.1] bg-transparent py-3.5 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-        >
-          Go Back
-        </button>
-      </div>
+            <div className="mx-auto flex max-w-[428px] flex-col gap-2">
+              {logError && (
+                <p role="alert" className={`${floatingSurface} pointer-events-auto rounded-[1.25rem] px-4 py-2.5 text-[13px] leading-snug text-accent-orange`}>
+                  {logError}
+                </p>
+              )}
+              <button
+                onClick={handleMarkDone}
+                className="btn-primary pointer-events-auto w-full px-5 text-[15px] shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+              >
+                <span className="truncate">{selectedActivity ? `Done: ${selectedActivity}` : "Mark as done"}</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </PageLayout>
   );
 }
@@ -263,6 +310,7 @@ export function Workout() {
   const [sessionSaveError, setSessionSaveError] = useState<string | null>(null);
   const [backOffFeedback, setBackOffFeedback] = useState<string | null>(null);
   const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
+  const [finishBarRef, finishBarHeight] = useMeasuredHeight<HTMLDivElement>();
   const leavingRef = useRef(false);
   const sessionStartRef = useRef(activeWorkout?.startedAt);
   const restPresets = [60, 90, 120, 180, 300];
@@ -270,11 +318,6 @@ export function Workout() {
   const day = program.days.find((d) => d.id === dayId);
   const todayDateKey = formatDateKey(new Date());
   const todayHasCompletedSession = history.some((workout) => getIsoDateKey(workout.date) === todayDateKey);
-  const themeColor = isOpen
-    ? "#FFAA00"
-    : day && day.type !== "lift"
-      ? dayTypeColors[day.type] ?? "#FFAA00"
-      : focusColors[day?.focus ?? ""] ?? "#FFAA00";
   const liftFocus = !isOpen && day?.type === "lift" && isLiftFocus(day.focus) ? day.focus : null;
 
   // earlierIds: exercises before this one in the session — decides whether a warm-up set is needed
@@ -297,6 +340,8 @@ export function Workout() {
     sessionStartRef.current = activeWorkout?.startedAt;
     setHasSessionSetInteraction(false);
     setBackOffFeedback(null);
+    // Feedback now shows as a page-wide toast, so a previous session's message must not linger
+    setCurationFeedback(null);
   }
 
   // Derive conflict: active workout exists for a different day
@@ -616,29 +661,29 @@ export function Workout() {
   if (!day && !isOpen) {
     return (
       <PageLayout withBottomNavPadding={false}>
-        <div className="pt-20 text-center text-text-muted">Loading workout...</div>
+        <div className="pt-20 text-center text-[15px] text-text-muted">Loading workout...</div>
       </PageLayout>
     );
   }
 
   if (!isOpen && day && day.type !== "lift") {
-    return <CardioRecoveryView day={day} program={program} themeColor={themeColor} history={history} />;
+    return <CardioRecoveryView day={day} program={program} history={history} />;
   }
 
   if (todayHasCompletedSession && !activeWorkout) {
     return (
       <PageLayout withBottomNavPadding={false}>
-        <div className="flex flex-col gap-3 pt-20 text-center">
-          <p className="text-base font-semibold text-text-primary">Today already has a logged session</p>
-          <p className="px-6 text-sm leading-relaxed text-text-muted">
+        <div className="sheet-surface mx-auto mt-[18vh] flex max-w-[400px] flex-col gap-2 rounded-[1.25rem] p-6 text-center">
+          <p className="section-title">Today already has a logged session</p>
+          <p className="text-[14px] leading-relaxed text-text-muted">
             One day can only hold one workout, cardio, or rest entry. Use the Home calendar to undo that day or move it.
           </p>
-          <div className="mt-4 flex flex-col gap-2 px-6">
-            <button type="button" onClick={() => navigate("/")} className="btn-primary touch-target rounded-2xl px-5 py-3 text-sm font-semibold">
+          <div className="mt-4 flex flex-col gap-2">
+            <button type="button" onClick={() => navigate("/")} className="btn-primary touch-target w-full px-5 text-[15px]">
               Back to Home
             </button>
-            <button type="button" onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/"))} className="btn-ghost touch-target rounded-2xl px-5 py-3 text-sm font-semibold">
-              Go Back
+            <button type="button" onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/"))} className="btn-secondary touch-target w-full px-5 text-[15px]">
+              Go back
             </button>
           </div>
         </div>
@@ -649,7 +694,7 @@ export function Workout() {
   if (!activeWorkout) {
     return (
       <PageLayout withBottomNavPadding={false}>
-        <div className="pt-20 text-center text-text-muted">Loading workout...</div>
+        <div className="pt-20 text-center text-[15px] text-text-muted">Loading workout...</div>
       </PageLayout>
     );
   }
@@ -686,87 +731,130 @@ export function Workout() {
     };
   };
 
+  // Header context line: strip the "Day N — " prefix so only the target muscles remain
+  const dayDetail = isOpen ? "Freeform" : (day?.name ?? "").replace(/^Day\s+\d+\s*[—–-]\s*/, "");
+  const restRemainingPct = timer.isRunning
+    ? (timer.secondsLeft / (restPresets.find((p) => p >= timer.secondsLeft) ?? timer.secondsLeft + 1)) * 100
+    : 0;
+  const feedbackToasts = [
+    backOffFeedback ? { key: "back-off", text: backOffFeedback, dismiss: () => setBackOffFeedback(null) } : null,
+    curationFeedback ? { key: "curation", text: curationFeedback, dismiss: () => setCurationFeedback(null) } : null,
+  ].filter((toast): toast is { key: string; text: string; dismiss: () => void } => toast !== null);
+  const sheetBottomPadding = { paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.5rem))" };
+  const renderInsertButton = (atIndex: number) => (
+    <button
+      onClick={() => setInsertAtIndex(atIndex)}
+      className="group/insert flex min-h-11 min-w-0 flex-1 items-center gap-3"
+      aria-label="Insert exercise here"
+    >
+      <span className="h-px flex-1 bg-separator" />
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-fill text-text-muted transition-colors group-active/insert:bg-fill-strong group-active/insert:text-text-primary">
+        <svg {...iconProps} strokeWidth={2} className="h-3.5 w-3.5">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </span>
+      <span className="h-px flex-1 bg-separator" />
+    </button>
+  );
+
   return (
     <>
-      {/* Rest Timer Modal */}
+      {/* Rest Timer Sheet */}
       {timer.isRunning && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-5 animate-fade-in"
-          style={{ background: "rgba(10,10,12,0.94)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-3 animate-fade-in"
+          style={{ ...sheetBottomPadding, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }}
         >
-          <div className="flex w-full max-w-[380px] flex-col items-center gap-8 animate-slide-up">
-            {/* Timer ring */}
-            <div className="relative flex h-52 w-52 items-center justify-center">
-              <svg className="absolute inset-0 -rotate-90" viewBox="0 0 208 208">
-                <circle cx="104" cy="104" r="96" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
-                <circle
-                  cx="104"
-                  cy="104"
-                  r="96"
-                  fill="none"
-                  stroke={themeColor}
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 96}
-                  strokeDashoffset={2 * Math.PI * 96 * (1 - (timer.secondsLeft / (restPresets.find((p) => p >= timer.secondsLeft) ?? timer.secondsLeft + 1)))}
-                  style={{ transition: "stroke-dashoffset 1s linear" }}
-                  opacity="0.8"
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Rest timer"
+            className="sheet-surface flex w-full max-w-[436px] flex-col gap-6 rounded-[1.25rem] px-5 pb-4 pt-7 animate-slide-up"
+          >
+            <div className="flex flex-col items-center gap-3">
+              <p className="section-label">{timer.label}</p>
+              <p className="stat-value text-[64px] text-text-primary">
+                {timer.formatTime(timer.secondsLeft)}
+              </p>
+              <div className="mt-1 h-[3px] w-full max-w-[220px] overflow-hidden rounded-full bg-fill">
+                <div
+                  className="h-full rounded-full bg-accent-red"
+                  style={{ width: `${restRemainingPct}%`, transition: "width 1s linear" }}
                 />
-              </svg>
-              <div className="flex flex-col items-center gap-1">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-text-dim">{timer.label}</p>
-                <p className="font-[var(--font-display)] text-6xl leading-none text-text-primary tabular-nums">
-                  {timer.formatTime(timer.secondsLeft)}
-                </p>
               </div>
             </div>
 
             {/* Presets */}
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="grid grid-cols-5 gap-2">
               {restPresets.map((seconds) => (
                 <button
                   key={seconds}
                   onClick={() => timer.start(seconds, timer.label)}
-                  className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm tabular-nums text-text-secondary transition-colors active:bg-white/[0.08]"
+                  className="btn-secondary min-h-11! px-0 text-[14px] tabular-nums text-text-secondary!"
                 >
                   {formatDuration(seconds)}
                 </button>
               ))}
             </div>
 
-            <button
-              onClick={timer.stop}
-              className="w-full max-w-[260px] rounded-2xl border border-white/[0.1] bg-transparent py-3.5 text-sm font-semibold text-text-secondary transition-colors active:bg-white/[0.04]"
-            >
-              Skip Rest
+            <button onClick={timer.stop} className="btn-secondary w-full text-[15px]">
+              Skip rest
             </button>
 
-            <div className="flex flex-col items-center gap-1">
+            <div className="-mx-1 flex flex-col border-t border-separator pt-1">
               <button
+                role="switch"
+                aria-checked={autoStartTimer}
                 onClick={() => useSettingsStore.getState().setAutoStartTimer(!autoStartTimer)}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-text-dim transition-colors active:bg-white/[0.04]"
+                className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[0.875rem] px-1 text-left text-[14px] text-text-secondary"
               >
-                <div
-                  className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${autoStartTimer ? "bg-accent-green/60" : "bg-white/[0.1]"}`}
-                >
-                  <div
-                    className={`h-4 w-4 rounded-full bg-white transition-transform ${autoStartTimer ? "translate-x-4" : "translate-x-0"}`}
-                  />
-                </div>
                 Auto-start timer
+                <SwitchIndicator on={autoStartTimer} />
               </button>
               <button
+                role="switch"
+                aria-checked={restTimerSound}
                 onClick={() => useSettingsStore.getState().setRestTimerSound(!restTimerSound)}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-text-dim transition-colors active:bg-white/[0.04]"
+                className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[0.875rem] px-1 text-left text-[14px] text-text-secondary"
               >
-                <div
-                  className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${restTimerSound ? "bg-accent-green/60" : "bg-white/[0.1]"}`}
-                >
-                  <div
-                    className={`h-4 w-4 rounded-full bg-white transition-transform ${restTimerSound ? "translate-x-4" : "translate-x-0"}`}
-                  />
-                </div>
                 Sound alert
+                <SwitchIndicator on={restTimerSound} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exit sheet: keep going / go home / cancel */}
+      {showCancel && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-3 animate-fade-in"
+          style={sheetBottomPadding}
+          onClick={() => setShowCancel(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="workout-exit-title"
+            onClick={(e) => e.stopPropagation()}
+            className="sheet-surface flex w-full max-w-[436px] flex-col gap-4 rounded-[1.25rem] p-4 pt-5 animate-slide-up"
+          >
+            <p id="workout-exit-title" className="section-title px-1">What would you like to do?</p>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => setShowCancel(false)} className="btn-primary w-full text-[15px]">
+                Keep going
+              </button>
+              <button
+                onClick={() => {
+                  leavingRef.current = true;
+                  navigate("/");
+                }}
+                className="btn-secondary w-full text-[15px]"
+              >
+                Go to Home
+              </button>
+              <button onClick={handleCancel} className="btn-danger w-full text-[15px]">
+                Cancel workout
               </button>
             </div>
           </div>
@@ -812,285 +900,166 @@ export function Workout() {
         />
       )}
 
-      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-5 pb-28">
+      <PageLayout withBottomNavPadding={false} className="flex flex-col gap-6">
         {/* Header */}
-        <header className="flex flex-col gap-3 pt-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-0.5">
-              <p className="text-[11px] font-semibold tracking-widest text-text-dim uppercase">{isOpen ? "Freeform" : program.shortName}</p>
-              <h1 className="font-[var(--font-display)] text-[2.25rem] leading-none tracking-wider text-text-primary">
-                {isOpen ? "Open Workout" : day!.focus}
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowCancel(true)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] text-text-dim transition-colors active:bg-white/[0.06]"
-                aria-label="Cancel workout"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+        <header className="flex items-center justify-between gap-3 pt-1">
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="truncate text-[13px] text-text-muted">
+              {/* The elapsed time belongs to the active session, which is a different day during a conflict */}
+              {!hasDayConflict && (
+                <span className="tabular-nums">
+                  <ElapsedTime startedAt={activeWorkout.startedAt} />
+                </span>
+              )}
+              {!hasDayConflict && dayDetail && " · "}
+              {dayDetail}
+            </p>
+            <h1 className="page-title truncate">{isOpen ? "Open workout" : day!.focus}</h1>
           </div>
-
-          {/* Progress bar */}
-          <div className="flex items-center gap-3">
-            <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${progressPct}%`, background: themeColor }}
-              />
-            </div>
-            <span className="text-[11px] font-semibold tabular-nums text-text-dim">
-              {completedSets}/{totalSets}
-            </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => setShowWorkoutSetup((value) => !value)}
+              aria-expanded={showWorkoutSetup}
+              className={`chip min-h-11! gap-1.5! px-3.5! text-[14px]! ${
+                showWorkoutSetup ? "bg-fill-strong! text-text-primary" : "text-text-secondary active:bg-fill-strong!"
+              }`}
+            >
+              <svg {...iconProps} className="h-[18px] w-[18px]">
+                <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+                <circle cx="16" cy="7" r="2" />
+                <circle cx="10" cy="17" r="2" />
+              </svg>
+              {showWorkoutSetup ? "Done" : "Tools"}
+            </button>
+            <button
+              onClick={() => setShowCancel(true)}
+              className="btn-icon shrink-0"
+              aria-label="Cancel workout"
+            >
+              <svg {...iconProps} className="h-5 w-5">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </header>
 
-        {/* Cancel confirmation */}
-        {showCancel && (
-          <section
-            className="flex flex-col gap-4 rounded-2xl p-5 animate-slide-up"
-            style={{ background: "rgba(229,9,20,0.06)", border: "1px solid rgba(229,9,20,0.12)" }}
-          >
-            <p className="text-sm text-text-secondary">What would you like to do?</p>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => setShowCancel(false)}
-                className="w-full rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97]"
-                style={{
-                  background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
-                }}
-              >
-                Keep Going
-              </button>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  onClick={() => {
-                    leavingRef.current = true;
-                    navigate("/");
-                  }}
-                  className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-                >
-                  Go to Home
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-accent-red transition-colors active:bg-white/[0.04]"
-                >
-                  Cancel Workout
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* Day conflict dialog */}
         {hasDayConflict && activeWorkout && (
-          <section
-            className="flex flex-col gap-4 rounded-2xl p-5 animate-slide-up"
-            style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.15)" }}
-          >
-            <div className="flex flex-col gap-1">
-              <p className="text-sm text-text-secondary">You have a workout in progress:</p>
-              <p className="text-base font-bold text-text-primary">{activeWorkout.dayName}</p>
+          <section className="hero-surface flex flex-col gap-4 rounded-[1.25rem] p-4 animate-slide-up">
+            <div className="flex flex-col gap-0.5 px-1">
+              <p className="text-[13px] text-text-muted">You have a workout in progress</p>
+              <p className="section-title">{activeWorkout.dayName}</p>
             </div>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="flex flex-col gap-1">
               <button
                 onClick={() => navigate(`/workout/${activeWorkout.dayId}`)}
-                className="rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.97]"
-                style={{
-                  background: "linear-gradient(135deg, #46D369, #46D369CC)",
-                }}
+                className="btn-primary w-full text-[15px]"
               >
                 Resume
               </button>
-              <button
-                onClick={handleDiscardAndStart}
-                className="rounded-xl border border-white/[0.1] bg-transparent py-3 text-sm font-medium text-accent-red transition-colors active:bg-white/[0.04]"
-              >
-                Discard & Start New
+              <button onClick={handleDiscardAndStart} className="btn-tertiary w-full text-[15px] text-accent-red!">
+                Discard & start new
               </button>
             </div>
           </section>
         )}
 
-        <section className="surface-card-muted rounded-[1.4rem] p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="section-label">Session</p>
-              <p className="mt-1 text-sm font-semibold text-text-primary">
-                {activeExerciseCount} exercise{activeExerciseCount !== 1 ? "s" : ""} · {completedSets}/{totalSets} sets
-              </p>
-            </div>
-            <button
-              onClick={() => setShowWorkoutSetup((value) => !value)}
-              className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors ${
-                showWorkoutSetup
-                  ? "bg-accent-red text-white"
-                  : "border border-white/[0.08] bg-white/[0.03] text-text-secondary active:bg-white/[0.07]"
-              }`}
-            >
-              {showWorkoutSetup ? "Close Tools" : "Tools"}
-            </button>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowCoachingHints((value) => !value)}
-              className={`rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${
-                showCoachingHints
-                  ? "border-accent-blue/25 bg-accent-blue/12 text-accent-blue"
-                  : "border-white/[0.08] bg-white/[0.03] text-text-secondary active:bg-white/[0.07]"
-              }`}
-            >
-              {showCoachingHints ? "Hints On" : "Show Hints"}
-            </button>
-
-            <button
-              onClick={handleBackOffWorkout}
-              disabled={!canBackOffWorkout}
-              className={`rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${
-                canBackOffWorkout
-                  ? "border-accent-orange/25 bg-accent-orange/10 text-accent-orange active:bg-accent-orange/18"
-                  : "cursor-not-allowed border-white/[0.05] bg-white/[0.02] text-text-dim opacity-60"
-              }`}
-            >
-              Back Off Today
-            </button>
-
-            {showWorkoutSetup && (
-              <span className="chip chip-muted text-[11px] text-text-secondary">
-                Reorder and add exercises below
-              </span>
-            )}
-
-            {recoveringGroups.length > 0 && (
-              <button
-                onClick={() => setShowRecoveryActions((value) => !value)}
-                className="rounded-full border border-accent-yellow/25 bg-accent-yellow/10 px-3 py-2 text-[11px] font-semibold text-accent-yellow transition-colors active:bg-accent-yellow/18"
-              >
-                {showRecoveryActions ? "Hide Recovery" : `${recoveringGroups.length} recovering`}
-              </button>
-            )}
-          </div>
-
-          <p className="mt-2 text-[11px] leading-snug text-text-dim">
-            {backOffFeedback ?? "Use if warm-up feels heavy or form feels off."}
-          </p>
-        </section>
-
+        {/* Session tools disclosure (toggled from the header) */}
         {showWorkoutSetup && (
-          <section className="surface-card flex flex-col gap-4 rounded-[1.5rem] p-4">
-            <div className="flex flex-col gap-1">
-              <p className="section-label">Workout Tools</p>
-              <h2 className="text-sm font-bold tracking-wide text-text-primary">Customize this session</h2>
-              <p className="text-xs leading-relaxed text-text-muted">
-                Add exercises, reorder cards, or rebuild the day from your gym profile.
-              </p>
-            </div>
+          <section className="list-group animate-fade-up">
+            <button
+              role="switch"
+              aria-checked={showCoachingHints}
+              onClick={() => setShowCoachingHints((value) => !value)}
+              className="flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-3 text-left"
+            >
+              <span className="text-[15px] text-text-primary">Show hints</span>
+              <SwitchIndicator on={showCoachingHints} />
+            </button>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <div className="min-w-0">
+                <p className="text-[15px] text-text-primary">Back off today</p>
+                <p className="text-[13px] leading-snug text-text-muted">Use if warm-up feels heavy or form feels off.</p>
+              </div>
               <button
-                onClick={() => setShowAddExercise(true)}
-                className="btn-secondary px-4 py-3 text-sm font-semibold"
+                onClick={handleBackOffWorkout}
+                disabled={!canBackOffWorkout}
+                className="btn-secondary min-h-10! shrink-0 px-4 text-[14px]"
               >
-                Add Exercise
-              </button>
-              <button
-                onClick={() => setShowWorkoutSetup(false)}
-                className="btn-ghost px-4 py-3 text-sm font-semibold"
-              >
-                Back to Logging
+                Back off
               </button>
             </div>
 
             {liftFocus && (
-              <div className="rounded-[1.3rem] border border-white/[0.06] bg-white/[0.03] p-4">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-semibold text-text-primary">Curate from My Gym</h3>
-                  <p className="text-xs leading-relaxed text-text-muted">
-                    Rebuild this workout from the equipment you have available.
-                  </p>
+              <div className="flex flex-col gap-3 px-4 py-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[15px] text-text-primary">Curate from My Gym</p>
+                    <p className="text-[13px] tabular-nums text-text-muted">
+                      {selectedEquipmentCount}/{gymEquipmentOptions.length} equipment · {curatedExerciseIds.length} matched
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate("/my-gym")}
+                    className="btn-tertiary -mr-2 -mt-1.5 shrink-0 gap-1! px-3 text-[14px]"
+                  >
+                    My Gym
+                    <svg {...iconProps} className="h-4 w-4">
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </button>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-text-dim">
-                  <span className="rounded-full border border-white/[0.08] px-2.5 py-1">
-                    {selectedEquipmentCount}/{gymEquipmentOptions.length} selected
-                  </span>
-                  <span className="rounded-full border border-white/[0.08] px-2.5 py-1">
-                    {curatedExerciseIds.length} exercises matched
-                  </span>
-                  {hasLoggedSets && (
-                    <span className="rounded-full border border-accent-yellow/25 px-2.5 py-1 text-accent-yellow">
-                      Locked after set changes
-                    </span>
-                  )}
-                </div>
-
-                {curatedResult && curatedResult.skippedSlots.length > 0 && !hasLoggedSets && (
-                  <p className="mt-3 text-[11px] leading-relaxed text-accent-yellow">
-                    Missing equipment for: {curatedResult.skippedSlots.join(", ")}
+                {hasLoggedSets && (
+                  <p className="flex items-center gap-2 text-[13px] text-text-secondary">
+                    <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-yellow" />
+                    Locked after set changes
                   </p>
                 )}
 
-                {curationFeedback && <p className="mt-3 text-xs leading-relaxed text-text-secondary">{curationFeedback}</p>}
+                {curatedResult && curatedResult.skippedSlots.length > 0 && !hasLoggedSets && (
+                  <p className="flex items-start gap-2 text-[13px] leading-snug text-text-secondary">
+                    <span aria-hidden="true" className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent-yellow" />
+                    <span>Missing equipment for: {curatedResult.skippedSlots.join(", ")}</span>
+                  </p>
+                )}
 
-                <div className="mt-3 grid gap-2.5">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleCurateWorkout(false)}
                     disabled={hasLoggedSets || curatedExerciseIds.length === 0}
-                    className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
-                    style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, boxShadow: `0 4px 16px ${themeColor}20` }}
+                    className="btn-secondary min-h-11! px-3 text-[14px]"
                   >
-                    Build Workout
+                    Build workout
                   </button>
-
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      onClick={() => handleCurateWorkout(true)}
-                      disabled={hasLoggedSets || curatedExerciseIds.length === 0}
-                      className="btn-ghost px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Shuffle
-                    </button>
-                    <button
-                      onClick={() => navigate("/my-gym")}
-                      className="btn-ghost px-4 py-3 text-sm font-medium"
-                    >
-                      My Gym
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleCurateWorkout(true)}
+                    disabled={hasLoggedSets || curatedExerciseIds.length === 0}
+                    className="btn-secondary min-h-11! px-3 text-[14px]"
+                  >
+                    Try another split
+                  </button>
                 </div>
               </div>
             )}
           </section>
         )}
 
+        {/* Recovery note */}
         {recoveringGroups.length > 0 && (
-          <section
-            className="flex flex-col gap-3 rounded-[1.35rem] px-3.5 py-3"
-            style={{ background: "rgba(255,170,0,0.06)", border: "1px solid rgba(255,170,0,0.12)" }}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-accent-yellow">
-                    <path d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
-                  </svg>
-                  <span className="text-xs font-semibold text-accent-yellow">Recovery</span>
-                </div>
-                <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-                  {recoveringGroups.length === 1
-                    ? `${recoveringGroups[0].group} was trained recently. Review it before pushing hard again.`
-                    : `${recoveringGroups.length} target muscle groups were trained recently. Review them before logging.`}
-                </p>
-              </div>
+          <section className="surface-card-muted flex flex-col rounded-[1.25rem] px-4 py-3">
+            <div className="flex items-start gap-3">
+              <span aria-hidden="true" className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-accent-orange" />
+              <p className="min-w-0 flex-1 text-[14px] leading-snug text-text-secondary">
+                {recoveringGroups.length === 1
+                  ? `${recoveringGroups[0].group} was trained recently. Review it before pushing hard again.`
+                  : `${recoveringGroups.length} target muscle groups were trained recently. Review them before logging.`}
+              </p>
               <button
                 onClick={() => setShowRecoveryActions((value) => !value)}
-                className="btn-ghost shrink-0 px-3 py-2 text-xs font-semibold"
+                aria-expanded={showRecoveryActions}
+                className="btn-tertiary -my-2.5 -mr-2 shrink-0 px-3 text-[14px] text-text-primary!"
               >
                 {showRecoveryActions ? "Hide" : "Review"}
               </button>
@@ -1102,18 +1071,18 @@ export function Workout() {
               const exerciseCount = exerciseIndices.length;
 
               return (
-                <div key={groupStatus.group} className="flex flex-col gap-2 border-t border-white/[0.06] pt-3">
-                  <p className="text-[12px] leading-relaxed text-text-secondary">
+                <div key={groupStatus.group} className="mt-3 flex flex-col gap-2.5 border-t border-separator pt-3">
+                  <p className="text-[13px] leading-relaxed text-text-secondary">
                     <span className="font-medium text-text-primary">{groupStatus.group}</span> was trained {groupStatus.daysSinceLastTrained}d ago. Heavy Duty usually works best with 4-7 days rest.
                   </p>
 
                   {consecutiveSkips >= 2 ? (
-                    <p className="text-[11px] font-medium leading-snug text-accent-red">
+                    <p className="text-[13px] font-medium leading-snug text-accent-red">
                       {groupStatus.group} has been skipped {consecutiveSkips} sessions in a row. Train it today for balanced progress.
                     </p>
                   ) : consecutiveSkips === 1 ? (
-                    <div className="flex flex-col gap-1.5">
-                      <p className="text-[11px] leading-snug text-accent-orange">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[13px] leading-snug text-accent-orange">
                         {groupStatus.group} was also skipped last session. Skipping again may slow progress.
                       </p>
                       <button
@@ -1121,7 +1090,7 @@ export function Workout() {
                           const sorted = [...exerciseIndices].sort((a, b) => b - a);
                           for (const idx of sorted) skipExercise(idx);
                         }}
-                        className="self-start rounded-lg border border-accent-orange/25 bg-accent-orange/10 px-3 py-1.5 text-[11px] font-semibold text-accent-orange transition-colors active:bg-accent-orange/20"
+                        className="btn-secondary min-h-11! self-start px-4 text-[14px] text-accent-orange!"
                       >
                         Skip anyway ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
                       </button>
@@ -1132,7 +1101,7 @@ export function Workout() {
                         const sorted = [...exerciseIndices].sort((a, b) => b - a);
                         for (const idx of sorted) skipExercise(idx);
                       }}
-                      className="self-start rounded-lg border border-accent-yellow/25 bg-accent-yellow/10 px-3 py-1.5 text-[11px] font-semibold text-accent-yellow transition-colors active:bg-accent-yellow/20"
+                      className="btn-secondary min-h-11! self-start px-4 text-[14px]"
                     >
                       Skip {groupStatus.group} this week ({exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""})
                     </button>
@@ -1144,109 +1113,142 @@ export function Workout() {
         )}
 
         {activeWorkout.exercises.length === 0 && (
-          <section className="rounded-2xl bg-white/[0.03] p-6 text-center text-sm text-text-secondary" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
-            {isOpen ? "Add your first exercise to start logging." : "No lift exercises are loaded for this day."}
+          <section className="flex flex-col items-center gap-1 px-6 py-4 text-center">
+            <p className="section-title">No exercises yet</p>
+            <p className="text-[14px] leading-relaxed text-text-muted">
+              {isOpen ? "Add your first exercise to start logging." : "No lift exercises are loaded for this day."}
+            </p>
+            {!showWorkoutSetup && (
+              <button
+                onClick={() => setShowAddExercise(true)}
+                className={`${hasDayConflict ? "btn-secondary" : "btn-primary"} mt-4 px-5 text-[15px]`}
+              >
+                <svg {...iconProps} className="h-[18px] w-[18px]">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add exercise
+              </button>
+            )}
           </section>
         )}
 
-        {/* Exercise groups with insert buttons */}
-        {groups.map((group, groupIndex) => {
-          const getInsertIdx = () => {
-            if (groupIndex + 1 >= groups.length) return activeWorkout.exercises.length;
-            return groups[groupIndex + 1].index;
-          };
-          const isFirst = groupIndex === 0;
-          const isLast = groupIndex === groups.length - 1;
+        {/* Exercise groups — in edit mode each card gets one control row: insert-before + reorder */}
+        {groups.length > 0 && (
+          <div className="flex flex-col gap-3">
+            {groups.map((group, groupIndex) => {
+              const isFirst = groupIndex === 0;
+              const isLast = groupIndex === groups.length - 1;
 
-          const insertButton = (atIndex: number) => (
-            <button
-              onClick={() => setInsertAtIndex(atIndex)}
-              className="group/insert flex w-full items-center gap-3 py-1"
-              aria-label="Insert exercise here"
-            >
-              <div className="h-px flex-1 bg-white/[0.04] transition-colors group-active/insert:bg-white/[0.12]" />
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-white/[0.1] text-text-dim transition-colors group-active/insert:border-white/[0.2] group-active/insert:text-text-muted">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3">
-                  <path d="M12 5v14m7-7H5" />
-                </svg>
-              </div>
-              <div className="h-px flex-1 bg-white/[0.04] transition-colors group-active/insert:bg-white/[0.12]" />
-            </button>
-          );
-
-          return (
-            <div key={`s-${group.index}`} className="flex flex-col">
-              {showWorkoutSetup && isFirst && insertButton(group.index)}
-              <section className="flex flex-col gap-2">
-                {showWorkoutSetup && (
-                  <div className="flex justify-end px-1">
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        onClick={() => handleMoveGroup(groupIndex, "up")}
-                        className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isFirst ? "pointer-events-none opacity-20" : ""}`}
-                        aria-label="Move up"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
-                          <path d="M18 15l-6-6-6 6" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleMoveGroup(groupIndex, "down")}
-                        className={`rounded-lg p-2 text-text-dim transition-colors active:bg-white/[0.06] ${isLast ? "pointer-events-none opacity-20" : ""}`}
-                        aria-label="Move down"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5">
-                          <path d="M6 9l6 6 6-6" />
-                        </svg>
-                      </button>
+              return (
+                <section key={`s-${group.index}`} className="flex flex-col gap-2">
+                  {showWorkoutSetup && (
+                    <div className="flex items-center gap-3">
+                      {renderInsertButton(group.index)}
+                      <div className="flex shrink-0 rounded-full bg-fill">
+                        <button
+                          onClick={() => handleMoveGroup(groupIndex, "up")}
+                          className={`flex h-11 w-11 items-center justify-center rounded-full text-text-secondary transition-colors active:bg-fill-strong ${isFirst ? "pointer-events-none opacity-30" : ""}`}
+                          aria-label="Move up"
+                        >
+                          <svg {...iconProps} className="h-[18px] w-[18px]">
+                            <path d="M18 15l-6-6-6 6" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleMoveGroup(groupIndex, "down")}
+                          className={`flex h-11 w-11 items-center justify-center rounded-full text-text-secondary transition-colors active:bg-fill-strong ${isLast ? "pointer-events-none opacity-30" : ""}`}
+                          aria-label="Move down"
+                        >
+                          <svg {...iconProps} className="h-[18px] w-[18px]">
+                            <path d="M6 9l6 6 6-6" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-                <ExerciseCard {...buildCardProps(group.index)} />
-              </section>
-              {showWorkoutSetup && insertButton(getInsertIdx())}
-            </div>
-          );
-        })}
-
-        {/* Add exercise button */}
-        {showWorkoutSetup && (
-          <button
-            onClick={() => setShowAddExercise(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/[0.08] py-4 text-sm font-medium text-text-dim transition-colors active:bg-white/[0.03]"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-              <path d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Add Exercise
-          </button>
+                  )}
+                  <ExerciseCard {...buildCardProps(group.index)} />
+                </section>
+              );
+            })}
+            {showWorkoutSetup && renderInsertButton(activeWorkout.exercises.length)}
+          </div>
         )}
+
+        {/* Add exercise / leave edit mode */}
+        {showWorkoutSetup && (
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => setShowAddExercise(true)}
+              className={`${activeWorkout.exercises.length === 0 ? "btn-primary" : "btn-secondary"} w-full text-[15px]`}
+            >
+              <svg {...iconProps} className="h-[18px] w-[18px]">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Add exercise
+            </button>
+            <button onClick={() => setShowWorkoutSetup(false)} className="btn-tertiary w-full text-[15px]">
+              Back to logging
+            </button>
+          </div>
+        )}
+
+        {/* Spacer so the last card clears the floating finish bar (grows with toasts / errors) */}
+        <div
+          aria-hidden="true"
+          className="shrink-0"
+          style={{
+            height: finishBarHeight
+              ? Math.max(0, finishBarHeight - 16)
+              : "calc(3.5rem + env(safe-area-inset-bottom))",
+          }}
+        />
       </PageLayout>
 
-      {/* Sticky Finish Bar */}
+      {/* Sticky finish bar + feedback toasts */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40"
-        style={{
-          background: "rgba(14,14,18,0.88)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
-        }}
+        ref={finishBarRef}
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4"
+        style={sheetBottomPadding}
       >
-        <div className="mx-auto flex max-w-[460px] flex-col gap-2 px-5 py-3">
-          {sessionSaveError && <p className="text-sm text-accent-orange">{sessionSaveError}</p>}
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium tabular-nums text-text-secondary">
-              {completedSets}/{totalSets} sets
-            </span>
+        <div className="mx-auto flex max-w-[428px] flex-col gap-2">
+          {feedbackToasts.map((toast) => (
+            <div
+              key={toast.key}
+              role="status"
+              className={`${floatingSurface} pointer-events-auto flex items-center gap-2 self-center rounded-[1.25rem] py-1.5 pl-4 pr-1.5 text-[13px] leading-snug text-text-primary animate-fade-up`}
+            >
+              <span className="min-w-0 py-1">{toast.text}</span>
+              <button
+                onClick={toast.dismiss}
+                aria-label="Dismiss"
+                className="-my-1.5 -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-muted active:bg-fill"
+              >
+                <svg {...iconProps} className="h-4 w-4">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+          {sessionSaveError && (
+            <p role="alert" className={`${floatingSurface} pointer-events-auto rounded-[1.25rem] px-4 py-2.5 text-[13px] leading-snug text-accent-orange`}>
+              {sessionSaveError}
+            </p>
+          )}
+          <div className={`${floatingSurface} pointer-events-auto flex items-center gap-4 rounded-full py-1.5 pl-5 pr-1.5`}>
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <p className="truncate text-[13px] tabular-nums text-text-muted">
+                <span className="font-semibold text-text-primary">{completedSets}/{totalSets}</span> sets · {activeExerciseCount} exercise{activeExerciseCount !== 1 ? "s" : ""}
+              </p>
+              <div className="h-[3px] overflow-hidden rounded-full bg-fill">
+                <div
+                  className="h-full rounded-full bg-text-primary transition-[width] duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
             <button
               onClick={handleFinish}
-              className="rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-[0.97]"
-              style={{
-                background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
-                boxShadow: `0 4px 16px ${themeColor}25`,
-              }}
+              className={`${totalSets === 0 || hasDayConflict ? "btn-secondary" : "btn-primary"} shrink-0 px-7 text-[15px]`}
             >
               Finish
             </button>

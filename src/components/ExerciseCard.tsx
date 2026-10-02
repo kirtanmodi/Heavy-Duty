@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { getEffectiveExercise, muscleColors } from "../data/exercises";
+import { getEffectiveExercise } from "../data/exercises";
 import { checkPR, hasPR, getPRLabel } from "../lib/records";
 import { getLastSets, useWorkoutStore } from "../store/workoutStore";
 import { useExerciseStore } from "../store/exerciseStore";
@@ -33,6 +33,153 @@ interface ExerciseCardProps {
   previousSets?: SetEntry[];
 }
 
+const EQUIPMENT_OPTIONS: Equipment[] = ["barbell", "dumbbells", "cable", "machine", "bodyweight+"];
+
+const formatEquipment = (eq: Equipment) =>
+  eq === "bodyweight+" ? "BW+" : eq.charAt(0).toUpperCase() + eq.slice(1);
+
+/* ---------- Small presentational pieces ---------- */
+
+const iconProps = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.75,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+function MoreButton({ open, onClick }: { open: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors active:bg-fill ${
+        open ? "bg-fill text-text-primary" : "text-text-muted"
+      }`}
+      aria-label="Exercise options"
+      aria-expanded={open}
+    >
+      <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+        <circle cx="5.5" cy="12" r="1.6" />
+        <circle cx="12" cy="12" r="1.6" />
+        <circle cx="18.5" cy="12" r="1.6" />
+      </svg>
+    </button>
+  );
+}
+
+function MenuPanel({ children, up = false }: { children: ReactNode; up?: boolean }) {
+  return (
+    <div
+      className={`sheet-surface absolute right-0 z-50 w-56 overflow-hidden rounded-[0.875rem] py-1 animate-fade-in ${
+        up ? "bottom-full mb-1" : "top-full mt-1"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MenuItem({
+  onClick,
+  icon,
+  children,
+  danger = false,
+  disabled = false,
+}: {
+  onClick: () => void;
+  icon: ReactNode;
+  children: ReactNode;
+  danger?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex min-h-11 w-full items-center gap-3 px-4 text-left text-[15px] transition-colors ${
+        disabled
+          ? "cursor-not-allowed text-text-dim"
+          : `active:bg-fill ${danger ? "text-accent-red" : "text-text-primary"}`
+      }`}
+    >
+      <span
+        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center ${
+          disabled ? "opacity-60" : danger ? "" : "text-text-secondary"
+        }`}
+      >
+        {icon}
+      </span>
+      {children}
+    </button>
+  );
+}
+
+function MenuDivider() {
+  return <div className="my-1 h-px bg-separator" />;
+}
+
+const SwapIcon = () => (
+  <svg {...iconProps} className="h-[18px] w-[18px]">
+    <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+  </svg>
+);
+
+const ShuffleIcon = () => (
+  <svg {...iconProps} className="h-[18px] w-[18px]">
+    <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+  </svg>
+);
+
+const BackOffIcon = () => (
+  <svg {...iconProps} className="h-[18px] w-[18px]">
+    <path d="M12 5v14m0 0l-5-5m5 5l5-5" />
+  </svg>
+);
+
+const SkipIcon = () => (
+  <svg {...iconProps} className="h-[18px] w-[18px]">
+    <path d="M5 5l10 7-10 7V5zM19 5v14" />
+  </svg>
+);
+
+const UnskipIcon = () => (
+  <svg {...iconProps} className="h-[18px] w-[18px]">
+    <path d="M9 12l2 2 4-4" />
+    <circle cx="12" cy="12" r="9" />
+  </svg>
+);
+
+const ToolsIcon = () => (
+  <svg {...iconProps} className="h-[18px] w-[18px]">
+    <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+    <circle cx="16" cy="7" r="2" />
+    <circle cx="8" cy="17" r="2" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg {...iconProps} className="h-[18px] w-[18px]">
+    <path d="M4 7h16M10 11v6m4-6v6M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+  </svg>
+);
+
+function RemoveConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 animate-fade-in">
+      <p className="text-[14px] text-text-secondary">Remove this exercise?</p>
+      <div className="flex shrink-0 items-center gap-1">
+        <button onClick={onCancel} className="btn-tertiary px-3.5 text-[14px]">
+          Cancel
+        </button>
+        <button onClick={onConfirm} className="btn-danger min-h-11! px-4 text-[14px]">
+          Remove
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ExerciseCard({
   mode = "workout",
   entry,
@@ -58,6 +205,7 @@ export function ExerciseCard({
   // Label sets by role (warm-up vs working) whenever the entry carries working-set flags
   const hasWorkingSetFlags = entry.sets.some((set) => set.toFailure);
   const [showMenu, setShowMenu] = useState(false);
+  const [menuUp, setMenuUp] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
@@ -80,108 +228,64 @@ export function ExerciseCard({
   if (!exercise) return null;
 
   const isHistoryEdit = mode === "history-edit";
-  const color = muscleColors[exercise.primaryMuscles[0]] || "#888";
-  const menuPanelStyle = {
-    background: "rgba(18, 21, 29, 0.98)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    boxShadow: "0 16px 38px rgba(0,0,0,0.42)",
+
+  // Open the overflow menu upward when its trigger sits in the lower part of the screen,
+  // so it stays clear of the floating bottom bar.
+  const toggleMenu = () => {
+    if (!showMenu && menuRef.current) {
+      setMenuUp(menuRef.current.getBoundingClientRect().bottom > window.innerHeight * 0.55);
+    }
+    setShowMenu(!showMenu);
   };
+
+  // Cards carry no z-index: they must not form a stacking context, so an open menu panel's
+  // z-50 layers above sibling cards and the floating bottom bar (z-40) without lifting the card.
 
   // Collapsed skipped render
   if (entry.skipped) {
     return (
-      <div
-        className={`relative rounded-2xl ${showMenu ? "z-30" : ""}`}
-        style={{
-          background: `linear-gradient(180deg, ${color}${isHistoryEdit ? "0C" : "08"} 0%, rgba(255,255,255,0.02) 54%, rgba(255,255,255,0.01) 100%)`,
-          border: `1px solid ${color}18`,
-        }}
-      >
-        <div
-          className="absolute left-0 top-0 h-full w-[3px] rounded-l-2xl"
-          style={{ background: `${color}40` }}
-        />
-        <div className="flex items-center justify-between pl-5 pr-4 py-4">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-[15px] font-medium text-text-secondary">{entry.name}</h2>
-            <span
-              className="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-              style={{ background: `${color}15`, color: `${color}CC` }}
-            >
-              Skipped
-            </span>
-          </div>
+      <div className="surface-card-muted relative rounded-[1.25rem]">
+        <div className="flex min-h-14 items-center gap-2.5 py-1.5 pl-4 pr-1.5">
+          <h2 className="min-w-0 flex-1 text-[15px] font-medium leading-snug text-text-muted">{entry.name}</h2>
+          <span className="shrink-0 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium text-text-muted">
+            Skipped
+          </span>
           <div className="relative shrink-0" ref={menuRef}>
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06]"
-              aria-label="Exercise options"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                <circle cx="12" cy="6" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="12" cy="18" r="1.5" />
-              </svg>
-            </button>
+            <MoreButton open={showMenu} onClick={toggleMenu} />
             {showMenu && (
-              <div
-                className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-2xl py-1 animate-fade-in"
-                style={menuPanelStyle}
-              >
+              <MenuPanel up={menuUp}>
                 {onUnskip && (
-                  <button
+                  <MenuItem
                     onClick={() => { onUnskip(exerciseIndex); setShowMenu(false); }}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-green transition-colors active:bg-white/[0.06]"
+                    icon={<UnskipIcon />}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                      <path d="M9 12l2 2 4-4" />
-                      <circle cx="12" cy="12" r="9" />
-                    </svg>
                     Unskip
-                  </button>
+                  </MenuItem>
                 )}
-                <button
+                <MenuItem
                   onClick={() => { onSwap(exerciseIndex); setShowMenu(false); }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-text-primary transition-colors active:bg-white/[0.06]"
+                  icon={<SwapIcon />}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-text-muted">
-                    <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
-                  </svg>
-                  Swap Exercise
-                </button>
-                <button
+                  Swap exercise
+                </MenuItem>
+                <MenuDivider />
+                <MenuItem
                   onClick={() => { setRemoveConfirm(true); setShowMenu(false); }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-red transition-colors active:bg-white/[0.06]"
+                  icon={<TrashIcon />}
+                  danger
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
                   Remove
-                </button>
-              </div>
+                </MenuItem>
+              </MenuPanel>
             )}
           </div>
         </div>
         {removeConfirm && (
-          <div
-            className="flex flex-col gap-3 rounded-xl mx-4 mb-4 p-4"
-            style={{ background: "rgba(229,9,20,0.06)", border: "1px solid rgba(229,9,20,0.12)" }}
-          >
-            <p className="text-xs text-text-secondary">Remove this exercise?</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => { onRemove(exerciseIndex); setRemoveConfirm(false); }}
-                className="rounded-xl bg-accent-red py-2.5 text-xs font-bold text-white transition-all active:scale-[0.97]"
-              >
-                Remove
-              </button>
-              <button
-                onClick={() => setRemoveConfirm(false)}
-                className="rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-xs text-text-secondary transition-colors active:bg-white/[0.04]"
-              >
-                Cancel
-              </button>
-            </div>
+          <div className="border-t border-separator px-4 py-2">
+            <RemoveConfirm
+              onConfirm={() => { onRemove(exerciseIndex); setRemoveConfirm(false); }}
+              onCancel={() => setRemoveConfirm(false)}
+            />
           </div>
         )}
       </div>
@@ -230,7 +334,8 @@ export function ExerciseCard({
 
   const completedCount = entry.sets.filter((s, i) => isSetComplete(s, i)).length;
   const totalSets = entry.sets.length;
-  const equipmentLabel = exercise.equipment === "bodyweight+" ? "BW+" : exercise.equipment;
+  const equipmentLabel = formatEquipment(exercise.equipment);
+  const toolsLabel = showDetails ? "Done editing" : "Edit sets & equipment";
 
   const getSetPR = (set: SetEntry, setIndex: number) => {
     if (!showOverloadBanner) return null;
@@ -240,165 +345,148 @@ export function ExerciseCard({
     return hasPR(pr) ? getPRLabel(pr) : null;
   };
 
-  const overloadColor =
+  const overloadDotClass =
     overloadSuggestion?.type === "increase"
-      ? "#46D369"
+      ? "bg-accent-green"
       : overloadSuggestion?.type === "decrease"
-        ? "#FF6B35"
+        ? "bg-accent-orange"
         : overloadSuggestion?.type === "testing"
-          ? "#4488FF"
-          : "#5A5B63";
+          ? "bg-accent-blue"
+          : "bg-text-muted";
+
+  // Set removal lives behind the edit disclosure mid-workout; the history edit screen is
+  // already an editing context, so it stays visible there.
+  const showSetRemoval = showDetails || isHistoryEdit;
+
+  // Shared column template keeps the header row and every set row aligned. The right-hand
+  // columns (Fail, remove) are identical in both templates so stacked cards line up.
+  const gridCols = bwMode
+    ? showSetRemoval
+      ? "grid-cols-[2rem_minmax(0,1fr)_2.5rem_1rem]"
+      : "grid-cols-[2rem_minmax(0,1fr)_2.5rem]"
+    : showSetRemoval
+      ? "grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem_1rem]"
+      : "grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem]";
+  // A tighter gap while the remove column is showing keeps 5-character weights legible.
+  const gridGap = showSetRemoval ? "gap-x-1" : "gap-x-1.5";
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl"
-      style={{
-        background: isHistoryEdit
-          ? `linear-gradient(180deg, ${color}0A 0%, rgba(255,255,255,0.02) 44%, rgba(255,255,255,0.01) 100%)`
-          : `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
-        border: `1px solid ${isHistoryEdit ? `${color}1A` : `${color}15`}`,
-      }}
-    >
-      {/* Color accent bar */}
-      <div
-        className="absolute left-0 top-0 h-full w-[3px]"
-        style={{ background: `linear-gradient(180deg, ${color}, ${color}30)` }}
-      />
-
-      <div className="flex flex-col gap-3 pl-5 pr-4 py-4">
+    <div className="surface-card relative rounded-[1.25rem] p-4">
+      <div className="flex flex-col gap-4">
         {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex flex-1 flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <h2 className="text-[16px] font-bold text-text-primary leading-tight">{entry.name}</h2>
-              {exercise.type === "compound" && (
-                <span
-                  className="rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-widest"
-                  style={{ color, background: `${color}15` }}
-                >
-                  C
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h2 className="section-title">{entry.name}</h2>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-text-muted">
+              <button
+                onClick={() => setShowDetails((prev) => !prev)}
+                className={`relative inline-flex items-center gap-1 rounded-full py-1 pl-2.5 pr-2 text-[12px] font-medium transition-colors after:absolute after:-inset-x-1 after:-inset-y-2 after:content-[''] ${
+                  showDetails ? "bg-fill-strong text-text-primary" : "chip-muted text-text-secondary active:bg-fill-strong"
+                }`}
+                aria-expanded={showDetails}
+                aria-label={`Equipment: ${equipmentLabel}. ${toolsLabel}`}
+              >
                 {equipmentLabel}
-              </span>
-              <span className="text-[12px] text-text-dim">
+                <svg
+                  {...iconProps}
+                  strokeWidth={2}
+                  className={`h-3 w-3 text-text-muted transition-transform ${showDetails ? "rotate-180" : ""}`}
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              <span className="ml-0.5">
                 {exercise.repRange[0]}–{exercise.repRange[1]} reps
               </span>
+              {exercise.type === "compound" && (
+                <>
+                  <span aria-hidden className="text-text-dim">·</span>
+                  <span>Compound</span>
+                </>
+              )}
+              {isBwExercise && (
+                <>
+                  <span aria-hidden className="text-text-dim">·</span>
+                  <span>{bwMode ? "BW only" : "+ weight"}</span>
+                </>
+              )}
               {showOverloadBanner && totalSets > 0 && (
                 <>
-                  <span className="text-[12px] text-text-dim">·</span>
-                  <span className="text-[12px] tabular-nums" style={{ color: completedCount === totalSets ? "#46D369" : "var(--color-text-dim)" }}>
+                  <span aria-hidden className="text-text-dim">·</span>
+                  <span className={`tabular-nums ${completedCount === totalSets ? "text-accent-green" : ""}`}>
                     {completedCount}/{totalSets}
                   </span>
                 </>
               )}
-              {isBwExercise && (
-                <span className="text-[12px] text-text-dim">{bwMode ? "BW only" : "+ weight"}</span>
-              )}
             </div>
-            <button
-              onClick={() => setShowDetails((prev) => !prev)}
-              className="self-start rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-text-secondary transition-colors active:bg-white/[0.07] active:text-text-primary"
-            >
-              {showDetails ? "Hide Tools" : isHistoryEdit ? "Edit Tools" : "Exercise Tools"}
-            </button>
           </div>
 
           {/* Context menu */}
-          <div className="relative shrink-0" ref={menuRef}>
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06]"
-              aria-label="Exercise options"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                <circle cx="12" cy="6" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="12" cy="18" r="1.5" />
-              </svg>
-            </button>
+          <div className="relative -mr-2 -mt-1.5 shrink-0" ref={menuRef}>
+            <MoreButton open={showMenu} onClick={toggleMenu} />
             {showMenu && (
-              <div
-                className="absolute right-0 top-full z-10 mt-1 w-48 overflow-hidden rounded-2xl py-1 animate-fade-in"
-                style={menuPanelStyle}
-              >
-                <button
+              <MenuPanel up={menuUp}>
+                <MenuItem
                   onClick={() => { onSwap(exerciseIndex); setShowMenu(false); }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-text-primary transition-colors active:bg-white/[0.06]"
+                  icon={<SwapIcon />}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-text-muted">
-                    <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
-                  </svg>
-                  Swap Exercise
-                </button>
+                  Swap exercise
+                </MenuItem>
                 {onAutoReplace && (
-                  <button
+                  <MenuItem
                     onClick={() => { onAutoReplace(exerciseIndex); setShowMenu(false); }}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-blue transition-colors active:bg-white/[0.06]"
+                    icon={<ShuffleIcon />}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                      <path d="M20 7h-3m3 0v3m0-3l-4 4a4 4 0 01-5.66 0L9 9.66a4 4 0 00-5.66 0L1 12m3 5h3m-3 0v-3m0 3l4-4a4 4 0 015.66 0L15 14.34a4 4 0 005.66 0L23 12" />
-                    </svg>
-                    Auto Replace
-                  </button>
+                    Auto replace
+                  </MenuItem>
                 )}
                 {onBackOff && (
-                  <button
+                  <MenuItem
                     onClick={() => {
                       if (!canBackOff) return;
                       onBackOff(exerciseIndex);
                       setShowMenu(false);
                     }}
                     disabled={!canBackOff}
-                    className={`flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] transition-colors ${
-                      canBackOff
-                        ? "text-accent-orange active:bg-white/[0.06]"
-                        : "cursor-not-allowed text-text-dim opacity-50"
-                    }`}
+                    icon={<BackOffIcon />}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                      <path d="M12 5v14m0 0l-5-5m5 5l5-5" />
-                    </svg>
-                    Back Off
-                  </button>
+                    Back off
+                  </MenuItem>
                 )}
                 {onSkip && (
-                  <button
+                  <MenuItem
                     onClick={() => { onSkip(exerciseIndex); setShowMenu(false); }}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-yellow transition-colors active:bg-white/[0.06]"
+                    icon={<SkipIcon />}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                      <path d="M5 5l14 7-14 7V5z" />
-                    </svg>
-                    Skip This Week
-                  </button>
+                    Skip this week
+                  </MenuItem>
                 )}
-                <button
-                  onClick={() => { setRemoveConfirm(true); setShowMenu(false); }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] text-accent-red transition-colors active:bg-white/[0.06]"
+                <MenuItem
+                  onClick={() => { setShowDetails((prev) => !prev); setShowMenu(false); }}
+                  icon={<ToolsIcon />}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  {toolsLabel}
+                </MenuItem>
+                <MenuDivider />
+                <MenuItem
+                  onClick={() => { setRemoveConfirm(true); setShowMenu(false); }}
+                  icon={<TrashIcon />}
+                  danger
+                >
                   Remove
-                </button>
-              </div>
+                </MenuItem>
+              </MenuPanel>
             )}
           </div>
         </div>
 
+        {/* Exercise tools: equipment + bodyweight logging mode */}
         {showDetails && (
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">Options</p>
-
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {(["barbell", "dumbbells", "cable", "machine", "bodyweight+"] as Equipment[]).map((eq) => {
+          <div className="-mt-1 flex flex-col gap-3 animate-fade-in">
+            <div className="flex flex-wrap gap-1.5">
+              {EQUIPMENT_OPTIONS.map((eq) => {
                 const isActive = exercise.equipment === eq;
                 const hasOverride = !!equipmentOverride[entry.id];
-                const label = eq === "bodyweight+" ? "BW+" : eq.charAt(0).toUpperCase() + eq.slice(1);
                 return (
                   <button
                     key={eq}
@@ -406,189 +494,120 @@ export function ExerciseCard({
                       setEquipmentOverride(entry.id, eq);
                       setWeightOverride(undefined);
                     }}
-                    className={`rounded-full px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-all ${
+                    aria-pressed={isActive}
+                    className={`min-h-9 shrink-0 rounded-full px-3 text-[13px] font-medium transition-colors ${
                       isActive
                         ? hasOverride
-                          ? "border border-accent-blue/25 bg-accent-blue/15 text-accent-blue"
-                          : "border border-white/[0.12] bg-white/[0.1] text-text-primary"
-                        : "border border-white/[0.06] bg-white/[0.04] text-text-dim active:bg-white/[0.08]"
+                          ? "bg-accent-blue/15 text-accent-blue"
+                          : "bg-white/[0.14] text-text-primary ring-1 ring-inset ring-white/20"
+                        : "bg-fill text-text-muted active:bg-fill-strong"
                     }`}
                   >
-                    {label}
+                    {formatEquipment(eq)}
                   </button>
                 );
               })}
             </div>
 
             {isBwExercise && (
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="text-[12px] text-text-muted">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] text-text-muted">
                   {bwMode ? "Logging bodyweight only" : "Logging added weight"}
                 </span>
                 <button
                   onClick={toggleWeightMode}
-                  className={`rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
-                    bwMode
-                      ? "border-accent-blue/20 bg-accent-blue/10 text-accent-blue"
-                      : "border-white/[0.08] bg-white/[0.04] text-text-muted"
-                  }`}
+                  className="min-h-9 shrink-0 rounded-full bg-fill px-3 text-[13px] font-medium text-text-primary transition-colors active:bg-fill-strong"
                 >
-                  {bwMode ? "Add Weight" : "BW Only"}
+                  {bwMode ? "Add weight" : "BW only"}
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* Overload banner */}
+        {/* Overload suggestion */}
         {showOverloadBanner && overloadSuggestion && (
-          <div
-            className="rounded-xl px-3.5 py-2.5 text-xs leading-relaxed"
-            style={{ background: `${overloadColor}10`, border: `1px solid ${overloadColor}15` }}
-          >
-            <span className="font-bold uppercase tracking-wider" style={{ color: overloadColor }}>
-              {overloadSuggestion.type === "increase"
-                ? bwMode ? "Reps Maxed" : "Weight Up"
-                : overloadSuggestion.type === "decrease"
-                  ? "Weight Down"
-                  : overloadSuggestion.type === "testing"
-                    ? "Testing"
-                    : "Building Reps"}
-            </span>
-            <span className="mx-1.5 opacity-30">·</span>
-            <span style={{ color: `${overloadColor}CC` }}>{overloadSuggestion.message}</span>
+          <div className="-mt-1 flex gap-2.5 text-[13px] leading-[1.45]">
+            <span aria-hidden className={`mt-[6px] h-2 w-2 shrink-0 rounded-full ${overloadDotClass}`} />
+            <p className="min-w-0 text-text-secondary">
+              <span className="font-medium text-text-primary">
+                {overloadSuggestion.type === "increase"
+                  ? bwMode ? "Reps maxed" : "Weight up"
+                  : overloadSuggestion.type === "decrease"
+                    ? "Weight down"
+                    : overloadSuggestion.type === "testing"
+                      ? "Testing"
+                      : "Building reps"}
+              </span>
+              <span aria-hidden className="mx-1.5 text-text-dim">·</span>
+              {overloadSuggestion.message}
+            </p>
           </div>
         )}
 
         {/* Set inputs */}
-        <div className="flex flex-col gap-2">
-          {bwMode ? (
-            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_2.5rem_1rem] items-center gap-1 px-0.5 text-[11px] font-semibold tracking-wider text-text-dim uppercase">
-              <span className="text-center">#</span>
-              <span>Reps</span>
-              <span className="text-center">Fail</span>
-              <span />
-            </div>
-          ) : (
-            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem_1rem] items-center gap-1 px-0.5 text-[11px] font-semibold tracking-wider text-text-dim uppercase">
-              <span className="text-center">#</span>
-              <span>Kg</span>
-              <span>Reps</span>
-              <span className="text-center">Fail</span>
-              <span />
-            </div>
-          )}
+        <div className="flex flex-col gap-1.5">
+          <div className={`grid ${gridCols} ${gridGap} items-center text-[12px] text-text-muted`}>
+            <span className="text-center">Set</span>
+            {!bwMode && <span className="text-center">kg</span>}
+            <span className="text-center">Reps</span>
+            <span className="text-center">Fail</span>
+            {showSetRemoval && <span />}
+          </div>
 
           {entry.sets.map((set, setIndex) => {
             const completed = isSetComplete(set, setIndex);
             const prevSet = previousSets?.[setIndex];
             const prLabel = getSetPR(set, setIndex);
+            const isWorkingSet = entry.sets[setIndex].toFailure;
+            const workingNumber = entry.sets.slice(0, setIndex + 1).filter((s) => s.toFailure).length;
+            const showRoleLabel = hasWorkingSetFlags && !completed;
+            const setLabel = showRoleLabel ? (isWorkingSet ? String(workingNumber) : "W") : String(setIndex + 1);
+            const setDescription = hasWorkingSetFlags
+              ? isWorkingSet ? `working set ${workingNumber}` : "warm-up set"
+              : `set ${setIndex + 1}`;
 
-            return bwMode ? (
-              <div key={setIndex} className="flex flex-col gap-1">
-                <div
-                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_2.5rem_1rem] items-start gap-1 rounded-xl transition-all"
-                  style={completed ? { background: `${color}08` } : {}}
-                >
-                  <div className="flex h-12 flex-col items-center justify-center">
-                    <button
-                      onClick={() => toggleSetComplete(setIndex)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full transition-all"
+            return (
+              <div key={setIndex} className="flex flex-col">
+                <div className={`grid ${gridCols} ${gridGap} items-start`}>
+                  <button
+                    onClick={() => toggleSetComplete(setIndex)}
+                    className="-ml-3 flex h-12 w-[calc(100%+0.75rem)] items-center justify-end"
+                    aria-pressed={completed}
+                    aria-label={`Mark ${setDescription} complete`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums transition-colors ${
+                        completedSets.has(setIndex)
+                          ? "bg-accent-green/15 text-accent-green"
+                          : `bg-fill ring-1 ring-inset ring-white/[0.08] ${
+                              completed
+                                ? "text-text-secondary"
+                                : showRoleLabel && !isWorkingSet
+                                  ? "text-text-muted"
+                                  : "text-text-primary"
+                            }`
+                      }`}
                     >
                       {completed ? (
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
-                          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-                            <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
+                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                          <path d="M6.5 12.5l3.5 3.5 7.5-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       ) : (
-                        <span className="text-[13px] font-semibold text-text-dim">{setIndex + 1}</span>
+                        setLabel
                       )}
-                    </button>
-                    {hasWorkingSetFlags && !completed && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wide ${entry.sets[setIndex].toFailure ? "text-accent-red/70" : "text-text-dim"}`}>
-                        {entry.sets[setIndex].toFailure ? "Work" : "W-up"}
-                      </span>
-                    )}
-                  </div>
-                  <StepperInput
-                    value={set.reps}
-                    onChange={(v) => onSetChange(exerciseIndex, setIndex, "reps", v)}
-                    step={1}
-                    prevHint={prevSet ? `prev: ${prevSet.reps}` : undefined}
-                    onPrevTap={prevSet ? () => onSetChange(exerciseIndex, setIndex, "reps", prevSet.reps) : undefined}
-                  />
-                  <button
-                    onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                    className={`h-12 rounded-xl text-[12px] font-semibold transition-all ${
-                      set.toFailure
-                        ? "bg-accent-red/15 text-accent-red"
-                        : "bg-white/[0.04] text-text-dim border border-white/[0.04]"
-                    }`}
-                  >
-                    {set.toFailure ? "F" : "—"}
+                    </span>
                   </button>
-                  <button
-                    onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-                    className={`flex h-12 w-full items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06] ${
-                      entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""
-                    }`}
-                    aria-label={`Remove set ${setIndex + 1}`}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <AnimatePresence>
-                  {prLabel && (
-                    <motion.span
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ type: "spring", stiffness: 600, damping: 20 }}
-                      className="ml-8 inline-block self-start rounded-full bg-accent-yellow/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-yellow"
-                    >
-                      {prLabel}
-                    </motion.span>
+                  {!bwMode && (
+                    <StepperInput
+                      value={set.weight}
+                      onChange={(v) => onSetChange(exerciseIndex, setIndex, "weight", v)}
+                      step={exercise.weightIncrement}
+                      inputMode="decimal"
+                      prevHint={prevSet ? `prev: ${prevSet.weight}kg` : undefined}
+                      onPrevTap={prevSet ? () => onSetChange(exerciseIndex, setIndex, "weight", prevSet.weight) : undefined}
+                    />
                   )}
-                </AnimatePresence>
-              </div>
-            ) : (
-              <div key={setIndex} className="flex flex-col gap-1">
-                <div
-                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem_1rem] items-start gap-1 rounded-xl transition-all"
-                  style={completed ? { background: `${color}08` } : {}}
-                >
-                  <div className="flex h-12 flex-col items-center justify-center">
-                    <button
-                      onClick={() => toggleSetComplete(setIndex)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full transition-all"
-                    >
-                      {completed ? (
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: `${color}25` }}>
-                          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-                            <path d="M8 12l3 3 5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <span className="text-[13px] font-semibold text-text-dim">{setIndex + 1}</span>
-                      )}
-                    </button>
-                    {hasWorkingSetFlags && !completed && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wide ${entry.sets[setIndex].toFailure ? "text-accent-red/70" : "text-text-dim"}`}>
-                        {entry.sets[setIndex].toFailure ? "Work" : "W-up"}
-                      </span>
-                    )}
-                  </div>
-                  <StepperInput
-                    value={set.weight}
-                    onChange={(v) => onSetChange(exerciseIndex, setIndex, "weight", v)}
-                    step={exercise.weightIncrement}
-                    inputMode="decimal"
-                    prevHint={prevSet ? `prev: ${prevSet.weight}kg` : undefined}
-                    onPrevTap={prevSet ? () => onSetChange(exerciseIndex, setIndex, "weight", prevSet.weight) : undefined}
-                  />
                   <StepperInput
                     value={set.reps}
                     onChange={(v) => onSetChange(exerciseIndex, setIndex, "reps", v)}
@@ -598,25 +617,29 @@ export function ExerciseCard({
                   />
                   <button
                     onClick={() => onSetChange(exerciseIndex, setIndex, "toFailure", !set.toFailure)}
-                    className={`h-12 rounded-xl text-[12px] font-semibold transition-all ${
+                    className={`h-12 w-full rounded-[0.875rem] text-[13px] font-semibold transition-colors ${
                       set.toFailure
-                        ? "bg-accent-red/15 text-accent-red"
-                        : "bg-white/[0.04] text-text-dim border border-white/[0.04]"
+                        ? "bg-fill-strong text-text-primary"
+                        : "bg-transparent text-text-dim ring-1 ring-inset ring-white/[0.06]"
                     }`}
+                    aria-pressed={set.toFailure}
+                    aria-label={`Set ${setIndex + 1} to failure`}
                   >
                     {set.toFailure ? "F" : "—"}
                   </button>
-                  <button
-                    onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-                    className={`flex h-12 w-full items-center justify-center rounded-xl text-text-dim transition-colors active:bg-white/[0.06] ${
-                      entry.sets.length <= 1 ? "pointer-events-none opacity-20" : ""
-                    }`}
-                    aria-label={`Remove set ${setIndex + 1}`}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
+                  {showSetRemoval && (
+                    <button
+                      onClick={() => onRemoveSet(exerciseIndex, setIndex)}
+                      className={`-mr-4 flex h-12 w-[calc(100%+1rem)] items-center justify-start pl-px text-text-muted transition-colors active:text-text-primary ${
+                        entry.sets.length <= 1 ? "pointer-events-none opacity-30" : ""
+                      }`}
+                      aria-label={`Remove set ${setIndex + 1}`}
+                    >
+                      <svg {...iconProps} strokeWidth={2} className="h-3.5 w-3.5">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
                 <AnimatePresence>
                   {prLabel && (
@@ -625,7 +648,7 @@ export function ExerciseCard({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ type: "spring", stiffness: 600, damping: 20 }}
-                      className="ml-8 inline-block self-start rounded-full bg-accent-yellow/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-yellow"
+                      className={`mb-1 mt-0.5 inline-block ${showSetRemoval ? "ml-9" : "ml-[2.375rem]"} self-start rounded-full bg-accent-red/12 px-2 py-0.5 text-[11px] font-medium text-accent-red`}
                     >
                       {prLabel}
                     </motion.span>
@@ -636,49 +659,43 @@ export function ExerciseCard({
           })}
         </div>
 
-        {/* Remove confirm */}
-        {removeConfirm && (
-          <div
-            className="flex flex-col gap-3 rounded-xl p-4"
-            style={{ background: "rgba(229,9,20,0.06)", border: "1px solid rgba(229,9,20,0.12)" }}
-          >
-            <p className="text-xs text-text-secondary">Remove this exercise?</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={handleRemoveConfirmed}
-                className="rounded-xl bg-accent-red py-2.5 text-xs font-bold text-white transition-all active:scale-[0.97]"
-              >
-                Remove
-              </button>
-              <button
-                onClick={() => setRemoveConfirm(false)}
-                className="rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-xs text-text-secondary transition-colors active:bg-white/[0.04]"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex gap-2">
+        {/* Actions */}
+        <div className="-mb-1.5 -mt-1 flex items-center justify-between gap-2">
           <button
             onClick={() => onAddSet(exerciseIndex)}
-            className="flex-1 rounded-xl border border-white/[0.08] bg-transparent py-2.5 text-[13px] font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
+            className="btn-tertiary -ml-3 px-3 text-[14px] active:text-text-primary"
           >
-            Add Set
+            <svg {...iconProps} strokeWidth={2} className="h-4 w-4">
+              <path d="M12 5v14m7-7H5" />
+            </svg>
+            Add set
           </button>
 
-          {restButtons?.map((btn, i) => (
-            <button
-              key={i}
-              onClick={btn.onClick}
-              className="rounded-xl border border-white/[0.08] bg-transparent px-4 py-2.5 text-[13px] font-medium text-text-secondary transition-colors active:bg-white/[0.04]"
-            >
-              {btn.label}
-            </button>
-          ))}
+          {restButtons && restButtons.length > 0 && (
+            <div className="flex items-center gap-2">
+              {restButtons.map((btn, i) => (
+                <button
+                  key={i}
+                  onClick={btn.onClick}
+                  className="btn-secondary min-h-11! px-3.5 text-[14px] tabular-nums"
+                >
+                  <svg {...iconProps} className="h-4 w-4 text-text-secondary">
+                    <circle cx="12" cy="13" r="8" />
+                    <path d="M12 9v4l2.5 2M10 2h4" />
+                  </svg>
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Remove confirm */}
+        {removeConfirm && (
+          <div className="border-t border-separator pt-3">
+            <RemoveConfirm onConfirm={handleRemoveConfirmed} onCancel={() => setRemoveConfirm(false)} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -11,6 +11,12 @@ interface StepperInputProps {
   onPrevTap?: () => void;
 }
 
+// Each step button is 36px visually; an invisible ::after widens the hit area to 44px:
+// 2px outward (half of the narrowest 4px column gap, so neighbours never overlap) and
+// 6px inward over the blank edge of the value field.
+const stepButtonClass =
+  "relative flex w-9 shrink-0 items-center justify-center text-text-secondary transition-colors active:bg-fill-strong active:text-text-primary after:absolute after:inset-y-0 after:content-['']";
+
 export function StepperInput({
   value,
   onChange,
@@ -61,9 +67,14 @@ export function StepperInput({
   const selectAllOnFocus = (e: React.FocusEvent<HTMLInputElement>) =>
     e.target.select();
 
+  // Shrink long values (e.g. "102.5") so they stay fully visible in narrow columns.
+  const valueLength = value ? String(value).length : 0;
+  const valueSizeClass =
+    valueLength >= 5 ? "text-[13px]" : valueLength === 4 ? "text-[15px]" : "text-[17px]";
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="input-shell flex items-center overflow-hidden">
+    <div className="flex min-w-0 flex-col">
+      <div className="flex h-12 items-stretch rounded-[0.875rem] bg-fill transition-shadow focus-within:ring-1 focus-within:ring-white/25">
         <button
           onClick={() => handleStep(-1)}
           onTouchStart={() => startLongPressWithRef(-1)}
@@ -72,15 +83,16 @@ export function StepperInput({
           onMouseDown={() => startLongPressWithRef(-1)}
           onMouseUp={clearTimers}
           onMouseLeave={clearTimers}
-          className="touch-target flex h-12 w-9 shrink-0 items-center justify-center border-r border-white/[0.06] bg-white/[0.02] text-text-muted transition-colors active:bg-white/[0.08]"
+          className={`${stepButtonClass} rounded-l-[0.875rem] after:-left-[2px] after:-right-[6px]`}
           aria-label="Decrease"
         >
           <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.5"
-            className="h-3.5 w-3.5"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            className="h-4 w-4"
           >
             <path d="M5 12h14" />
           </svg>
@@ -97,7 +109,7 @@ export function StepperInput({
             onChange(parsed);
           }}
           onFocus={selectAllOnFocus}
-          className="input-focus h-12 w-full min-w-0 border-0 bg-transparent px-0 text-center text-[14px] font-semibold tabular-nums text-white outline-none"
+          className={`h-full w-full min-w-0 rounded-none border-0 bg-transparent p-0 text-center font-semibold tabular-nums tracking-tight text-text-primary outline-none ${valueSizeClass}`}
           placeholder={placeholder}
         />
         <button
@@ -108,15 +120,16 @@ export function StepperInput({
           onMouseDown={() => startLongPressWithRef(1)}
           onMouseUp={clearTimers}
           onMouseLeave={clearTimers}
-          className="touch-target flex h-12 w-9 shrink-0 items-center justify-center border-l border-white/[0.06] bg-white/[0.02] text-text-muted transition-colors active:bg-white/[0.08]"
+          className={`${stepButtonClass} rounded-r-[0.875rem] after:-left-[6px] after:-right-[2px]`}
           aria-label="Increase"
         >
           <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.5"
-            className="h-3.5 w-3.5"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            className="h-4 w-4"
           >
             <path d="M12 5v14m7-7H5" />
           </svg>
@@ -125,7 +138,7 @@ export function StepperInput({
       {prevHint && (
         <button
           onClick={onPrevTap}
-          className="self-center rounded-full bg-white/[0.04] px-3 py-1.5 text-center text-[11px] font-medium tabular-nums text-text-dim transition-colors active:bg-white/[0.07] active:text-text-muted"
+          className="relative min-h-7 w-full rounded-lg px-1 py-1.5 text-center text-[11px] tabular-nums leading-none text-text-muted transition-colors after:absolute after:inset-x-0 after:top-0 after:-bottom-1.5 after:content-[''] active:text-text-primary"
         >
           {prevHint}
         </button>
