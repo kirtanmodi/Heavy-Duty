@@ -28,9 +28,9 @@ const MyGym = lazy(loadMyGymPage);
 function PageTransition({ children }: { children: ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
+      exit={{ opacity: 0, y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
       {children}
@@ -39,7 +39,32 @@ function PageTransition({ children }: { children: ReactNode }) {
 }
 
 function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-2xl bg-white/[0.05] ${className}`} />;
+  const radius = className.includes("rounded-") ? "" : "rounded-[0.875rem]";
+  return <div className={`animate-pulse bg-fill ${radius} ${className}`} />;
+}
+
+function SkeletonCard({ className }: { className: string }) {
+  return <section className={`surface-card animate-pulse rounded-[1.25rem] ${className}`} />;
+}
+
+function SkeletonHeader({ withEyebrow = false }: { withEyebrow?: boolean }) {
+  return (
+    <header className="px-1 pt-2">
+      {withEyebrow && <SkeletonBlock className="mb-2 h-3.5 w-24" />}
+      <SkeletonBlock className="h-8 w-36" />
+    </header>
+  );
+}
+
+function SkeletonSetRow() {
+  return (
+    <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem] items-center gap-2">
+      <SkeletonBlock className="h-8 w-8 rounded-full" />
+      <SkeletonBlock className="h-11" />
+      <SkeletonBlock className="h-11" />
+      <SkeletonBlock className="h-11 rounded-full" />
+    </div>
+  );
 }
 
 function RouteFallback({ pathname }: { pathname: string }) {
@@ -49,102 +74,77 @@ function RouteFallback({ pathname }: { pathname: string }) {
   const isHistoryRoute = pathname.startsWith("/history");
 
   return (
-    <PageLayout withBottomNavPadding={!hideBottomNav} className="flex flex-col gap-4">
-      <section className="surface-card rounded-[1.9rem] p-5">
-        <SkeletonBlock className="h-3 w-20" />
-        <SkeletonBlock className="mt-3 h-10 w-36" />
-        <SkeletonBlock className="mt-3 h-4 w-full max-w-[18rem]" />
-      </section>
-
+    <PageLayout withBottomNavPadding={!hideBottomNav} className="flex flex-col gap-6">
       {isProgressRoute ? (
         <>
-          <section className="hero-surface rounded-[1.9rem] p-5">
-            <SkeletonBlock className="h-4 w-28" />
-            <SkeletonBlock className="mt-4 h-10 w-44" />
-            <SkeletonBlock className="mt-3 h-4 w-full max-w-[16rem]" />
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              <SkeletonBlock className="h-20" />
-              <SkeletonBlock className="h-20" />
-              <SkeletonBlock className="h-20" />
-            </div>
-          </section>
-          <section className="surface-card rounded-[1.75rem] p-4">
-            <div className="flex gap-2">
-              <SkeletonBlock className="h-9 w-16 rounded-full" />
-              <SkeletonBlock className="h-9 w-20 rounded-full" />
-              <SkeletonBlock className="h-9 w-24 rounded-full" />
-            </div>
-            <SkeletonBlock className="mt-4 h-40 w-full" />
-          </section>
+          <SkeletonHeader />
+          <SkeletonBlock className="h-10 w-full rounded-full" />
+          <div className="px-1">
+            <SkeletonBlock className="h-7 w-48" />
+            <SkeletonBlock className="mt-2 h-3.5 w-36" />
+          </div>
+          <SkeletonCard className="h-[4.75rem]" />
+          <SkeletonCard className="h-64" />
         </>
       ) : isWorkoutRoute ? (
         <>
-          <section className="surface-card-muted rounded-[1.55rem] p-4">
-            <SkeletonBlock className="h-4 w-16" />
-            <SkeletonBlock className="mt-3 h-5 w-40" />
-            <div className="mt-4 flex gap-2">
-              <SkeletonBlock className="h-11 w-36" />
-              <SkeletonBlock className="h-11 w-28" />
+          <header className="flex items-start justify-between gap-3 pt-1">
+            <div className="min-w-0 flex-1">
+              <SkeletonBlock className="h-3.5 w-40" />
+              <SkeletonBlock className="mt-2.5 h-8 w-28" />
             </div>
-          </section>
-          <section className="surface-card rounded-[1.7rem] p-4">
-            <SkeletonBlock className="h-5 w-40" />
-            <SkeletonBlock className="mt-3 h-4 w-28" />
-            <div className="mt-4 grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem] gap-2">
-              <SkeletonBlock className="h-11" />
-              <SkeletonBlock className="h-11" />
-              <SkeletonBlock className="h-11" />
-              <SkeletonBlock className="h-11" />
-            </div>
-          </section>
-          <section className="surface-card rounded-[1.7rem] p-4">
-            <SkeletonBlock className="h-5 w-36" />
-            <div className="mt-4 grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem] gap-2">
-              <SkeletonBlock className="h-11" />
-              <SkeletonBlock className="h-11" />
-              <SkeletonBlock className="h-11" />
-              <SkeletonBlock className="h-11" />
-            </div>
-          </section>
+            <SkeletonBlock className="h-11 w-11 shrink-0 rounded-full" />
+          </header>
+          {[0, 1].map((card) => (
+            <section key={card} className="surface-card rounded-[1.25rem] p-4">
+              <SkeletonBlock className={`h-5 ${card === 0 ? "w-40" : "w-36"}`} />
+              <SkeletonBlock className={`mt-2 h-3.5 ${card === 0 ? "w-28" : "w-24"}`} />
+              <div className="mt-4 flex flex-col gap-2">
+                <SkeletonSetRow />
+                <SkeletonSetRow />
+              </div>
+            </section>
+          ))}
         </>
       ) : isHistoryRoute ? (
         <>
-          <section className="surface-card rounded-[1.6rem] p-4">
-            <SkeletonBlock className="h-4 w-14" />
-            <SkeletonBlock className="mt-3 h-5 w-52" />
-            <SkeletonBlock className="mt-2 h-4 w-full max-w-[18rem]" />
-          </section>
-          <section className="surface-card rounded-[1.6rem] p-4">
-            <SkeletonBlock className="h-4 w-24" />
-            <div className="mt-4 flex gap-2">
-              <SkeletonBlock className="h-9 w-16 rounded-full" />
-              <SkeletonBlock className="h-9 w-20 rounded-full" />
-              <SkeletonBlock className="h-9 w-24 rounded-full" />
+          <SkeletonHeader />
+          <div className="flex gap-2">
+            <SkeletonBlock className="h-8 w-16 rounded-full" />
+            <SkeletonBlock className="h-8 w-20 rounded-full" />
+            <SkeletonBlock className="h-8 w-24 rounded-full" />
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <SkeletonBlock className="h-4 w-32" />
+            <div className="flex flex-col gap-2.5">
+              {[0, 1, 2].map((row) => (
+                <section key={row} className="surface-card rounded-[1.25rem] p-4">
+                  <SkeletonBlock className="h-5 w-44" />
+                  <SkeletonBlock className="mt-2 h-3.5 w-28" />
+                  <SkeletonBlock className="mt-3 h-3.5 w-52" />
+                </section>
+              ))}
             </div>
-          </section>
-          <section className="surface-card rounded-[1.6rem] p-4">
-            <SkeletonBlock className="h-5 w-44" />
-            <SkeletonBlock className="mt-3 h-4 w-24" />
-            <SkeletonBlock className="mt-4 h-20 w-full" />
-          </section>
+          </div>
         </>
       ) : (
         <>
-          <section className="surface-card rounded-[1.8rem] p-5">
-            <SkeletonBlock className="h-4 w-16" />
-            <SkeletonBlock className="mt-3 h-11 w-full" />
+          <SkeletonHeader withEyebrow />
+          <section className="surface-card rounded-[1.25rem] p-5">
+            <SkeletonBlock className="h-3.5 w-20" />
+            <SkeletonBlock className="mt-3 h-7 w-32" />
+            <SkeletonBlock className="mt-2 h-3.5 w-40" />
+            <SkeletonBlock className="mt-5 h-12 w-full rounded-full" />
           </section>
-          <section className="surface-card rounded-[1.75rem] p-4">
-            <SkeletonBlock className="h-4 w-24" />
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <SkeletonBlock className="h-24" />
-              <SkeletonBlock className="h-24" />
-            </div>
-          </section>
-          <section className="surface-card rounded-[1.75rem] p-4">
-            <SkeletonBlock className="h-4 w-20" />
-            <SkeletonBlock className="mt-4 h-52 w-full" />
-          </section>
+          <div className="flex gap-2">
+            <SkeletonBlock className="h-11 w-24 rounded-full" />
+            <SkeletonBlock className="h-11 w-28 rounded-full" />
+            <SkeletonBlock className="h-11 w-20 rounded-full" />
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <SkeletonBlock className="ml-1 h-4 w-28" />
+            <SkeletonCard className="h-64" />
+          </div>
         </>
       )}
     </PageLayout>

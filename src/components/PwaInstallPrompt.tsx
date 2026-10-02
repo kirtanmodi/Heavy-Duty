@@ -111,81 +111,96 @@ export function PwaInstallPrompt() {
     }
   };
 
-  const title = deferredPrompt ? "Install the app" : "Add to Home Screen";
-  const message = deferredPrompt
-    ? "Open Heavy Duty like a native app with offline access."
-    : "Add Heavy Duty to your home screen for the app-style layout.";
-
   return (
-    <AnimatePresence>
-      {canShowPrompt ? (
-        <motion.aside
-          key="pwa-install-prompt"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 12 }}
-          transition={{ type: "spring", stiffness: 320, damping: 28 }}
-          className="pointer-events-none fixed inset-x-0 bottom-[calc(6.1rem+env(safe-area-inset-bottom))] z-40 px-3"
-        >
-          <div className="pointer-events-auto mx-auto w-full max-w-[460px]">
-            <div className="surface-card rounded-[1.35rem] p-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent-red/12 text-accent-red">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
-                    <path d="M12 15V5" strokeLinecap="round" />
-                    <path d="M8.5 8.5L12 5l3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M5 18.5h14" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold tracking-[0.01em] text-text-primary">{title}</p>
-                  <p className="mt-1 text-sm leading-6 text-text-secondary">{message}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={dismiss}
-                  className="touch-target -mr-1 -mt-1 inline-flex items-center justify-center rounded-full text-text-muted active:bg-white/6 active:text-text-secondary"
-                  aria-label="Dismiss install prompt"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
-                    <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
+    <>
+      {canShowPrompt && <div aria-hidden className="h-24 shrink-0" />}
+      <AnimatePresence>
+        {canShowPrompt ? (
+          <motion.aside
+            key="pwa-install-prompt"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="pointer-events-none fixed inset-x-0 bottom-[max(5.625rem,calc(env(safe-area-inset-bottom)+5rem))] z-40 px-4"
+          >
+            <div className="pointer-events-auto mx-auto w-full max-w-[460px]">
+              <div className="sheet-surface rounded-[1.25rem] py-2 pl-3 pr-2">
+                <div className="flex items-center gap-3">
+                  <img src="/pwa-icon.svg" alt="" aria-hidden className="h-10 w-10 shrink-0" />
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {deferredPrompt ? (
-                  <button type="button" onClick={handleInstall} className="btn-primary px-4 text-sm font-medium" disabled={isInstalling}>
-                    {isInstalling ? "Opening..." : "Install App"}
-                  </button>
-                ) : (
+                  {deferredPrompt ? (
+                    <>
+                      <div className="min-w-0 flex-1 py-1">
+                        <p className="text-[15px] font-semibold leading-snug tracking-tight text-text-primary">Install Heavy Duty</p>
+                        <p className="text-[13px] leading-snug text-text-muted">Works offline</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleInstall}
+                        className="btn-secondary min-h-11! shrink-0 px-4 text-[14px]"
+                        disabled={isInstalling}
+                      >
+                        {isInstalling ? "Opening..." : "Install"}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowIosSteps((value) => !value)}
+                      aria-expanded={showIosSteps}
+                      className="min-h-11 min-w-0 flex-1 py-1 text-left"
+                    >
+                      <span className="block text-[15px] font-semibold leading-snug tracking-tight text-text-primary">
+                        Install Heavy Duty
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[13px] leading-snug text-text-muted">
+                        {showIosSteps ? "Hide steps" : "Show steps"}
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.75"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className={`h-3.5 w-3.5 transition-transform ${showIosSteps ? "rotate-180" : ""}`}
+                        >
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    onClick={() => setShowIosSteps((value) => !value)}
-                    className="btn-secondary px-4 text-sm font-medium"
+                    onClick={dismiss}
+                    className="btn-icon -ml-1 shrink-0 bg-transparent! active:bg-fill!"
+                    aria-label="Dismiss install prompt"
                   >
-                    {showIosSteps ? "Hide Steps" : "Show Steps"}
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      className="h-[18px] w-[18px]"
+                    >
+                      <path d="M6 6l12 12M18 6L6 18" />
+                    </svg>
                   </button>
+                </div>
+
+                {!deferredPrompt && showIosSteps && (
+                  <p className="pb-1.5 pl-[3.25rem] pr-3 text-[13px] leading-relaxed text-text-muted">
+                    Tap <span className="font-medium text-text-secondary">Share</span>, then choose{" "}
+                    <span className="font-medium text-text-secondary">Add to Home Screen</span>.
+                  </p>
                 )}
               </div>
-
-              {!deferredPrompt && showIosSteps && (
-                <div className="mt-3 rounded-[1.1rem] border border-white/[0.06] bg-white/[0.03] px-3.5 py-3 text-sm leading-relaxed text-text-secondary">
-                  Tap <span className="font-semibold text-text-primary">Share</span>, then choose{" "}
-                  <span className="font-semibold text-text-primary">Add to Home Screen</span>.
-                </div>
-              )}
-
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="text-[11px] text-text-dim">You can dismiss this and install later.</span>
-                <button type="button" onClick={dismiss} className="text-[11px] font-semibold text-text-secondary transition-colors active:text-text-primary">
-                  Maybe later
-                </button>
-              </div>
             </div>
-          </div>
-        </motion.aside>
-      ) : null}
-    </AnimatePresence>
+          </motion.aside>
+        ) : null}
+      </AnimatePresence>
+    </>
   );
 }
