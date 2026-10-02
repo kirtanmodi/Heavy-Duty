@@ -88,7 +88,7 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
 
   const chipClass = (active: boolean) =>
     `chip relative h-9 shrink-0 px-3.5 font-medium transition-colors after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] ${
-      active ? "bg-[#f4f4f5]! text-[#0b0b0c]" : "text-text-secondary active:bg-fill-strong"
+      active ? "bg-[#f4f4f5] text-[#0b0b0c]" : "text-text-secondary active:bg-fill-strong"
     }`;
 
   return (
@@ -132,7 +132,7 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search exercises"
-              className="input-shell input-focus h-11 w-full pl-10 pr-11 text-[15px] text-text-primary placeholder:text-text-dim outline-none"
+              className="input-shell input-focus h-11 w-full rounded-full pl-10 pr-11 text-[15px] text-text-primary placeholder:text-text-dim outline-none"
               autoFocus
             />
             {search && (
@@ -177,26 +177,27 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[1.125rem] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           {candidates.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-6 pt-16 text-center">
+            <div className="flex flex-col items-center gap-3 px-6 pt-12 text-center">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.75"
                 strokeLinecap="round"
-                className="h-6 w-6 text-text-dim"
+                className="h-7 w-7 text-text-muted"
+                aria-hidden
               >
                 <circle cx="11" cy="11" r="7" />
                 <path d="M20 20l-3.5-3.5" />
               </svg>
-              <p className="mt-1 text-[15px] font-medium text-text-primary">{emptyMessage}</p>
-              <button onClick={() => setShowCreate(true)} className="btn-secondary mt-4 px-5 text-[15px]">
+              <p className="section-title mt-1 max-w-[18rem]">{emptyMessage}</p>
+              <button onClick={() => setShowCreate(true)} className="btn-secondary mt-3 px-5 text-[15px]">
                 <PlusIcon />
                 Create new exercise
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-2.5 pt-3">
               <p className="section-caption px-1 tabular-nums">{candidates.length} available</p>
 
               <div className="list-group">
@@ -217,14 +218,10 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
                       className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors active:bg-fill"
                     >
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="truncate text-[15px] font-medium text-text-primary">{exercise.name}</span>
-                          {exercise.type === "compound" && (
-                            <span className="shrink-0 text-[13px] text-text-muted">Compound</span>
-                          )}
-                        </div>
+                        <span className="truncate text-[15px] font-medium leading-snug text-text-primary">{exercise.name}</span>
                         <span className="truncate text-[13px] text-text-muted">
                           {groupLabel} · {equipmentLabels[exercise.equipment]} · {exercise.repRange[0]}–{exercise.repRange[1]} reps
+                          {exercise.type === "compound" && " · Compound"}
                         </span>
                       </div>
                       {mode === "add" ? (
@@ -265,7 +262,7 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
           onClick={() => setSelectedExercise(null)}
         >
           <div
-            className="sheet-surface flex w-full max-w-[460px] flex-col gap-2 rounded-t-[1.25rem] px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] animate-slide-up"
+            className="sheet-surface flex w-full max-w-[460px] flex-col gap-2 rounded-t-[1.25rem] border-b-0 px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-fill-strong" />
@@ -384,14 +381,15 @@ function CreateExerciseSheet({ onCreated, onClose }: { onCreated: (exercise: Exe
         onClick={onClose}
       />
       <div className="fixed inset-x-0 bottom-0 z-[70] animate-slide-up">
-        <div className="sheet-surface mx-auto max-w-[460px] rounded-t-[1.25rem] px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+        <div className="sheet-surface mx-auto max-w-[460px] rounded-t-[1.25rem] border-b-0 px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill-strong" />
           <h3 className="section-title mb-4 px-1">New exercise</h3>
 
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="px-1 text-[13px] font-medium text-text-secondary">Name</label>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="picker-new-exercise-name" className="section-label px-1">Name</label>
               <input
+                id="picker-new-exercise-name"
                 ref={inputRef}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -401,10 +399,11 @@ function CreateExerciseSheet({ onCreated, onClose }: { onCreated: (exercise: Exe
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <label className="px-1 text-[13px] font-medium text-text-secondary">Muscle group</label>
+              <div className="flex min-w-0 flex-col gap-2">
+                <label htmlFor="picker-new-exercise-muscle" className="section-label px-1">Muscle group</label>
                 <div className="relative">
                   <select
+                    id="picker-new-exercise-muscle"
                     value={muscle}
                     onChange={(e) => setMuscle(e.target.value as MuscleGroup)}
                     className="input-shell input-focus h-12 w-full appearance-none px-4 pr-9 text-[15px] text-text-primary outline-none"
@@ -417,10 +416,11 @@ function CreateExerciseSheet({ onCreated, onClose }: { onCreated: (exercise: Exe
                 </div>
               </div>
 
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <label className="px-1 text-[13px] font-medium text-text-secondary">Equipment</label>
+              <div className="flex min-w-0 flex-col gap-2">
+                <label htmlFor="picker-new-exercise-equipment" className="section-label px-1">Equipment</label>
                 <div className="relative">
                   <select
+                    id="picker-new-exercise-equipment"
                     value={equipment}
                     onChange={(e) => setEquipment(e.target.value as Equipment)}
                     className="input-shell input-focus h-12 w-full appearance-none px-4 pr-9 text-[15px] text-text-primary outline-none"

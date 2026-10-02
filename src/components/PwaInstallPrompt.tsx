@@ -125,7 +125,7 @@ export function PwaInstallPrompt() {
             className="pointer-events-none fixed inset-x-0 bottom-[max(5.625rem,calc(env(safe-area-inset-bottom)+5rem))] z-40 px-4"
           >
             <div className="pointer-events-auto mx-auto w-full max-w-[460px]">
-              <div className="sheet-surface rounded-[1.25rem] py-2 pl-3 pr-2">
+              <div className="glass rounded-[1.25rem] py-2 pl-3 pr-2">
                 <div className="flex items-center gap-3">
                   <img src="/pwa-icon.svg" alt="" aria-hidden className="h-10 w-10 shrink-0" />
 
@@ -138,7 +138,7 @@ export function PwaInstallPrompt() {
                       <button
                         type="button"
                         onClick={handleInstall}
-                        className="btn-secondary min-h-11! shrink-0 px-4 text-[14px]"
+                        className="btn-secondary min-h-11 shrink-0 px-4 text-[14px]"
                         disabled={isInstalling}
                       >
                         {isInstalling ? "Opening..." : "Install"}
@@ -174,7 +174,7 @@ export function PwaInstallPrompt() {
                   <button
                     type="button"
                     onClick={dismiss}
-                    className="btn-icon -ml-1 shrink-0 bg-transparent! active:bg-fill!"
+                    className="btn-icon -ml-1 shrink-0 bg-transparent active:bg-fill"
                     aria-label="Dismiss install prompt"
                   >
                     <svg

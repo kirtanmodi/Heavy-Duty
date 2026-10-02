@@ -542,8 +542,8 @@ export function Home() {
   return (
     <PageLayout className="flex flex-col gap-7">
       <header className="animate-fade-up px-1 pt-2">
-        <p className="text-[13px] font-medium text-text-muted">{dateStr}</p>
-        <h1 className="page-title mt-1">Today</h1>
+        <h1 className="page-title">Today</h1>
+        <p className="mt-1 text-[13px] tabular-nums text-text-muted">{dateStr}</p>
       </header>
 
       <section className="flex flex-col gap-5 animate-fade-up" style={{ animationDelay: "40ms" }}>
@@ -644,7 +644,7 @@ export function Home() {
                   key={option.key}
                   onClick={() => handleOptionTap(option)}
                   {...(getOptionPrefetchPath(option) ? prefetchButtonProps(getOptionPrefetchPath(option)!) : {})}
-                  className="chip !min-h-11 shrink-0 !px-3.5 !text-[14px] font-medium text-text-primary active:bg-fill-strong"
+                  className="chip min-h-11 shrink-0 px-3.5 text-[14px] font-medium text-text-primary active:bg-fill-strong"
                 >
                   {option.label}
                 </button>
@@ -659,7 +659,7 @@ export function Home() {
               type="button"
               onClick={() => setShowAlternateWorkouts((value) => !value)}
               aria-expanded={showAlternateWorkouts}
-              className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 text-left active:bg-fill"
+              className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-3 text-left active:bg-fill"
             >
               <span className="text-text-muted [&>svg]:h-[1.125rem] [&>svg]:w-[1.125rem]">{ACTIVITY_ICONS.lift}</span>
               <span className="flex-1 text-[15px] text-text-primary">
@@ -677,7 +677,7 @@ export function Home() {
                   key={option.key}
                   onClick={() => handleOptionTap(option)}
                   {...prefetchButtonProps(`/workout/${option.dayId}`)}
-                  className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 text-left animate-fade-in active:bg-fill"
+                  className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-3 text-left animate-fade-in active:bg-fill"
                 >
                   <span className="w-[1.125rem] shrink-0" aria-hidden />
                   <span className="min-w-0 flex-1 truncate text-[15px] text-text-primary">{option.label}</span>
@@ -838,7 +838,7 @@ export function Home() {
         <SectionLabel
           action={
             trainedRecovery.length > 0 ? (
-              <span className="flex items-center gap-3 text-[12px] text-text-muted">
+              <span className="flex items-center gap-3 text-[13px] text-text-muted">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-accent-orange" />
                   Recovering
@@ -880,7 +880,7 @@ export function Home() {
         {showRestSuggestion && (
           <div className="surface-card mt-2.5 rounded-[1.25rem] p-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2 text-[15px] font-semibold text-text-primary">
+              <span className="section-title flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${nudgeDotClass}`} aria-hidden />
                 {restSuggestion.type === "full-rest" ? "Rest day" : "Stay active"}
               </span>
@@ -905,14 +905,14 @@ export function Home() {
       </section>
 
       <section className="flex flex-col gap-2.5 animate-fade-up" style={{ animationDelay: "200ms" }}>
-        <SectionLabel action={<span className="text-[12px] tabular-nums text-text-muted">{history.length} workouts on this device</span>}>
+        <SectionLabel action={<span className="text-[13px] tabular-nums text-text-muted">{history.length} workouts on this device</span>}>
           Data
         </SectionLabel>
 
         <div className="list-group">
           <button
             onClick={handleExportJSON}
-            className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 text-left active:bg-fill"
+            className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-3 text-left active:bg-fill"
           >
             <svg {...iconProps} className="h-[1.125rem] w-[1.125rem] shrink-0 text-text-muted">
               <path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14" />
@@ -922,7 +922,7 @@ export function Home() {
           </button>
           <button
             onClick={handleExportCSV}
-            className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 text-left active:bg-fill"
+            className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-3 text-left active:bg-fill"
           >
             <svg {...iconProps} className="h-[1.125rem] w-[1.125rem] shrink-0 text-text-muted">
               <path d="M4 5h16v14H4zM4 10h16M4 14.5h16M10 10v9" />
@@ -933,7 +933,7 @@ export function Home() {
           <button
             onClick={() => setDataExpanded((value) => !value)}
             aria-expanded={dataExpanded}
-            className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 text-left active:bg-fill"
+            className="flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-3 text-left active:bg-fill"
           >
             <svg {...iconProps} className="h-[1.125rem] w-[1.125rem] shrink-0 text-text-muted">
               <path d="M4 12a8 8 0 1 0 2.35-5.65L4 8.7M4 4v4.7h4.7" />
@@ -951,7 +951,7 @@ export function Home() {
                 Restoring a JSON backup replaces your current history, settings, and any in-progress workout on this
                 device.
               </p>
-              <button onClick={() => fileRef.current?.click()} className="btn-danger w-full text-[14px]">
+              <button onClick={() => fileRef.current?.click()} className="btn-danger w-full text-[15px]">
                 Choose backup file
               </button>
               <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
@@ -963,14 +963,14 @@ export function Home() {
 
       {selectedCalendarCell && (
         <div
-          className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/60 px-3 pt-20 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/60 px-3 pt-20 animate-fade-in"
           onClick={closeCalendarActions}
         >
           <div
             className="mx-auto w-full max-w-[28rem] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] animate-slide-up"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="sheet-surface rounded-[1.5rem] p-5" role="dialog" aria-modal="true" aria-label={selectedCalendarLabel}>
+            <div className="sheet-surface rounded-[1.25rem] p-5" role="dialog" aria-modal="true" aria-label={selectedCalendarLabel}>
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="section-label">
@@ -1011,7 +1011,7 @@ export function Home() {
                   <button
                     onClick={() => handleCalendarActivity("cardio")}
                     disabled={!!activeWorkout}
-                    className="btn-secondary w-full px-4 text-[14px]"
+                    className="btn-secondary w-full px-4 text-[15px]"
                   >
                     {ACTIVITY_ICONS.cardio}
                     Log cardio
@@ -1019,7 +1019,7 @@ export function Home() {
                   <button
                     onClick={() => handleCalendarActivity("rest")}
                     disabled={!!activeWorkout}
-                    className="btn-secondary w-full px-4 text-[14px]"
+                    className="btn-secondary w-full px-4 text-[15px]"
                   >
                     {ACTIVITY_ICONS.rest}
                     Log rest
@@ -1035,7 +1035,7 @@ export function Home() {
 
               {selectedCalendarCell.entryKind === "lift" && (
                 <div className="mt-5 flex flex-col gap-2">
-                  <label className="section-label px-1" htmlFor="calendar-date-move">
+                  <label className="section-label" htmlFor="calendar-date-move">
                     New date
                   </label>
                   <input
@@ -1047,7 +1047,7 @@ export function Home() {
                       setCalendarDateDraft(event.target.value);
                       setCalendarActionError(null);
                     }}
-                    className="input-shell input-focus min-h-12 w-full px-4 text-[15px] text-text-primary outline-none"
+                    className="input-shell input-focus h-11 w-full px-4 text-[15px] text-text-primary outline-none"
                   />
                   <button onClick={handleLiftDateChange} className="btn-primary mt-2 w-full text-[15px]">
                     Move workout
@@ -1062,7 +1062,7 @@ export function Home() {
               )}
 
               {calendarActionError && (
-                <p className="mt-3 text-[13px] font-medium text-accent-orange">{calendarActionError}</p>
+                <p role="alert" className="mt-3 text-[13px] text-accent-orange">{calendarActionError}</p>
               )}
             </div>
           </div>
