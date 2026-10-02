@@ -28,12 +28,13 @@ function humanizeLabel(value: string): string {
   return value.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+// No trailing periods: the summary is joined into a " · " separated meta line.
 function getLoggedSummary(day: ProgramDay, activityName?: string): string {
-  if (activityName) return `Already logged: ${activityName}.`;
-  if (day.type === "lift") return "This date already has a logged lift session.";
-  if (day.type === "rest") return "This date is already marked as rest.";
-  if (day.type === "recovery") return "This date is already logged as recovery.";
-  return "This date is already logged as cardio.";
+  if (activityName) return `Already logged: ${activityName}`;
+  if (day.type === "lift") return "This date already has a logged lift session";
+  if (day.type === "rest") return "This date is already marked as rest";
+  if (day.type === "recovery") return "This date is already logged as recovery";
+  return "This date is already logged as cardio";
 }
 
 function getCycleReason(cycleIndex: number, programDays: ProgramDay[]): string {
@@ -90,7 +91,7 @@ function DayTypeBadge({ type }: { type: string }) {
   const badge = typeBadge[type] ?? typeBadge.rest;
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium leading-tight text-text-secondary">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium leading-tight text-text-primary">
       <StatusDot className={badge.dot} />
       {badge.label}
     </span>
@@ -216,11 +217,14 @@ export function Schedule() {
 
     const dateLabel = formatDayDate(createSessionIso(dateKey));
     // Drop the stat when it would only repeat the type badge (e.g. "Rest").
+    // Logged slots keep it (exercise count / planned duration) ahead of the logged summary.
+    const visibleStat = compactStat !== typeBadge[day.type]?.label ? compactStat : null;
     const statText = isLogged
-      ? getLoggedSummary(day, workout?.activityName)
-      : compactStat !== typeBadge[day.type]?.label
-        ? compactStat
-        : null;
+      ? [visibleStat, getLoggedSummary(day, workout?.activityName)].filter(Boolean).join(" · ")
+      : visibleStat;
+
+    // The Next up hero uses the 20px hero inset; list rows use 16px.
+    const inset = isNextUp ? "px-5 pb-5" : "px-4 pb-4";
 
     const loggedBadge = isLogged ? (
       <span className="shrink-0 rounded-full bg-accent-green/12 px-2 py-0.5 text-[12px] font-medium leading-tight text-accent-green">
@@ -233,11 +237,11 @@ export function Schedule() {
     const startBlock =
       !isRest && !isLogged && leadDays === 0 ? (
         activeWorkout ? (
-          <p className="px-4 pb-4 text-[13px] text-text-muted">
+          <p className={`${inset} text-[13px] text-text-muted`}>
             Start unavailable · finish or cancel the active session first.
           </p>
         ) : (
-          <div className="px-4 pb-4">
+          <div className={inset}>
             <button
               type="button"
               onClick={() => navigate(`/workout/${day.id}`)}
@@ -250,7 +254,7 @@ export function Schedule() {
       ) : null;
 
     const details = isExpanded ? (
-      <div className={`flex flex-col gap-5 px-4 pb-4 ${isNextUp ? "pt-1" : ""}`}>
+      <div className={`flex flex-col gap-5 ${inset}`}>
         <DetailSection label="Why this day">
           <p className="text-[14px] leading-relaxed text-text-secondary">
             {getCycleReason(cycleIndex, program.days)}
@@ -315,9 +319,10 @@ export function Schedule() {
         ) : null}
 
         {!isLogged && smartSuggestion?.reason && smartSuggestion.suggestion ? (
-          <div className="rounded-[0.875rem] bg-accent-orange/10 px-3.5 py-3">
-            <p className="text-[13px] font-medium text-accent-orange">Recovery suggestion</p>
-            <p className="mt-0.5 text-[13px] leading-relaxed text-text-secondary">
+          <div className="flex items-start gap-2.5">
+            <span className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-accent-orange" aria-hidden />
+            <p className="text-[13px] leading-relaxed text-text-secondary">
+              <span className="font-medium text-text-primary">Recovery suggestion.</span>{" "}
               {smartSuggestion.reason}. {smartSuggestion.suggestion}.
             </p>
           </div>
@@ -332,7 +337,7 @@ export function Schedule() {
           className="hero-surface rounded-[1.25rem] animate-fade-up"
           style={{ animationDelay: `${index * 35}ms` }}
         >
-          <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
+          <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-5">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-text-muted">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-fill px-2 py-0.5 text-[12px] font-medium leading-tight text-text-primary">
@@ -344,10 +349,10 @@ export function Schedule() {
                   {dateLabel} · {leadTimeLabel}
                 </span>
               </div>
-              <h3 className="mt-2 text-[20px] font-semibold leading-snug tracking-tight text-text-primary">
+              <h3 className="mt-2 text-[1.5rem] font-semibold leading-tight tracking-tight text-text-primary">
                 {day.focus}
               </h3>
-              {statText ? <p className="mt-0.5 text-[13px] text-text-muted">{statText}</p> : null}
+              {statText ? <p className="mt-1 text-[13px] text-text-muted">{statText}</p> : null}
             </div>
             <span className="flex shrink-0 pt-0.5">
               <DayTypeBadge type={day.type} />
@@ -362,10 +367,10 @@ export function Schedule() {
 
     return (
       <div key={`${day.id}-${dateKey}`}>
-        <div className="relative flex min-h-[3.75rem] items-center gap-3 px-4 py-3">
+        <div className="relative flex min-h-[3.25rem] items-center gap-3 px-4 py-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="min-w-0 text-[15px] font-semibold leading-snug tracking-tight text-text-primary">
+              <h3 className="min-w-0 text-[15px] font-medium leading-snug text-text-primary">
                 {/* The pseudo-element stretches the toggle over the whole row. */}
                 <button
                   type="button"
@@ -402,14 +407,14 @@ export function Schedule() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 animate-fade-up">
-        <div className="flex items-center justify-between gap-3 px-1">
+      <div className="flex flex-col gap-2.5 animate-fade-up">
+        <div className="flex min-h-6 items-center justify-between gap-3 px-1">
           <h2 className="section-label">Next {rollingDays.length} days</h2>
           <button
             type="button"
             onClick={() => setShowLegend((value) => !value)}
             aria-expanded={showLegend}
-            className="btn-tertiary -mr-2 px-2 text-[13px]"
+            className="btn-tertiary -my-2.5 -mr-2 gap-1 px-2 text-[13px]"
           >
             {showLegend ? "Hide legend" : "Legend"}
           </button>
@@ -430,13 +435,11 @@ export function Schedule() {
 
         {activeWorkout ? (
           <div className="surface-card-muted flex items-start gap-2.5 rounded-[1.25rem] px-4 py-3">
-            <StatusDot className="mt-[7px] bg-accent-red" />
-            <div className="min-w-0">
-              <p className="text-[14px] font-medium text-text-primary">Workout in progress</p>
-              <p className="mt-0.5 text-[13px] text-text-muted">
-                Finish or cancel {activeWorkout.dayName} before starting another day from here.
-              </p>
-            </div>
+            <StatusDot className="mt-[0.45rem] bg-accent-red" />
+            <p className="min-w-0 text-[13px] leading-relaxed text-text-secondary">
+              <span className="font-medium text-text-primary">Workout in progress.</span>{" "}
+              Finish or cancel {activeWorkout.dayName} before starting another day from here.
+            </p>
           </div>
         ) : null}
       </div>

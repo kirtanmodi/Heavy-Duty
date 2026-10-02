@@ -22,6 +22,7 @@ import {
   getExercisePRs,
 } from "../lib/charts";
 import { getEffectiveExercise, exerciseGroups } from "../data/exercises";
+import { formatDayDate } from "../lib/dates";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { PRRecord } from "../lib/charts";
 
@@ -30,13 +31,12 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function formatPRDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+/** "Mon · Sep 28", with the year appended only when it isn't the current year. */
+function formatListDate(iso: string): string {
+  const year = new Date(iso).getFullYear();
+  return year === new Date().getFullYear()
+    ? formatDayDate(iso)
+    : `${formatDayDate(iso)}, ${year}`;
 }
 
 function formatMetricValue(value: number): string {
@@ -176,9 +176,9 @@ function SegmentedControl({
   );
 }
 
-function EmptyStateCard({ title, description }: { title: string; description: string }) {
+function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="surface-card flex flex-col items-center gap-3 rounded-[1.25rem] px-6 py-10 text-center">
+    <div className="flex flex-col items-center gap-3 px-6 pt-12 text-center animate-fade-up">
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -187,14 +187,14 @@ function EmptyStateCard({ title, description }: { title: string; description: st
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden
-        className="h-6 w-6 text-text-muted"
+        className="h-7 w-7 text-text-muted"
       >
         <path d="M3 3v18h18" />
         <path d="M7 16l4-4 4 4 5-5" />
       </svg>
-      <div>
+      <div className="max-w-[18rem]">
         <h2 className="section-title">{title}</h2>
-        <p className="section-caption mt-1">{description}</p>
+        <p className="mt-1 text-[15px] leading-relaxed text-text-muted">{description}</p>
       </div>
     </div>
   );
@@ -214,14 +214,16 @@ function PRRow({ pr }: { pr: PRRecord }) {
   };
 
   return (
-    <div className="flex min-h-[3.75rem] items-center justify-between gap-3 px-4 py-3">
-      <span className="min-w-0 truncate text-[15px] text-text-secondary">{prLabels[pr.type]}</span>
-      <span className="shrink-0 text-right">
-        <span className="block text-[15px] font-semibold tabular-nums text-text-primary">
-          {values[pr.type]}
-        </span>
-        <span className="mt-0.5 block text-[12px] text-text-muted">{formatPRDate(pr.date)}</span>
-      </span>
+    <div className="flex min-h-[3.25rem] items-center justify-between gap-3 px-4 py-2.5">
+      <div className="min-w-0">
+        <p className="truncate text-[15px] font-medium leading-snug text-text-primary">
+          {prLabels[pr.type]}
+        </p>
+        <p className="mt-0.5 truncate text-[13px] text-text-muted">{formatListDate(pr.date)}</p>
+      </div>
+      <p className="shrink-0 text-right text-[15px] font-semibold tabular-nums text-text-primary">
+        {values[pr.type]}
+      </p>
     </div>
   );
 }
@@ -322,13 +324,13 @@ export function Progress() {
   );
 
   return (
-    <PageLayout className="flex flex-col gap-6">
+    <PageLayout className="flex flex-col gap-7">
       <header className="flex flex-col gap-4 pt-2">
-        <div className="flex items-baseline justify-between gap-3 px-1">
+        <div className="px-1">
           <h1 className="page-title">Progress</h1>
-          <span className="shrink-0 text-[13px] tabular-nums text-text-muted">
+          <p className="mt-1 text-[13px] tabular-nums text-text-muted">
             {tracked.length} {tracked.length === 1 ? "exercise" : "exercises"}
-          </span>
+          </p>
         </div>
 
         <SegmentedControl
@@ -345,7 +347,7 @@ export function Progress() {
       {view === "schedule" ? (
         <Schedule />
       ) : tracked.length === 0 ? (
-        <EmptyStateCard
+        <EmptyState
           title="No progress yet"
           description="Log a few workouts to unlock charts and PRs."
         />
@@ -371,7 +373,7 @@ export function Progress() {
                 </span>
               </button>
             </h2>
-            <p className="text-[13px] text-text-muted">{exerciseMeta}</p>
+            <p className="-mt-1 text-[13px] text-text-muted">{exerciseMeta}</p>
           </section>
 
           {showExercisePicker ? (
@@ -386,18 +388,18 @@ export function Progress() {
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="exercise-picker-title"
-                  className="sheet-surface mx-auto flex max-h-[78dvh] max-w-[460px] flex-col rounded-t-[1.5rem] border-b-0"
+                  className="sheet-surface mx-auto flex max-h-[78dvh] max-w-[460px] flex-col rounded-t-[1.25rem] border-b-0"
                 >
-                  <div className="shrink-0 px-[1.125rem] pt-3">
-                    <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-fill-strong" aria-hidden />
-                    <div className="flex items-center justify-between gap-3 px-1">
+                  <div className="shrink-0 px-5 pt-3">
+                    <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill-strong" aria-hidden />
+                    <div className="flex min-h-6 items-center justify-between gap-3 px-1">
                       <h2 id="exercise-picker-title" className="section-title">
                         Choose exercise
                       </h2>
                       <button
                         type="button"
                         onClick={() => setShowExercisePicker(false)}
-                        className="btn-tertiary -mr-3 px-3 text-[15px] text-text-primary"
+                        className="btn-tertiary -my-2.5 -mr-3 px-3 text-[15px] text-text-primary"
                       >
                         Done
                       </button>
@@ -405,7 +407,7 @@ export function Progress() {
                     <div
                       role="group"
                       aria-label="Filter by muscle group"
-                      className="scrollbar-hide -mx-[1.125rem] mt-1 flex gap-2 overflow-x-auto px-[1.125rem] pb-2"
+                      className="scrollbar-hide -mx-5 mt-2 flex gap-2 overflow-x-auto px-5 pb-2"
                     >
                       {[
                         { label: "All", count: tracked.length },
@@ -424,15 +426,15 @@ export function Progress() {
                             className="group flex min-h-11 shrink-0 items-center"
                           >
                             <span
-                              className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors ${
+                              className={`chip h-9 px-3.5 font-medium transition-colors ${
                                 active
-                                  ? "bg-text-primary text-bg-primary"
-                                  : "bg-fill text-text-secondary group-active:bg-fill-strong"
+                                  ? "bg-[#f4f4f5] text-[#0b0b0c]"
+                                  : "text-text-secondary group-active:bg-fill-strong"
                               }`}
                             >
                               {group.label}
                               <span
-                                className={`tabular-nums ${active ? "text-bg-primary/55" : "text-text-muted"}`}
+                                className={`tabular-nums ${active ? "text-[#0b0b0c]/55" : "text-text-muted"}`}
                               >
                                 {group.count}
                               </span>
@@ -444,8 +446,8 @@ export function Progress() {
                   </div>
 
                   <div
-                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[1.125rem] pt-1"
-                    style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-1"
+                    style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
                   >
                     <div className="list-group">
                       {visibleExercises.length > 0 ? (
@@ -461,10 +463,10 @@ export function Progress() {
                                 setShowExercisePicker(false);
                                 setShowAllSessions(false);
                               }}
-                              className="flex min-h-[3.25rem] w-full items-center justify-between gap-3 px-4 text-left active:bg-fill"
+                              className="flex min-h-[3.25rem] w-full items-center justify-between gap-3 px-4 py-3 text-left active:bg-fill"
                             >
                               <span
-                                className={`truncate text-[15px] ${active ? "font-medium text-text-primary" : "text-text-secondary"}`}
+                                className={`truncate text-[15px] text-text-primary ${active ? "font-medium" : ""}`}
                               >
                                 {visibleExercise.name}
                               </span>
@@ -517,7 +519,7 @@ export function Progress() {
                   compact
                 />
               </div>
-              <p className="mt-1.5 text-[13px] text-text-muted">{chartCaption}</p>
+              <p className="mt-1 text-[13px] text-text-muted">{chartCaption}</p>
             </div>
 
             {sessions.length >= 2 ? (
@@ -648,11 +650,11 @@ export function Progress() {
               {displayedSessions.map((session, index) => (
                 <div
                   key={`${session.date}-${index}`}
-                  className="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5"
+                  className="flex min-h-[3.25rem] items-center justify-between gap-3 px-4 py-2.5"
                 >
                   <div className="min-w-0">
-                    <p className="text-[15px] font-medium text-text-primary">
-                      {formatDate(session.date)}
+                    <p className="text-[15px] font-medium leading-snug text-text-primary">
+                      {formatListDate(session.date)}
                     </p>
                     <p className="mt-0.5 text-[13px] tabular-nums text-text-muted">
                       {session.totalSets} working sets · {session.bestWeight}kg × {session.bestReps} ·{" "}
