@@ -52,8 +52,10 @@ function writeStoredTimer(stored: StoredTimer | null) {
 
 export function useTimer(onComplete?: (info: TimerCompleteInfo) => void, persistKey?: string | null) {
   const [timer, setTimer] = useState<RunningTimer | null>(() => readStoredTimer(persistKey))
-  // Only changes once a second, so the 250ms ticks don't re-render the page.
+  // Set only when the shown second changes: even a same-value set re-runs the caller once,
+  // so the 250ms ticks would re-render the page twice a second.
   const [secondsLeft, setSecondsLeft] = useState(() => (timer ? secondsUntil(timer.endsAt) : 0))
+  const secondsLeftRef = useRef(secondsLeft)
   const onCompleteRef = useRef(onComplete)
   const persistKeyRef = useRef(persistKey)
 
@@ -72,6 +74,7 @@ export function useTimer(onComplete?: (info: TimerCompleteInfo) => void, persist
 
   const start = useCallback((seconds: number, timerLabel = 'REST BETWEEN EXERCISES') => {
     const next = { endsAt: Date.now() + seconds * 1000, label: timerLabel }
+    secondsLeftRef.current = seconds
     setSecondsLeft(seconds)
     setTimer(next)
     const key = persistKeyRef.current
@@ -85,7 +88,11 @@ export function useTimer(onComplete?: (info: TimerCompleteInfo) => void, persist
       if (completed) return
       const current = Date.now()
       if (current < timer.endsAt) {
-        setSecondsLeft(secondsUntil(timer.endsAt, current))
+        const next = secondsUntil(timer.endsAt, current)
+        if (next !== secondsLeftRef.current) {
+          secondsLeftRef.current = next
+          setSecondsLeft(next)
+        }
         return
       }
       completed = true
