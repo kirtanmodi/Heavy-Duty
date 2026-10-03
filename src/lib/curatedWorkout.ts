@@ -28,12 +28,13 @@ export interface CurateResult {
 const has = (profile: GymEquipmentProfile, equipmentId: GymEquipmentId) => profile[equipmentId]
 const hasAny = (profile: GymEquipmentProfile, equipmentIds: GymEquipmentId[]) => equipmentIds.some((equipmentId) => has(profile, equipmentId))
 const hasAnyBench = (profile: GymEquipmentProfile) => hasAny(profile, ['flat-bench', 'incline-bench', 'decline-bench'])
+const hasLegRaiseStation = (profile: GymEquipmentProfile) => hasAny(profile, ['pull-up-bar', 'leg-raise-stand', 'assisted-dip-chin-up'])
 
 export const gymEquipmentOptions: GymEquipmentOption[] = [
   { id: 'chest-press-machine', label: 'Chest Press', category: 'Machines', focuses: ['Push'] },
   { id: 'fly-machine', label: 'Fly / Pec Deck', category: 'Machines', focuses: ['Push'] },
   { id: 'shoulder-press-machine', label: 'Shoulder Press', category: 'Machines', focuses: ['Push'] },
-  { id: 'lateral-raise', label: 'Lateral Raise', category: 'Machines', focuses: ['Push'] },
+  { id: 'lateral-raise', label: 'Lateral Raise', category: 'Machines', focuses: ['Push', 'Legs & Abs'] },
   { id: 'tricep-press-machine', label: 'Tricep Press', category: 'Machines', focuses: ['Push'] },
   { id: 'lat-pulldown', label: 'Lat Pulldown', category: 'Machines', focuses: ['Pull'] },
   { id: 'high-row-machine', label: 'High Row', category: 'Machines', focuses: ['Pull'] },
@@ -43,13 +44,13 @@ export const gymEquipmentOptions: GymEquipmentOption[] = [
   { id: 'front-bicep-curl', label: 'Front Bicep Curl', category: 'Machines', focuses: ['Pull'] },
   { id: 'dual-adjustable-pulley', label: 'Dual Adjustable Pulley', category: 'Machines', focuses: ['Push', 'Pull', 'Legs & Abs'] },
   { id: 'assisted-dip-chin-up', label: 'Assisted Dip / Chin-Up', category: 'Machines', focuses: ['Push', 'Pull'] },
-  { id: 'pull-up-bar', label: 'Pull-Up Bar', category: 'Machines', focuses: ['Pull', 'Legs & Abs'] },
+  { id: 'pull-up-bar', label: 'Pull-Up Bar', category: 'Machines', focuses: ['Push', 'Pull', 'Legs & Abs'] },
   { id: 'linear-leg-press', label: 'Linear Leg Press', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'seated-leg-press', label: 'Seated Leg Press', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'leg-extension-machine', label: 'Leg Extension', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'leg-curl-machine', label: 'Leg Curl', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'calf-raise-machine', label: 'Calf Raise', category: 'Machines', focuses: ['Legs & Abs'] },
-  { id: 'abdominal-crunch-machine', label: 'Abdominal Crunch', category: 'Machines', focuses: ['Legs & Abs'] },
+  { id: 'abdominal-crunch-machine', label: 'Abdominal Crunch', category: 'Machines', focuses: ['Push', 'Pull', 'Legs & Abs'] },
   { id: 'back-extension', label: 'Back Extension', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'hip-adductor', label: 'Hip Adductor', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'hip-abductor', label: 'Hip Abductor', category: 'Machines', focuses: ['Legs & Abs'] },
@@ -59,7 +60,7 @@ export const gymEquipmentOptions: GymEquipmentOption[] = [
   { id: 'flat-bench', label: 'Flat Bench', category: 'Free Weights', focuses: ['Push', 'Pull'] },
   { id: 'incline-bench', label: 'Incline Bench', category: 'Free Weights', focuses: ['Push', 'Pull'] },
   { id: 'decline-bench', label: 'Decline Bench', category: 'Free Weights', focuses: ['Push'] },
-  { id: 'leg-raise-stand', label: 'Leg Raise Stand', category: 'Free Weights', focuses: ['Legs & Abs'] },
+  { id: 'leg-raise-stand', label: 'Leg Raise Stand', category: 'Free Weights', focuses: ['Push', 'Pull', 'Legs & Abs'] },
   { id: 'stairs', label: 'Stairs / StairMaster', category: 'Cardio', focuses: [] },
   { id: 'cycle', label: 'Stationary Cycle', category: 'Cardio', focuses: [] },
   { id: 'elliptical', label: 'Elliptical', category: 'Cardio', focuses: [] },
@@ -111,6 +112,14 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
         { exerciseId: 'weighted-dips', isAvailable: (profile) => hasAny(profile, ['assisted-dip-chin-up', 'pull-up-bar']) },
       ],
     },
+    {
+      label: 'Abs',
+      candidates: [
+        { exerciseId: 'hanging-leg-raise', isAvailable: hasLegRaiseStation },
+        { exerciseId: 'abdominal-crunch-machine', isAvailable: (profile) => has(profile, 'abdominal-crunch-machine') },
+        { exerciseId: 'cable-crunch', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
+      ],
+    },
   ],
   Pull: [
     {
@@ -150,6 +159,14 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
         { exerciseId: 'hammer-curl', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
+    {
+      label: 'Abs',
+      candidates: [
+        { exerciseId: 'cable-crunch', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
+        { exerciseId: 'abdominal-crunch-machine', isAvailable: (profile) => has(profile, 'abdominal-crunch-machine') },
+        { exerciseId: 'hanging-leg-raise', isAvailable: hasLegRaiseStation },
+      ],
+    },
   ],
   'Legs & Abs': [
     {
@@ -180,10 +197,21 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      label: 'Ab Crunch',
+      // Second side-delt hit of the cycle. Cable first so it differs from
+      // Push's machine/dumbbell raise.
+      label: 'Side Delt',
+      candidates: [
+        { exerciseId: 'cable-lateral-raise', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
+        { exerciseId: 'machine-lateral-raise', isAvailable: (profile) => has(profile, 'lateral-raise') },
+        { exerciseId: 'side-lateral-raise', isAvailable: (profile) => has(profile, 'dumbbells') },
+      ],
+    },
+    {
+      label: 'Abs',
       candidates: [
         { exerciseId: 'abdominal-crunch-machine', isAvailable: (profile) => has(profile, 'abdominal-crunch-machine') },
         { exerciseId: 'cable-crunch', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
+        { exerciseId: 'hanging-leg-raise', isAvailable: hasLegRaiseStation },
       ],
     },
   ],

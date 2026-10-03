@@ -11,6 +11,12 @@ export interface MuscleRecoveryStatus {
   lastExercises: string[];
 }
 
+// Days a group counts as "recovering" after it was trained. Abs sit on every
+// lift day (2 days apart in the cycle) and tolerate frequent training, so the
+// default window would flag them every session.
+const DEFAULT_RECOVERY_DAYS = 4;
+const groupRecoveryDays: Record<string, number> = { Abs: 2 };
+
 export const muscleToGroup = new Map<string, string>();
 for (const g of exerciseGroups) {
   for (const m of g.muscles) {
@@ -47,7 +53,20 @@ export function getSmartProgramDaySuggestion(
   if (!programDay) return { type: "rest" };
   if (!enableAdaptation || programDay.type !== "lift") return { type: programDay.type };
 
-  const targetGroups = getLiftDayGroups(programDay);
+  // A group trained on every lift day (abs) can't be avoided by switching
+  // days, so it never drives a swap suggestion.
+  const liftDays = programDays.filter((d) => d.type === "lift");
+  const everyDayGroups = new Set(
+    liftDays.length > 1
+      ? liftDays.reduce((shared, d) => {
+          const groups = getLiftDayGroups(d);
+          return shared.filter((g) => groups.includes(g));
+        }, getLiftDayGroups(programDay))
+      : [],
+  );
+  const getSwappableGroups = (day: ProgramDay) => getLiftDayGroups(day).filter((g) => !everyDayGroups.has(g));
+
+  const targetGroups = getSwappableGroups(programDay);
   const recoveringGroups = targetGroups.filter((g) => {
     const status = recoveryStatuses.find((s) => s.group === g);
     return status?.status === "recovering";
@@ -61,14 +80,14 @@ export function getSmartProgramDaySuggestion(
   const alternatives = programDays
     .filter((d) => d.id !== programDay.id && d.type === "lift")
     .map((d) => {
-      const altGroups = getLiftDayGroups(d);
+      const altGroups = getSwappableGroups(d);
       const recovered = altGroups.filter((g) => {
         const status = recoveryStatuses.find((s) => s.group === g);
         return !status || status.status !== "recovering";
       });
       return { day: d, recovered, total: altGroups.length };
     })
-    .filter((a) => a.recovered.length > 0)
+    .filter((a) => a.total > 0 && a.recovered.length > 0)
     .sort((a, b) => b.recovered.length / b.total - a.recovered.length / a.total);
 
   const best = alternatives[0];
@@ -191,7 +210,7 @@ export function getMuscleRecoveryStatus(
     return {
       group: g.label,
       daysSinceLastTrained: daysSince,
-      status: daysSince < 4 ? ("recovering" as const) : ("recovered" as const),
+      status: daysSince < (groupRecoveryDays[g.label] ?? DEFAULT_RECOVERY_DAYS) ? ("recovering" as const) : ("recovered" as const),
       lastExercises: groupExercises.get(g.label) ?? [],
     };
   });

@@ -10,18 +10,20 @@ export const programs: Program[] = [
     days: [
       {
         id: 'hd-monday',
-        name: 'Day 1 — Chest, Shoulders, Triceps',
+        name: 'Day 1 — Chest, Shoulders, Triceps, Abs',
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Push',
         // Front delts are trained by the incline press; side and rear delts get
-        // direct work so all three heads are covered.
+        // direct work so all three heads are covered. Every lift day ends with
+        // abs (trained last so they're fresh as stabilisers for the big lifts).
         exercises: [
           'dumbbell-flyes',
           'incline-bench-press',
           'side-lateral-raise',
           'rear-delt-fly',
           'tricep-pushdown',
+          'hanging-leg-raise',
         ],
       },
       {
@@ -36,7 +38,7 @@ export const programs: Program[] = [
       },
       {
         id: 'hd-wednesday',
-        name: 'Day 2 — Back, Traps, Biceps',
+        name: 'Day 2 — Back, Traps, Biceps, Abs',
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Pull',
@@ -46,6 +48,7 @@ export const programs: Program[] = [
           'barbell-row',
           'barbell-shrugs',
           'barbell-curl',
+          'cable-crunch',
         ],
       },
       {
@@ -60,15 +63,19 @@ export const programs: Program[] = [
       },
       {
         id: 'hd-friday',
-        name: 'Day 3 — Legs, Abs',
+        name: 'Day 3 — Legs, Side Delts, Abs',
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Legs & Abs',
+        // Side delts get a second weekly hit here (shoulder width drives the
+        // V-taper). Leg day sits 4 days from Push either way, so it doesn't
+        // collide with Push's shoulder work.
         exercises: [
           'leg-extension',
           'leg-press',
           'leg-curl',
           'calf-raise',
+          'cable-lateral-raise',
           'cable-crunch',
         ],
       },
@@ -81,7 +88,7 @@ export const programs: Program[] = [
         exercises: [],
         description: 'Pick your cardio: steady-state zone 2 for heart health, or intervals for VO2 max. Your call.',
         duration: '20-40 min',
-        tips: 'Zone 2 = conversational pace (120-140 BPM). Intervals = 30s hard / 90s easy × 8-10 rounds.',
+        tips: 'Zone 2 = conversational pace (120-140 BPM). Intervals = 30s hard / 90s easy × 8-10 rounds. Optional ab finisher: 2 sets of planks or dead bugs, stopping short of failure — the hard ab work happens on lift days.',
       },
       {
         id: 'hd-saturday',
@@ -92,7 +99,7 @@ export const programs: Program[] = [
         exercises: [],
         description: 'Incline treadmill walk (8-12% incline, 5-6 km/h) followed by foam rolling and stretching.',
         duration: '30-40 min',
-        tips: 'This helps recovery and burns extra calories without taxing your muscles. Focus on stretching tight areas.',
+        tips: 'This helps recovery and burns extra calories without taxing your muscles. Focus on stretching tight areas. Optional: 2 easy sets of dead bugs or side planks — not to failure.',
       },
       {
         id: 'hd-rest-3',
@@ -108,9 +115,10 @@ export const programs: Program[] = [
   },
 ]
 
-// Default session size for every lift day. Users can still add exercises
-// mid-session; extras just aren't carried into the next session's defaults.
-export const MAX_DEFAULT_EXERCISES = 5
+// Default session size for every lift day (5 main lifts + abs). Users can still
+// add exercises mid-session; extras just aren't carried into the next
+// session's defaults.
+export const MAX_DEFAULT_EXERCISES = 6
 
 /**
  * Picks the exercise IDs a new session starts with. Each program exercise is a

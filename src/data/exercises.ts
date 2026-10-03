@@ -241,6 +241,19 @@ export const exercises: Exercise[] = [
     weightIncrement: 1,
   },
   {
+    id: "cable-lateral-raise",
+    name: "Cable Lateral Raise",
+    equipment: "cable",
+    type: "isolation",
+    primaryMuscles: ["side-delts"],
+    secondaryMuscles: ["traps"],
+    mentzerTips:
+      "One arm at a time, pulley at the lowest setting. 4s lower, 1s pause, 4s raise to shoulder height leading with the elbow. The cable keeps tension at the bottom where dumbbells go slack.",
+    repRange: [8, 10],
+    restSeconds: 60,
+    weightIncrement: 1,
+  },
+  {
     id: "rear-delt-fly",
     name: "Rear Delt Fly",
     equipment: "dumbbells",
