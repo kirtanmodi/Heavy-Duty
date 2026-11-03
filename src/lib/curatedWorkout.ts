@@ -34,33 +34,33 @@ export const gymEquipmentOptions: GymEquipmentOption[] = [
   { id: 'chest-press-machine', label: 'Chest Press', category: 'Machines', focuses: ['Push'] },
   { id: 'fly-machine', label: 'Fly / Pec Deck', category: 'Machines', focuses: ['Push'] },
   { id: 'shoulder-press-machine', label: 'Shoulder Press', category: 'Machines', focuses: ['Push'] },
-  { id: 'lateral-raise', label: 'Lateral Raise', category: 'Machines', focuses: ['Push', 'Legs & Abs'] },
-  { id: 'tricep-press-machine', label: 'Tricep Press', category: 'Machines', focuses: ['Push'] },
+  { id: 'lateral-raise', label: 'Lateral Raise', category: 'Machines', focuses: ['Push', 'Arms'] },
+  { id: 'tricep-press-machine', label: 'Tricep Press', category: 'Machines', focuses: ['Arms'] },
   { id: 'lat-pulldown', label: 'Lat Pulldown', category: 'Machines', focuses: ['Pull'] },
   { id: 'high-row-machine', label: 'High Row', category: 'Machines', focuses: ['Pull'] },
   { id: 'row-machine', label: 'Row', category: 'Machines', focuses: ['Pull'] },
   { id: 'rear-deltoid-machine', label: 'Rear Deltoid', category: 'Machines', focuses: ['Push'] },
-  { id: 'bicep-curl', label: 'Bicep Curl', category: 'Machines', focuses: ['Pull'] },
-  { id: 'front-bicep-curl', label: 'Front Bicep Curl', category: 'Machines', focuses: ['Pull'] },
-  { id: 'dual-adjustable-pulley', label: 'Dual Adjustable Pulley', category: 'Machines', focuses: ['Push', 'Pull', 'Legs & Abs'] },
+  { id: 'bicep-curl', label: 'Bicep Curl', category: 'Machines', focuses: ['Arms'] },
+  { id: 'front-bicep-curl', label: 'Front Bicep Curl', category: 'Machines', focuses: ['Arms'] },
+  { id: 'dual-adjustable-pulley', label: 'Dual Adjustable Pulley', category: 'Machines', focuses: ['Push', 'Pull', 'Legs & Abs', 'Arms'] },
   { id: 'assisted-dip-chin-up', label: 'Assisted Dip / Chin-Up', category: 'Machines', focuses: ['Push', 'Pull'] },
-  { id: 'pull-up-bar', label: 'Pull-Up Bar', category: 'Machines', focuses: ['Push', 'Pull', 'Legs & Abs'] },
+  { id: 'pull-up-bar', label: 'Pull-Up Bar', category: 'Machines', focuses: ['Push', 'Legs & Abs'] },
   { id: 'linear-leg-press', label: 'Linear Leg Press', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'seated-leg-press', label: 'Seated Leg Press', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'leg-extension-machine', label: 'Leg Extension', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'leg-curl-machine', label: 'Leg Curl', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'calf-raise-machine', label: 'Calf Raise', category: 'Machines', focuses: ['Legs & Abs'] },
-  { id: 'abdominal-crunch-machine', label: 'Abdominal Crunch', category: 'Machines', focuses: ['Push', 'Pull', 'Legs & Abs'] },
+  { id: 'abdominal-crunch-machine', label: 'Abdominal Crunch', category: 'Machines', focuses: ['Push', 'Legs & Abs'] },
   { id: 'back-extension', label: 'Back Extension', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'hip-adductor', label: 'Hip Adductor', category: 'Machines', focuses: ['Legs & Abs'] },
   { id: 'hip-abductor', label: 'Hip Abductor', category: 'Machines', focuses: ['Legs & Abs'] },
-  { id: 'barbells', label: 'Barbells', category: 'Free Weights', focuses: ['Push', 'Pull', 'Legs & Abs'] },
-  { id: 'dumbbells', label: 'Dumbbells', category: 'Free Weights', focuses: ['Push', 'Pull', 'Legs & Abs'] },
+  { id: 'barbells', label: 'Barbells', category: 'Free Weights', focuses: ['Push', 'Pull', 'Legs & Abs', 'Arms'] },
+  { id: 'dumbbells', label: 'Dumbbells', category: 'Free Weights', focuses: ['Push', 'Pull', 'Legs & Abs', 'Arms'] },
   { id: 'squat-rack', label: 'Squat Rack', category: 'Free Weights', focuses: ['Legs & Abs'] },
-  { id: 'flat-bench', label: 'Flat Bench', category: 'Free Weights', focuses: ['Push', 'Pull'] },
-  { id: 'incline-bench', label: 'Incline Bench', category: 'Free Weights', focuses: ['Push', 'Pull'] },
-  { id: 'decline-bench', label: 'Decline Bench', category: 'Free Weights', focuses: ['Push'] },
-  { id: 'leg-raise-stand', label: 'Leg Raise Stand', category: 'Free Weights', focuses: ['Push', 'Pull', 'Legs & Abs'] },
+  { id: 'flat-bench', label: 'Flat Bench', category: 'Free Weights', focuses: ['Push', 'Pull', 'Arms'] },
+  { id: 'incline-bench', label: 'Incline Bench', category: 'Free Weights', focuses: ['Push', 'Pull', 'Arms'] },
+  { id: 'decline-bench', label: 'Decline Bench', category: 'Free Weights', focuses: ['Push', 'Arms'] },
+  { id: 'leg-raise-stand', label: 'Leg Raise Stand', category: 'Free Weights', focuses: ['Push', 'Legs & Abs'] },
   { id: 'stairs', label: 'Stairs / StairMaster', category: 'Cardio', focuses: [] },
   { id: 'cycle', label: 'Stationary Cycle', category: 'Cardio', focuses: [] },
   { id: 'elliptical', label: 'Elliptical', category: 'Cardio', focuses: [] },
@@ -105,14 +105,6 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      label: 'Triceps',
-      candidates: [
-        { exerciseId: 'tricep-pushdown', isAvailable: (profile) => hasAny(profile, ['tricep-press-machine', 'dual-adjustable-pulley']) },
-        { exerciseId: 'skull-crushers', isAvailable: (profile) => has(profile, 'barbells') && hasAnyBench(profile) },
-        { exerciseId: 'weighted-dips', isAvailable: (profile) => hasAny(profile, ['assisted-dip-chin-up', 'pull-up-bar']) },
-      ],
-    },
-    {
       label: 'Abs',
       candidates: [
         { exerciseId: 'hanging-leg-raise', isAvailable: hasLegRaiseStation },
@@ -151,22 +143,6 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
         { exerciseId: 'dumbbell-shrugs', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
-    {
-      label: 'Bicep curl',
-      candidates: [
-        { exerciseId: 'machine-bicep-curl', isAvailable: (profile) => hasAny(profile, ['bicep-curl', 'front-bicep-curl']) },
-        { exerciseId: 'barbell-curl', isAvailable: (profile) => has(profile, 'barbells') },
-        { exerciseId: 'hammer-curl', isAvailable: (profile) => has(profile, 'dumbbells') },
-      ],
-    },
-    {
-      label: 'Abs',
-      candidates: [
-        { exerciseId: 'cable-crunch', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
-        { exerciseId: 'abdominal-crunch-machine', isAvailable: (profile) => has(profile, 'abdominal-crunch-machine') },
-        { exerciseId: 'hanging-leg-raise', isAvailable: hasLegRaiseStation },
-      ],
-    },
   ],
   'Legs & Abs': [
     {
@@ -197,21 +173,53 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      // Second side-delt hit of the cycle. Cable first so it differs from
-      // Push's machine/dumbbell raise.
-      label: 'Side delt',
-      candidates: [
-        { exerciseId: 'cable-lateral-raise', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
-        { exerciseId: 'machine-lateral-raise', isAvailable: (profile) => has(profile, 'lateral-raise') },
-        { exerciseId: 'side-lateral-raise', isAvailable: (profile) => has(profile, 'dumbbells') },
-      ],
-    },
-    {
       label: 'Abs',
       candidates: [
         { exerciseId: 'abdominal-crunch-machine', isAvailable: (profile) => has(profile, 'abdominal-crunch-machine') },
         { exerciseId: 'cable-crunch', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
         { exerciseId: 'hanging-leg-raise', isAvailable: hasLegRaiseStation },
+      ],
+    },
+  ],
+  Arms: [
+    {
+      label: 'Bicep curl',
+      candidates: [
+        { exerciseId: 'machine-bicep-curl', isAvailable: (profile) => hasAny(profile, ['bicep-curl', 'front-bicep-curl']) },
+        { exerciseId: 'barbell-curl', isAvailable: (profile) => has(profile, 'barbells') },
+        { exerciseId: 'hammer-curl', isAvailable: (profile) => has(profile, 'dumbbells') },
+      ],
+    },
+    {
+      label: 'Hammer curl',
+      candidates: [
+        { exerciseId: 'hammer-curl', isAvailable: (profile) => has(profile, 'dumbbells') },
+        { exerciseId: 'barbell-curl', isAvailable: (profile) => has(profile, 'barbells') },
+      ],
+    },
+    {
+      // Heavy triceps lift first, while the elbows are fresh
+      label: 'Triceps',
+      candidates: [
+        { exerciseId: 'skull-crushers', isAvailable: (profile) => has(profile, 'barbells') && hasAnyBench(profile) },
+        { exerciseId: 'tricep-pushdown', isAvailable: (profile) => hasAny(profile, ['tricep-press-machine', 'dual-adjustable-pulley']) },
+      ],
+    },
+    {
+      label: 'Triceps finisher',
+      candidates: [
+        { exerciseId: 'tricep-pushdown', isAvailable: (profile) => hasAny(profile, ['tricep-press-machine', 'dual-adjustable-pulley']) },
+        { exerciseId: 'skull-crushers', isAvailable: (profile) => has(profile, 'barbells') && hasAnyBench(profile) },
+      ],
+    },
+    {
+      // Second side-delt hit of the cycle. Cable first so it differs from
+      // Push's machine or dumbbell raise.
+      label: 'Side delt',
+      candidates: [
+        { exerciseId: 'cable-lateral-raise', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
+        { exerciseId: 'machine-lateral-raise', isAvailable: (profile) => has(profile, 'lateral-raise') },
+        { exerciseId: 'side-lateral-raise', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
   ],

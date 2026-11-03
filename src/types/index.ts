@@ -85,7 +85,7 @@ export interface Program {
 
 export type ProgramId = "heavy-duty-complete";
 
-export type LiftFocus = "Push" | "Pull" | "Legs & Abs";
+export type LiftFocus = "Push" | "Pull" | "Legs & Abs" | "Arms";
 
 export type GymEquipmentId =
   | "lat-pulldown"

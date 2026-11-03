@@ -28,33 +28,36 @@ function isNonLiftTypeMatch(cycle: ProgramDay[], cycleIndex: number, workout: Wo
   return loggedType !== "lift";
 }
 
+/** Rest and recovery slots exist to enforce a recovery gap. Cardio is a session, so it is never skipped. */
+function isRestSlot(day: ProgramDay | undefined): boolean {
+  return day?.type === "rest" || day?.type === "recovery";
+}
+
+/** Date of the last logged session of any kind (lift, cardio, recovery or rest) before `dateKey`. */
+function getLastActivityDateKey(history: WorkoutEntry[], dateKey: string): string | null {
+  for (const workout of history) {
+    const workoutDateKey = getIsoDateKey(workout.date);
+    if (workoutDateKey < dateKey) return workoutDateKey;
+  }
+  return null;
+}
+
+/** True when a full day with nothing logged sits between the last session and `dateKey`. */
+function hasRestedSinceLastSession(history: WorkoutEntry[], dateKey: string): boolean {
+  const last = getLastActivityDateKey(history, dateKey);
+  return last !== null && daysBetweenDateKeys(dateKey, last) >= 2;
+}
+
 /**
- * Skip redundant non-lift cycle days when 48h+ have already passed since the last lift.
- * Returns the advanced cycleIndex pointing to the next lift day.
+ * Skip rest slots when the user already took a day off (nothing logged for a
+ * full day). Stops at the next lift or cardio day. Only used for the first
+ * open day: later projected days assume the plan is followed.
  */
 function skipRedundantRestDays(cycle: ProgramDay[], cycleIndex: number, dateKey: string, history: WorkoutEntry[]): number {
-  if (cycle[cycleIndex]?.type === "lift") return cycleIndex;
-
-  // Find the most recent lift date
-  const lastLiftDateKey = (() => {
-    for (const w of history) {
-      if ((w.dayType ?? "lift") === "lift") {
-        const dk = getIsoDateKey(w.date);
-        if (dk <= dateKey) return dk;
-      }
-    }
-    return null;
-  })();
-
-  if (!lastLiftDateKey) return cycleIndex;
-
-  const daysSinceLift = daysBetweenDateKeys(dateKey, lastLiftDateKey);
-  if (daysSinceLift < 2) return cycleIndex;
-
-  // Already 48h+ since last lift — skip non-lift days to reach the next lift
+  if (!isRestSlot(cycle[cycleIndex]) || !hasRestedSinceLastSession(history, dateKey)) return cycleIndex;
   let idx = cycleIndex;
   for (let i = 0; i < cycle.length; i++) {
-    if (cycle[idx].type === "lift") return idx;
+    if (!isRestSlot(cycle[idx])) return idx;
     idx = (idx + 1) % cycle.length;
   }
   return cycleIndex;
@@ -62,15 +65,6 @@ function skipRedundantRestDays(cycle: ProgramDay[], cycleIndex: number, dateKey:
 
 function getCycleDistance(cycleLength: number, fromIndex: number, toIndex: number): number {
   return toIndex >= fromIndex ? toIndex - fromIndex : cycleLength - fromIndex + toIndex;
-}
-
-function getLastLoggedLiftDateKey(history: WorkoutEntry[], dateKey: string): string | null {
-  for (const workout of history) {
-    if ((workout.dayType ?? "lift") !== "lift") continue;
-    const workoutDateKey = getIsoDateKey(workout.date);
-    if (workoutDateKey <= dateKey) return workoutDateKey;
-  }
-  return null;
 }
 
 function getMostStaleLiftDayIndex(
@@ -121,14 +115,10 @@ function resolveStartingCycleIndex(
   startDateKey: string,
   history: WorkoutEntry[],
 ): number {
-  if (cycle[cycleIndex]?.type === "lift") return cycleIndex;
+  // Lift and cardio days are always kept. A rest slot is dropped only after a real day off.
+  if (!isRestSlot(cycle[cycleIndex]) || !hasRestedSinceLastSession(history, startDateKey)) return cycleIndex;
 
-  const lastLiftDateKey = getLastLoggedLiftDateKey(history, startDateKey);
-  if (!lastLiftDateKey) return cycleIndex;
-
-  const daysSinceLift = daysBetweenDateKeys(startDateKey, lastLiftDateKey);
-  if (daysSinceLift < 2) return cycleIndex;
-
+  // Back after a break: start with the lift you have gone longest without.
   return getMostStaleLiftDayIndex(cycle, cycleIndex, startDateKey, history)
     ?? skipRedundantRestDays(cycle, cycleIndex, startDateKey, history);
 }
@@ -247,7 +237,6 @@ export function getRollingDayAtOffset(
       continue;
     }
 
-    cycleIndex = skipRedundantRestDays(cycle, cycleIndex, dateKey, history);
     const day = cycle[cycleIndex] ?? null;
     if (!day) return null;
     if (openDaysSeen === offset) return day;
@@ -284,7 +273,6 @@ export function getUpcomingOpenRollingDays(
       continue;
     }
 
-    cycleIndex = skipRedundantRestDays(cycle, cycleIndex, dateKey, history);
     result.push({
       day: cycle[cycleIndex],
       cycleIndex,
@@ -349,7 +337,6 @@ export function getUpcomingRollingDays(
       continue;
     }
 
-    cycleIndex = skipRedundantRestDays(cycle, cycleIndex, dateKey, history);
     result.push({
       day: cycle[cycleIndex],
       cycleIndex,

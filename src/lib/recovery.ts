@@ -17,11 +17,26 @@ export interface MuscleRecoveryStatus {
   lastExercises: string[];
 }
 
-// Days a group counts as "recovering" after it was trained. Abs sit on every
-// lift day (2 days apart in the cycle) and tolerate frequent training, so the
-// default window would flag them every session.
+// Days a group counts as "recovering" after it was trained. Abs (Push, Legs)
+// and side delts (Push, Arms) are small muscles hit twice a cycle, 3-4 days
+// apart. The default window would flag them on every planned session.
 const DEFAULT_RECOVERY_DAYS = 4;
-const groupRecoveryDays: Record<string, number> = { Abs: 2 };
+const groupRecoveryDays: Record<string, number> = { Abs: 2, Shoulders: 3 };
+const getRecoveryWindow = (group: string) => groupRecoveryDays[group] ?? DEFAULT_RECOVERY_DAYS;
+
+/**
+ * Recovery as it will be `daysAhead` days from now. Use it to judge a planned
+ * day in the future: today's status would flag muscles that are fine by then.
+ * Sessions planned in between are not counted; the plan itself has no overlaps.
+ */
+export function projectRecoveryStatuses(statuses: MuscleRecoveryStatus[], daysAhead: number): MuscleRecoveryStatus[] {
+  if (daysAhead <= 0) return statuses;
+  return statuses.map((status) => {
+    if (status.daysSinceLastTrained === null) return status;
+    const days = status.daysSinceLastTrained + daysAhead;
+    return { ...status, daysSinceLastTrained: days, status: days < getRecoveryWindow(status.group) ? "recovering" : "recovered" };
+  });
+}
 
 export const muscleToGroup = new Map<string, string>();
 for (const g of exerciseGroups) {
@@ -216,7 +231,7 @@ export function getMuscleRecoveryStatus(
     return {
       group: g.label,
       daysSinceLastTrained: daysSince,
-      status: daysSince < (groupRecoveryDays[g.label] ?? DEFAULT_RECOVERY_DAYS) ? ("recovering" as const) : ("recovered" as const),
+      status: daysSince < getRecoveryWindow(g.label) ? ("recovering" as const) : ("recovered" as const),
       lastExercises: groupExercises.get(g.label) ?? [],
     };
   });
@@ -240,9 +255,9 @@ export function getRestDaySuggestion(
   daysSinceLastActivity: number,
 ): RestDaySuggestion {
   // Recovery activities = gentle movement
-  const recoveryActivities = cardioActivities["hd-saturday"] ?? [];
+  const recoveryActivities = cardioActivities.recovery ?? [];
   // Light cardio options
-  const lightCardioActivities = cardioActivities["hd-cardio"] ?? [];
+  const lightCardioActivities = cardioActivities["hd-zone2"] ?? [];
 
   if (daysSinceLastActivity === 0) {
     return {

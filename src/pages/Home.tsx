@@ -9,6 +9,7 @@ import {
   getDaysSinceLastActivity,
   getRestDaySuggestion,
   getSmartProgramDaySuggestion,
+  projectRecoveryStatuses,
 } from "../lib/recovery";
 import { getRollingDayAtOffset, getUpcomingOpenRollingDays } from "../lib/rollingSchedule";
 import { useExerciseStore } from "../store/exerciseStore";
@@ -105,6 +106,7 @@ const QUICK_OPTIONS: QuickOption[] = [
   { key: "hd-monday", label: "Push", type: "lift", dayId: "hd-monday" },
   { key: "hd-wednesday", label: "Pull", type: "lift", dayId: "hd-wednesday" },
   { key: "hd-friday", label: "Legs & Abs", type: "lift", dayId: "hd-friday" },
+  { key: "hd-arms", label: "Arms", type: "lift", dayId: "hd-arms" },
   { key: "manual-cardio", label: "Cardio", type: "cardio", dayId: "manual-cardio" },
   { key: "manual-recovery", label: "Recovery", type: "recovery", dayId: "manual-recovery" },
   { key: "manual-rest", label: "Rest", type: "rest", dayId: "manual-rest" },
@@ -223,7 +225,7 @@ export function Home() {
         ? getSmartProgramDaySuggestion(
             suggested.day,
             program.days,
-            recoveryStatuses,
+            projectRecoveryStatuses(recoveryStatuses, daysBetweenDateKeys(suggested.dateKey, todayDateKey)),
             daysBetweenDateKeys(suggested.dateKey, todayDateKey) <= 2,
           )
         : null,
@@ -299,7 +301,7 @@ export function Home() {
           const smart = getSmartProgramDaySuggestion(
             plannedDay,
             program.days,
-            recoveryStatuses,
+            projectRecoveryStatuses(recoveryStatuses, leadDays),
             leadDays <= 2,
           );
           suggestedType = smart.type;

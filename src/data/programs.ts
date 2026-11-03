@@ -5,40 +5,33 @@ export const programs: Program[] = [
     id: 'heavy-duty-complete',
     name: 'Heavy Duty Complete',
     shortName: 'Program A',
-    description: 'The full Mentzer plan. Three lift days with cardio, recovery and rest in an 8-day cycle.',
+    description: 'The full Mentzer plan in a 7-day cycle. Four lift days, two cardio days and one full rest day.',
     recommended: true,
+    // 7-day cycle. Every lift group is hit once a cycle, 7 days apart. The
+    // exceptions are abs (Push, Legs) and side delts (Push, Arms), each hit
+    // twice, 3-4 days apart. Arms have their own day, 3+ days from Push and
+    // Pull, so pressing and pulling never eat into arm recovery or the reverse.
+    // Cardio sits on the two days that do not stress the legs before Legs.
     days: [
       {
         id: 'hd-monday',
-        name: 'Chest, Shoulders, Triceps, Abs',
+        name: 'Chest, Shoulders, Abs',
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Push',
         // Front delts are trained by the incline press; side and rear delts get
-        // direct work so all three heads are covered. Every lift day ends with
-        // abs (trained last so they're fresh as stabilisers for the big lifts).
+        // direct work so all three heads are covered.
         exercises: [
           'dumbbell-flyes',
           'incline-bench-press',
           'side-lateral-raise',
           'rear-delt-fly',
-          'tricep-pushdown',
           'hanging-leg-raise',
         ],
       },
       {
-        id: 'hd-rest-1',
-        name: 'Rest',
-        type: 'rest',
-        dayOfWeek: 0,
-        focus: 'Full rest',
-        exercises: [],
-        description: 'Muscles grow during rest, not in the gym. Wait at least 48 hours between lifts.',
-        tips: 'Sleep 7-8 hours and eat plenty of protein.',
-      },
-      {
         id: 'hd-wednesday',
-        name: 'Back, Traps, Biceps, Abs',
+        name: 'Back, Traps',
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Pull',
@@ -47,77 +40,77 @@ export const programs: Program[] = [
           'lat-pulldown',
           'barbell-row',
           'barbell-shrugs',
-          'barbell-curl',
-          'cable-crunch',
         ],
       },
       {
-        id: 'hd-rest-2',
-        name: 'Rest',
-        type: 'rest',
+        id: 'hd-zone2',
+        name: 'Zone 2 cardio',
+        type: 'cardio',
         dayOfWeek: 0,
-        focus: 'Full rest',
+        focus: 'Zone 2 cardio',
         exercises: [],
-        description: 'Muscles grow during rest, not in the gym. Wait at least 48 hours between lifts.',
-        tips: 'Sleep 7-8 hours and eat plenty of protein.',
+        description: 'Steady cardio at a pace where you can still talk, about 120-140 BPM. It trains your heart and helps you recover.',
+        duration: '30-45 min',
+        tips: 'Legs is tomorrow, so keep it easy on your legs. A bike, an incline walk or the elliptical work well.',
       },
       {
         id: 'hd-friday',
-        name: 'Legs, Side Delts, Abs',
+        name: 'Legs, Abs',
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Legs & Abs',
-        // Side delts get a second weekly hit here (shoulder width drives the
-        // V-taper). Leg day sits 4 days from Push either way, so it doesn't
-        // collide with Push's shoulder work.
         exercises: [
           'leg-extension',
           'leg-press',
           'leg-curl',
           'calf-raise',
-          'cable-lateral-raise',
           'cable-crunch',
         ],
       },
       {
-        id: 'hd-cardio',
-        name: 'Cardio',
+        id: 'hd-arms',
+        name: 'Biceps, Triceps, Side Delts',
+        type: 'lift',
+        dayOfWeek: 0,
+        focus: 'Arms',
+        // Skull crushers go before pushdowns: the heavy lift is done while the
+        // elbows are fresh. Side delts get their second hit of the cycle here,
+        // 4 days after Push and 3 days before the next one.
+        exercises: [
+          'barbell-curl',
+          'hammer-curl',
+          'skull-crushers',
+          'tricep-pushdown',
+          'cable-lateral-raise',
+        ],
+      },
+      {
+        id: 'hd-intervals',
+        name: 'Interval cardio',
         type: 'cardio',
         dayOfWeek: 0,
-        focus: 'Cardio',
+        focus: 'Interval cardio',
         exercises: [],
-        description: 'Pick steady zone 2 cardio for heart health, or intervals for VO2 max.',
-        duration: '20-40 min',
-        tips: 'Zone 2 is a pace where you can still talk, about 120-140 BPM. For intervals, go hard for 30s and easy for 90s, for 8-10 rounds. You can finish with 2 easy sets of planks or dead bugs. Stop short of failure, because the hard ab work is on lift days.',
+        description: 'Short, hard cardio for VO2 max. Go hard for 30s, then easy for 90s.',
+        duration: '20-30 min',
+        tips: 'Warm up for 5 min, then do 8-10 rounds. A bike, rower or air bike is easiest on your joints.',
       },
       {
-        id: 'hd-saturday',
-        name: 'Active recovery',
-        type: 'recovery',
-        dayOfWeek: 0,
-        focus: 'Active recovery',
-        exercises: [],
-        description: 'Walk on an incline treadmill (8-12% incline, 5-6 km/h), then foam roll and stretch.',
-        duration: '30-40 min',
-        tips: 'This helps you recover and burns extra calories without tiring your muscles. Spend more time on tight areas. You can add 2 easy sets of dead bugs or side planks. Do not go to failure.',
-      },
-      {
-        id: 'hd-rest-3',
+        id: 'hd-rest',
         name: 'Rest',
         type: 'rest',
         dayOfWeek: 0,
         focus: 'Full rest',
         exercises: [],
-        description: 'Do nothing. Your muscles grow during rest, not in the gym.',
-        tips: 'Sleep 7-8 hours and eat plenty of protein.',
+        description: 'Your one full rest day. Muscles grow during rest, not in the gym.',
+        tips: 'Sleep 7-8 hours and eat plenty of protein. A gentle walk is fine.',
       },
     ],
   },
 ]
 
-// Default session size for every lift day (5 main lifts + abs). Users can still
-// add exercises mid-session; extras just aren't carried into the next
-// session's defaults.
+// Most exercises a lift day starts with. Users can still add exercises
+// mid-session; extras just aren't carried into the next session's defaults.
 export const MAX_DEFAULT_EXERCISES = 6
 
 /**
@@ -187,7 +180,7 @@ export interface CardioActivity {
 }
 
 export const cardioActivities: Record<string, CardioActivity[]> = {
-  'hd-cardio': [
+  'hd-zone2': [
     { name: 'Incline treadmill walk', note: '10-15% incline, 4-5.5 km/h' },
     { name: 'Stationary bike', note: '70-90 RPM, moderate resistance' },
     { name: 'Rowing machine (steady)', note: '2:00-2:30 per 500m' },
@@ -196,6 +189,8 @@ export const cardioActivities: Record<string, CardioActivity[]> = {
     { name: 'Stair climber (slow)', note: '50-65 steps per minute' },
     { name: 'Swimming (easy laps)', note: 'Continuous freestyle, low effort' },
     { name: 'Outdoor cycling (flat)', note: '19-24 km/h, steady pace' },
+  ],
+  'hd-intervals': [
     { name: 'Air bike sprints', note: 'Arms and legs, max effort' },
     { name: 'Rowing machine intervals', note: '30s at 1:30-1:45 per 500m' },
     { name: 'SkiErg sprints', note: 'Upper back, lats, core' },
@@ -206,7 +201,8 @@ export const cardioActivities: Record<string, CardioActivity[]> = {
     { name: 'Burpee intervals', note: '6-10 per 30s round, no equipment' },
     { name: 'Kettlebell swings', note: 'Heavy two-hand, hip hinge' },
   ],
-  'hd-saturday': [
+  // Gentle movement for days off. Used by the Home rest-day card.
+  recovery: [
     { name: 'Foam rolling (full body)', note: '30-60s per muscle group' },
     { name: 'Slow walking', note: '3-5 km/h on flat ground, 15-20 min' },
     { name: 'Hip 90/90 stretching', note: '60-90s per side, inner and outer rotation' },

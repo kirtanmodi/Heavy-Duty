@@ -28,7 +28,7 @@ function formatDuration(seconds: number): string {
 }
 
 function isLiftFocus(focus: string): focus is LiftFocus {
-  return focus === "Push" || focus === "Pull" || focus === "Legs & Abs";
+  return focus === "Push" || focus === "Pull" || focus === "Legs & Abs" || focus === "Arms";
 }
 
 function areSetsEqual(a: SetEntry[], b: SetEntry[]): boolean {
@@ -695,7 +695,7 @@ export function Workout() {
     setCurationFeedback(
       shuffle
         ? `Built a new ${liftFocus} workout with ${result.exerciseIds.length} exercises.${skippedMsg}`
-        : `Built a ${liftFocus} workout with ${result.exerciseIds.length} exercises.${skippedMsg}`,
+        : `Built your ${liftFocus} workout with ${result.exerciseIds.length} exercises.${skippedMsg}`,
     );
   };
 

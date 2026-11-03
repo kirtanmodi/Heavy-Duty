@@ -12,7 +12,7 @@ import {
   formatDayDate,
   getIsoDateKey,
 } from "../lib/dates";
-import { getLiftDayGroups, getMuscleRecoveryStatus, getSmartProgramDaySuggestion } from "../lib/recovery";
+import { getLiftDayGroups, getMuscleRecoveryStatus, getSmartProgramDaySuggestion, projectRecoveryStatuses } from "../lib/recovery";
 import { getUpcomingRollingDays } from "../lib/rollingSchedule";
 import { useWorkoutStore } from "../store/workoutStore";
 import type { ProgramDay } from "../types";
@@ -65,20 +65,22 @@ function getCycleReason(cycleIndex: number, programDays: ProgramDay[]): string {
     return `Lift ${liftNum} of ${liftTotal} in your cycle. Day ${cycleIndex + 1} of ${total}.`;
   }
 
-  if (day.type === "rest" && prevLift && nextLift) {
-    return `Rest between ${prevLift.focus} and ${nextLift.focus}. Muscles need at least 48 hours before the next lift.`;
+  if (day.type === "rest") {
+    return nextLift
+      ? `Your full rest day before ${nextLift.focus}. Muscles grow while you rest. If you already took a day off, the app skips it.`
+      : "Your full rest day. Muscles grow while you rest.";
   }
 
-  if (day.type === "rest" && prevLift) {
-    return `Rest after ${prevLift.focus}. This is the last day of the cycle.`;
+  if (day.type === "cardio" && prevLift && nextLift) {
+    return `Cardio between ${prevLift.focus} and ${nextLift.focus}. It trains your heart on a day you do not lift. The app never skips cardio.`;
   }
 
   if (day.type === "cardio") {
-    return `Cardio comes after all 3 lifts. It trains your heart without taxing tired muscles.`;
+    return "Cardio trains your heart on a day you do not lift.";
   }
 
   if (day.type === "recovery") {
-    return `Light movement gets blood flowing before the next cycle starts.`;
+    return "Light movement gets blood flowing before your next lift.";
   }
 
   return `Day ${cycleIndex + 1} of ${total} in your cycle.`;
@@ -187,18 +189,20 @@ export function Schedule() {
       day.type === "lift"
         ? `${day.exercises.length} exercises`
         : day.duration ?? typeBadge[day.type]?.label ?? "Planned";
+    // Judge a planned day by recovery on that date, not today
+    const dayStatuses = isLogged ? recoveryStatuses : projectRecoveryStatuses(recoveryStatuses, leadDays);
     const pillGroups =
       day.type === "lift"
         ? getLiftDayGroups(day)
-            .map((group) => recoveryStatuses.find((status) => status.group === group))
+            .map((group) => dayStatuses.find((status) => status.group === group))
             .filter((status): status is NonNullable<typeof status> => !!status)
-        : recoveryStatuses.filter((status) => status.status !== "never");
+        : dayStatuses.filter((status) => status.status !== "never");
     const smartSuggestion = isLogged
       ? null
       : getSmartProgramDaySuggestion(
           day,
           program.days,
-          recoveryStatuses,
+          dayStatuses,
           leadDays <= 2,
         );
     const liftExercises =
