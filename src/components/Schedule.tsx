@@ -292,8 +292,7 @@ export function Schedule() {
           </DetailSection>
         ) : null}
 
-        {(day.type === "cardio" || day.type === "recovery" || day.type === "rest") &&
-        (day.description || day.tips) ? (
+        {day.description || day.tips ? (
           <>
             {day.description ? (
               <DetailSection label="Plan">

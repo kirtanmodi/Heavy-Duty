@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
-import { getSessionTitle } from "../data/programs";
+import { getSessionTitle, POST_LIFT_WALK } from "../data/programs";
 import { formatDayDate } from "../lib/dates";
 import { prefetchRoute } from "../lib/routePrefetch";
 import { calcProgress, calcStats, findPrevSession } from "../lib/stats";
@@ -117,6 +117,16 @@ export function WorkoutSummary() {
           </div>
         )}
       </section>
+
+      {(lastWorkout.dayType ?? "lift") === "lift" && (
+        <section className="surface-card flex items-start gap-3 rounded-[1.25rem] px-4 py-3.5">
+          <span aria-hidden="true" className="mt-[0.45rem] h-2 w-2 shrink-0 rounded-full bg-accent-blue" />
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-text-primary">{POST_LIFT_WALK.title}</p>
+            <p className="mt-0.5 text-[13px] leading-relaxed text-text-muted">{POST_LIFT_WALK.detail}</p>
+          </div>
+        </section>
+      )}
 
       {lastWorkout.exercises.length > 0 && (
         <section className="list-group">

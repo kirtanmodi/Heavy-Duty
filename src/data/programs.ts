@@ -1,5 +1,15 @@
 import type { Exercise, Program } from '../types'
 
+/**
+ * Easy walk after every lift. Four of them add about 50 min of cardio a week,
+ * which, with the two cardio days, gets close to the 150 min weekly target.
+ */
+export const POST_LIFT_WALK = {
+  title: 'Walk 10-15 min now',
+  detail: 'Easy pace, about 5 km/h. It cools you down and adds to your weekly cardio.',
+}
+const POST_LIFT_WALK_TIP = 'After your last set, walk 10-15 min at an easy pace. It cools you down and adds to your weekly cardio.'
+
 export const programs: Program[] = [
   {
     id: 'heavy-duty-complete',
@@ -19,6 +29,7 @@ export const programs: Program[] = [
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Push',
+        tips: POST_LIFT_WALK_TIP,
         // Front delts are trained by the incline press; side and rear delts get
         // direct work so all three heads are covered.
         exercises: [
@@ -35,6 +46,7 @@ export const programs: Program[] = [
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Pull',
+        tips: POST_LIFT_WALK_TIP,
         exercises: [
           'dumbbell-pullover',
           'lat-pulldown',
@@ -59,6 +71,7 @@ export const programs: Program[] = [
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Legs & Abs',
+        tips: POST_LIFT_WALK_TIP,
         exercises: [
           'leg-extension',
           'leg-press',
@@ -73,6 +86,7 @@ export const programs: Program[] = [
         type: 'lift',
         dayOfWeek: 0,
         focus: 'Arms',
+        tips: POST_LIFT_WALK_TIP,
         // Skull crushers go before pushdowns: the heavy lift is done while the
         // elbows are fresh. Side delts get their second hit of the cycle here,
         // 4 days after Push and 3 days before the next one.
