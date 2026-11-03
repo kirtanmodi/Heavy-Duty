@@ -26,7 +26,7 @@ interface ExerciseCardProps {
   canBackOff?: boolean;
   onSkip?: (exerciseIndex: number) => void;
   onUnskip?: (exerciseIndex: number) => void;
-  onSetComplete?: (exerciseIndex: number) => void;
+  onSetComplete?: (exerciseIndex: number, setIndex: number) => void;
   showOverloadBanner?: boolean;
   overloadSuggestion?: OverloadSuggestion;
   restButtons?: RestButton[];
@@ -322,7 +322,7 @@ export function ExerciseCard({
       return next;
     });
     if (!wasComplete && onSetComplete) {
-      onSetComplete(exerciseIndex);
+      onSetComplete(exerciseIndex, setIndex);
     }
   };
 

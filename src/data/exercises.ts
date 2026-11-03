@@ -700,3 +700,22 @@ export function getAutoReplacement(exerciseId: string, excludeIds: string[]): Ex
 
   return pool[Math.floor(Math.random() * pool.length)];
 }
+
+/**
+ * restSeconds 0 marks a pre-exhaust exercise (flyes, pullovers, leg extension...).
+ * Its own sets still need rest between them. Only after its last set do you go
+ * straight to the next exercise, and only when that exercise works the same muscle.
+ */
+export const PRE_EXHAUST_SET_REST_SECONDS = 60;
+
+/** Rest between two sets of the same exercise. */
+export function getSetRestSeconds(exercise: Exercise): number {
+  return exercise.restSeconds > 0 ? exercise.restSeconds : PRE_EXHAUST_SET_REST_SECONDS;
+}
+
+/** True when a pre-exhaust exercise should flow straight into `next` with no rest. */
+export function goesStraightTo(exercise: Exercise, next: Exercise | undefined): boolean {
+  return exercise.restSeconds === 0
+    && !!next
+    && next.primaryMuscles.some((muscle) => exercise.primaryMuscles.includes(muscle));
+}

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
-import { getAutoReplacement, getEffectiveExercise } from "../data/exercises";
+import { getAutoReplacement, getEffectiveExercise, getSetRestSeconds, goesStraightTo } from "../data/exercises";
 import { cardioActivities, getDefaultExerciseIds, getSessionTitle, programs } from "../data/programs";
 
 import { useElapsedTimer } from "../hooks/useElapsedTimer";
@@ -333,6 +333,13 @@ export function Workout() {
   const [curationFeedback, setCurationFeedback] = useState<string | null>(null);
   const [sessionSaveError, setSessionSaveError] = useState<string | null>(null);
   const [backOffFeedback, setBackOffFeedback] = useState<string | null>(null);
+  // "Go straight to X" after the last set of a pre-exhaust exercise. Hides itself after 4s.
+  const [restCue, setRestCue] = useState<string | null>(null);
+  useEffect(() => {
+    if (!restCue) return;
+    const id = window.setTimeout(() => setRestCue(null), 4000);
+    return () => clearTimeout(id);
+  }, [restCue]);
   const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
   const [finishBarRef, finishBarHeight] = useMeasuredHeight<HTMLDivElement>();
   const leavingRef = useRef(false);
@@ -366,6 +373,7 @@ export function Workout() {
     sessionStartRef.current = activeWorkout?.startedAt;
     setHasSessionSetInteraction(false);
     setBackOffFeedback(null);
+    setRestCue(null);
     // Feedback now shows as a page-wide toast, so a previous session's message must not linger
     setCurationFeedback(null);
   }
@@ -584,20 +592,29 @@ export function Workout() {
   const handleRest = (exerciseId: string) => {
     const exercise = getEffectiveExercise(exerciseId);
     if (!exercise) return;
-    const seconds = exercise.restSeconds || 120;
-    timer.start(seconds, "Rest");
+    timer.start(getSetRestSeconds(exercise), "Rest");
   };
 
-  const handleSetComplete = (exerciseIndex: number) => {
+  const handleSetComplete = (exerciseIndex: number, setIndex: number) => {
     setHasSessionSetInteraction(true);
-    if (!autoStartTimer || !activeWorkout || timer.isRunning) return;
+    if (!activeWorkout) return;
     const entry = activeWorkout.exercises[exerciseIndex];
     if (!entry) return;
-
     const exercise = getEffectiveExercise(entry.id);
     if (!exercise) return;
-    const seconds = exercise.restSeconds || 120;
-    timer.start(seconds, "Rest");
+
+    // Pre-exhaust: after the last set, go straight into the next lift for the same muscle.
+    if (setIndex === entry.sets.length - 1) {
+      const next = activeWorkout.exercises.slice(exerciseIndex + 1).find((e) => !e.skipped);
+      if (next && goesStraightTo(exercise, getEffectiveExercise(next.id))) {
+        timer.stop();
+        setRestCue(`No rest here. Go straight to ${next.name}.`);
+        return;
+      }
+    }
+
+    if (!autoStartTimer || timer.isRunning) return;
+    timer.start(getSetRestSeconds(exercise), "Rest");
   };
 
   const handleMoveGroup = (groupIndex: number, direction: "up" | "down") => {
@@ -741,8 +758,8 @@ export function Workout() {
     const suggestion = exercise ? getOverloadSuggestion(exercise, lastSets, olderSessions, getDaysSinceExercise(entry.id, history)) : undefined;
 
     const restBtns: { label: string; onClick: () => void }[] = [];
-    if (exercise && exercise.restSeconds > 0) {
-      restBtns.push({ label: `Rest ${formatDuration(exercise.restSeconds || 60)}`, onClick: () => handleRest(entry.id) });
+    if (exercise) {
+      restBtns.push({ label: `Rest ${formatDuration(getSetRestSeconds(exercise))}`, onClick: () => handleRest(entry.id) });
     }
 
     return {
@@ -771,6 +788,7 @@ export function Workout() {
   const feedbackToasts = [
     backOffFeedback ? { key: "back-off", text: backOffFeedback, dismiss: () => setBackOffFeedback(null) } : null,
     curationFeedback ? { key: "curation", text: curationFeedback, dismiss: () => setCurationFeedback(null) } : null,
+    restCue ? { key: "rest-cue", text: restCue, dismiss: () => setRestCue(null) } : null,
   ].filter((toast): toast is { key: string; text: string; dismiss: () => void } => toast !== null);
   const sheetBottomPadding = { paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.5rem))" };
   const renderInsertButton = (atIndex: number) => (

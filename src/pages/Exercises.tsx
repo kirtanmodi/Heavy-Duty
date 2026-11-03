@@ -4,6 +4,7 @@ import {
   exerciseGroups,
   getEffectiveExercises,
   getEffectiveExercisesByGroup,
+  getSetRestSeconds,
 } from "../data/exercises";
 import { useExerciseStore } from "../store/exerciseStore";
 import type { Exercise, Equipment, MuscleGroup } from "../types";
@@ -111,7 +112,7 @@ function ExerciseRow({ exercise, isCustom }: { exercise: Exercise; isCustom: boo
 
   const details = [
     exercise.primaryMuscles.map(formatMuscle).join(", "),
-    `${exercise.restSeconds}s rest`,
+    `${getSetRestSeconds(exercise)}s rest`,
     `+${exercise.weightIncrement}kg increments`,
   ]
     .filter(Boolean)
