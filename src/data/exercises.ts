@@ -11,7 +11,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["chest"],
     secondaryMuscles: ["front-delts"],
     mentzerTips:
-      "Pre-exhaust movement. 4s stretch on the way down, 1s pause at full stretch, 4s squeeze up. Focus on the chest doing the work — arms are just hooks. Stop when you cannot complete a full rep with control.",
+      "Pre-exhaust movement. 4s stretch on the way down, 1s pause at full stretch, 4s squeeze up. Let the chest do the work and keep the arms passive. Stop when you cannot finish a full rep with control.",
     repRange: [6, 8],
     restSeconds: 0,
     weightIncrement: 2,
@@ -24,7 +24,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["chest", "upper-chest"],
     secondaryMuscles: ["front-delts", "triceps"],
     mentzerTips:
-      "Immediately after flyes — chest is pre-exhausted. 4s lower to chest, 1s pause (no bounce), 4s press up. Do NOT lock out — keep tension on the chest. Go to absolute failure.",
+      "Do this right after the flyes, while the chest is still tired. 4s lower to the chest, 1s pause (no bounce), 4s press up. Do not lock out, so the chest keeps the tension. Go to failure.",
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
@@ -37,7 +37,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["chest"],
     secondaryMuscles: ["front-delts", "triceps"],
     mentzerTips:
-      "4s controlled descent to mid-chest, 1s pause, 4s explosive press. Full range of motion. No bouncing off the chest. Train to failure on every working set.",
+      "4s controlled descent to mid-chest, 1s pause, 4s press up. Full range of motion. No bouncing off the chest. Train to failure on every working set.",
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
@@ -50,7 +50,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["chest"],
     secondaryMuscles: ["front-delts"],
     mentzerTips:
-      "4s controlled opening, 1s full stretch, 4s squeeze together. Focus on squeezing the chest at peak contraction. Machine provides constant tension — use it.",
+      "4s controlled opening, 1s full stretch, 4s squeeze together. Squeeze the chest hard at the end of each rep. The machine keeps constant tension, so do not rest at either end.",
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
@@ -63,7 +63,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["chest", "upper-chest"],
     secondaryMuscles: ["front-delts", "triceps"],
     mentzerTips:
-      "4s controlled descent, 1s pause near the chest, 4s drive through the hands. Keep shoulders pinned back and let the machine lock you into a strict chest-dominant path.",
+      "4s controlled descent, 1s pause near the chest, 4s drive through the hands. Keep your shoulders pinned back. The machine fixes the path, so the chest does the work.",
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
@@ -76,7 +76,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["chest", "triceps"],
     secondaryMuscles: ["front-delts"],
     mentzerTips:
-      "Lean forward for chest emphasis. 4s lower until upper arms parallel, 1s pause, 4s push up. Add weight via belt when bodyweight becomes easy. Go to failure.",
+      "Lean forward to work the chest more. 4s lower until your upper arms are parallel to the floor, 1s pause, 4s push up. Add weight with a dip belt when bodyweight gets easy. Go to failure.",
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
@@ -91,7 +91,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["lats"],
     secondaryMuscles: ["chest", "triceps"],
     mentzerTips:
-      "Pre-exhaust for lats. 4s stretch overhead (feel the lats lengthen), 1s pause, 4s pull back over chest. Keep slight bend in elbows. This is a lat exercise — think about pulling with your back.",
+      "Pre-exhaust for the lats. 4s stretch overhead, 1s pause, 4s pull back over the chest. Keep a slight bend in the elbows. Pull with your back, not your arms.",
     repRange: [6, 8],
     restSeconds: 0,
     weightIncrement: 2,
@@ -104,7 +104,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["lats", "mid-back"],
     secondaryMuscles: ["biceps", "rear-delts"],
     mentzerTips:
-      "Immediately after pullovers. 4s controlled release up, 1s full stretch at top, 4s pull to upper chest. Lean back slightly. Pull with elbows, not hands. To absolute failure.",
+      "Do this right after the pullovers. 4s controlled release up, 1s full stretch at the top, 4s pull to the upper chest. Lean back slightly. Pull with your elbows, not your hands. Go to failure.",
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 2.5,
@@ -130,7 +130,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["mid-back", "lats"],
     secondaryMuscles: ["biceps", "rear-delts", "lower-back"],
     mentzerTips:
-      "4s lower the bar, 1s pause at full stretch, 4s row to lower chest. Keep back at 45 degrees. Squeeze shoulder blades at the top. No momentum — strict form to failure.",
+      "4s lower the bar, 1s pause at full stretch, 4s row to lower chest. Keep your back at 45 degrees. Squeeze your shoulder blades at the top. Do not use momentum. Keep strict form all the way to failure.",
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2.5,
@@ -156,7 +156,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["mid-back", "lats"],
     secondaryMuscles: ["biceps", "rear-delts"],
     mentzerTips:
-      "4s release forward with full stretch, 1s pause, 4s pull to abdomen. Keep torso upright. Squeeze shoulder blades together at contraction. Constant tension.",
+      "4s release forward with full stretch, 1s pause, 4s pull to abdomen. Keep torso upright. Squeeze your shoulder blades together at the end. Keep constant tension on the back.",
     repRange: [8, 10],
     restSeconds: 90,
     weightIncrement: 2.5,
@@ -169,7 +169,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["lats"],
     secondaryMuscles: ["chest", "triceps"],
     mentzerTips:
-      "Pre-exhaust for lats. Stand facing away from pulley. 4s stretch overhead, 1s pause at full extension, 4s pull down to thighs. Keep arms nearly straight — this is a lat movement.",
+      "Pre-exhaust for the lats. Stand facing away from the pulley. 4s stretch overhead, 1s pause at full extension, 4s pull down to the thighs. Keep your arms nearly straight so the lats do the work.",
     repRange: [8, 10],
     restSeconds: 0,
     weightIncrement: 2,
@@ -182,7 +182,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["lower-back", "glutes", "hamstrings"],
     secondaryMuscles: ["quads", "traps", "forearms"],
     mentzerTips:
-      "4s controlled descent, 1s pause at floor (no bouncing), 4s lift. Hinge at hips, keep back flat. This is a full-body compound — respect the weight. One all-out set can be enough.",
+      "4s controlled descent, 1s pause at floor (no bouncing), 4s lift. Hinge at hips, keep back flat. This works the whole body, so pick a weight you can control. One all-out set can be enough.",
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 5,
@@ -197,7 +197,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["front-delts", "side-delts"],
     secondaryMuscles: ["triceps", "upper-chest", "traps"],
     mentzerTips:
-      "4s lower to chin level, 1s pause, 4s press overhead. Do NOT lock out — keep tension on delts. No leg drive. Strict form, train to failure.",
+      "4s lower to chin level, 1s pause, 4s press overhead. Do not lock out, so the delts keep the tension. Do not use your legs. Keep strict form and train to failure.",
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2.5,
@@ -210,7 +210,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["front-delts", "side-delts"],
     secondaryMuscles: ["triceps", "upper-chest"],
     mentzerTips:
-      "4s lower with control, 1s pause, 4s press without slamming the stack. Keep shoulders down and let the machine guide a strict delt-dominant path.",
+      "4s lower with control, 1s pause, 4s press without slamming the stack. Keep your shoulders down. The machine fixes the path, so the delts do the work.",
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2.5,
@@ -223,7 +223,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["side-delts"],
     secondaryMuscles: ["front-delts", "traps"],
     mentzerTips:
-      "4s lower to sides, 1s pause, 4s raise to shoulder height. Slight bend in elbows. Lead with elbows, not hands. Control the negative — no swinging. Lighter weight, perfect form.",
+      "4s lower to sides, 1s pause, 4s raise to shoulder height. Slight bend in elbows. Lead with elbows, not hands. Control the lowering and do not swing. Use a lighter weight with strict form.",
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 1,
@@ -261,7 +261,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["rear-delts"],
     secondaryMuscles: ["mid-back", "traps"],
     mentzerTips:
-      "Bent over at 90 degrees. 4s lower, 1s pause, 4s raise out to sides. Squeeze shoulder blades at top. Light weight, strict form. Feel the rear delts burn.",
+      "Bent over at 90 degrees. 4s lower, 1s pause, 4s raise out to sides. Squeeze your shoulder blades at the top. Use a light weight with strict form.",
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 1,
@@ -289,7 +289,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["biceps"],
     secondaryMuscles: ["forearms"],
     mentzerTips:
-      "4s lower to full extension, 1s pause at bottom (no resting), 4s curl up. No swinging — if you need momentum, the weight is too heavy. Squeeze at the top.",
+      "4s lower to full extension, 1s pause at bottom (no resting), 4s curl up. Do not swing. If you need momentum, the weight is too heavy. Squeeze at the top.",
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2.5,
@@ -328,7 +328,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["biceps", "forearms"],
     secondaryMuscles: [],
     mentzerTips:
-      "Neutral grip (palms facing each other). 4s lower, 1s pause, 4s curl. Targets brachialis and forearms. No swinging. Strict form to failure.",
+      "Neutral grip (palms facing each other). 4s lower, 1s pause, 4s curl. It works the brachialis and forearms. Do not swing. Keep strict form all the way to failure.",
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
@@ -341,7 +341,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["triceps"],
     secondaryMuscles: [],
     mentzerTips:
-      "4s lower to forehead, 1s pause, 4s extend. Keep upper arms vertical — only forearms move. Full range of motion. If elbows hurt, switch to pushdowns.",
+      "4s lower to forehead, 1s pause, 4s extend. Keep your upper arms vertical so only the forearms move. Full range of motion. If elbows hurt, switch to pushdowns.",
     repRange: [6, 8],
     restSeconds: 90,
     weightIncrement: 2,
@@ -356,7 +356,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["traps"],
     secondaryMuscles: [],
     mentzerTips:
-      "4s lower (let traps stretch fully), 1s pause, 4s shrug straight up. Do NOT roll shoulders — straight up and down only. Hold at top and squeeze. Heavy weight, strict form.",
+      "4s lower (let traps stretch fully), 1s pause, 4s shrug straight up. Do not roll your shoulders. Move straight up and down only. Hold and squeeze at the top. Use a heavy weight with strict form.",
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2.5,
@@ -369,7 +369,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["traps"],
     secondaryMuscles: [],
     mentzerTips:
-      "4s lower, 1s full stretch at bottom, 4s shrug up. Dumbbells allow more natural arm position. No rolling — straight up and down. Squeeze at the top.",
+      "4s lower, 1s full stretch at bottom, 4s shrug up. Dumbbells let your arms hang in a more natural position. Do not roll. Move straight up and down. Squeeze at the top.",
     repRange: [8, 10],
     restSeconds: 60,
     weightIncrement: 2,
@@ -384,7 +384,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["quads"],
     secondaryMuscles: [],
     mentzerTips:
-      "Pre-exhaust for quads. 4s lower, 1s pause at bottom, 4s extend to full lockout. Squeeze quads hard at the top. This is the burn that makes the leg press brutal.",
+      "Pre-exhaust for quads. 4s lower, 1s pause at bottom, 4s extend to full lockout. Squeeze the quads hard at the top. Go straight to the leg press after this.",
     repRange: [8, 10],
     restSeconds: 0,
     weightIncrement: 2,
@@ -397,7 +397,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["quads", "glutes"],
     secondaryMuscles: ["hamstrings"],
     mentzerTips:
-      "Immediately after leg extensions. 4s lower until knees at 90 degrees, 1s pause (no bouncing), 4s press. Feet shoulder-width, mid-platform. Do NOT lock knees at top. To absolute failure.",
+      "Do this right after the leg extensions. 4s lower until your knees are at 90 degrees, 1s pause (no bouncing), 4s press. Place your feet shoulder-width apart, mid-platform. Do not lock your knees at the top. Go to failure.",
     repRange: [8, 10],
     restSeconds: 120,
     weightIncrement: 5,
@@ -410,7 +410,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["quads", "glutes"],
     secondaryMuscles: ["hamstrings", "lower-back", "core"],
     mentzerTips:
-      "4s controlled descent to parallel or below, 1s pause at bottom, 4s drive up. Keep chest up, knees tracking over toes. Full range of motion. One working set to failure can be sufficient.",
+      "4s controlled descent to parallel or below, 1s pause at bottom, 4s drive up. Keep chest up, knees tracking over toes. Full range of motion. One working set to failure can be enough.",
     repRange: [6, 8],
     restSeconds: 120,
     weightIncrement: 5,
@@ -475,7 +475,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["calves"],
     secondaryMuscles: [],
     mentzerTips:
-      "4s lower into deep stretch (heels below platform), 1s pause at full stretch, 4s raise to maximum contraction. Full range is critical for calves. Squeeze hard at top.",
+      "4s lower into deep stretch (heels below platform), 1s pause at full stretch, 4s raise to maximum contraction. Calves need the full range. Squeeze hard at top.",
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 2.5,
@@ -503,7 +503,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["lower-back", "glutes"],
     secondaryMuscles: ["hamstrings"],
     mentzerTips:
-      "4s lower into full flexion, 1s pause, 4s extend up to neutral spine. Do NOT hyperextend. Squeeze glutes and lower back at the top. Controlled movement throughout.",
+      "4s lower into full flexion, 1s pause, 4s extend up to neutral spine. Do not hyperextend. Squeeze glutes and lower back at the top. Controlled movement throughout.",
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 2.5,
@@ -544,7 +544,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["core"],
     secondaryMuscles: ["forearms"],
     mentzerTips:
-      "4s lower legs, 1s pause at bottom, 4s raise legs to parallel or higher. No swinging — if you swing, you are cheating your abs. Add weight between feet when bodyweight is easy.",
+      "4s lower legs, 1s pause at bottom, 4s raise legs to parallel or higher. Do not swing. Swinging takes the work off your abs. Add weight between feet when bodyweight is easy.",
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 1,
@@ -557,7 +557,7 @@ export const exercises: Exercise[] = [
     primaryMuscles: ["core"],
     secondaryMuscles: [],
     mentzerTips:
-      "4s release up, 1s pause, 4s crunch down. Think about bringing ribs to hips. Do not pull with arms — abs do the work. Full range of motion.",
+      "4s release up, 1s pause, 4s crunch down. Think about bringing ribs to hips. Do not pull with your arms. Let the abs do the work. Full range of motion.",
     repRange: [10, 12],
     restSeconds: 60,
     weightIncrement: 2,
@@ -590,13 +590,13 @@ export function getExercisesByMuscle(muscle: string): Exercise[] {
 
 export const muscleGroupLabels: Record<string, string> = {
   chest: "Chest",
-  "upper-chest": "Upper Chest",
+  "upper-chest": "Upper chest",
   lats: "Lats",
-  "mid-back": "Mid Back",
-  "lower-back": "Lower Back",
-  "front-delts": "Front Delts",
-  "side-delts": "Side Delts",
-  "rear-delts": "Rear Delts",
+  "mid-back": "Mid back",
+  "lower-back": "Lower back",
+  "front-delts": "Front delts",
+  "side-delts": "Side delts",
+  "rear-delts": "Rear delts",
   traps: "Traps",
   biceps: "Biceps",
   triceps: "Triceps",

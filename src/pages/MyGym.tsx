@@ -6,9 +6,12 @@ import type { CustomGymEquipment } from "../types";
 
 const categoryOptions: { label: string; value: string }[] = [
   { label: "Machines", value: "Machines" },
-  { label: "Free Weights", value: "Free Weights" },
+  { label: "Free weights", value: "Free Weights" },
   { label: "Cardio", value: "Cardio" },
 ];
+
+/** Display name for a stored category value ("Free Weights" is stored, "Free weights" is shown). */
+const categoryLabel = (value: string) => categoryOptions.find((c) => c.value === value)?.label ?? value;
 
 /* ── Small presentational pieces ───────────────────────────── */
 
@@ -449,7 +452,7 @@ export function MyGym() {
         return (
           <section key={cat} className="flex flex-col gap-2.5">
             <CategoryHeader
-              label={cat}
+              label={categoryLabel(cat)}
               availableCount={catAvailable}
               totalCount={items.length}
               onSelectAll={() => bulkSetGymEquipmentAvailability(items.map((i) => i.id), true)}
@@ -526,7 +529,7 @@ export function MyGym() {
               <EquipmentRow
                 key={item.id}
                 label={item.label}
-                meta={item.category}
+                meta={categoryLabel(item.category)}
                 available={gymEquipment[item.id] ?? true}
                 onToggle={() => setGymEquipmentAvailability(item.id, !gymEquipment[item.id])}
                 isCustom

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
-import { getProgram } from "../data/programs";
+import { getProgram, getSessionTitle } from "../data/programs";
 import { exportJSON, exportCSV, validateImport } from "../lib/export";
 import { prefetchRoute } from "../lib/routePrefetch";
 import {
@@ -89,7 +89,7 @@ const ChevronIcon = ({ direction = "right", className = "" }: { direction?: "rig
 const MANUAL_ACTIVITY = {
   cardio: { dayId: "manual-cardio", dayName: "Cardio" },
   recovery: { dayId: "manual-recovery", dayName: "Recovery" },
-  rest: { dayId: "manual-rest", dayName: "Rest Day" },
+  rest: { dayId: "manual-rest", dayName: "Rest day" },
 } as const;
 
 type QuickOptionType = "lift" | "cardio" | "recovery" | "rest" | "open";
@@ -174,11 +174,6 @@ function SectionLabel({ children, action }: { children: ReactNode; action?: Reac
       {action}
     </div>
   );
-}
-
-/** Drops the "Day N — " prefix so titles read as the focus ("Chest, Shoulders, Triceps"). */
-function formatSessionTitle(name: string): string {
-  return (name.includes("—") ? name.split("—").pop()?.trim() : name) || name;
 }
 
 function formatElapsed(isoStart: string): string {
@@ -374,7 +369,7 @@ export function Home() {
         const json = JSON.parse(reader.result as string);
         const parsed = validateImport(json);
         if (!parsed) {
-          setImportMsg("Invalid backup file.");
+          setImportMsg("This is not a valid backup file.");
           return;
         }
         const workoutStore = useWorkoutStore.getState();
@@ -391,11 +386,11 @@ export function Home() {
 
         setImportMsg(
           parsed.sourceVersion === 1
-            ? "Legacy backup restored. Missing newer settings were reset to defaults."
-            : "Backup restored. Current local data was replaced.",
+            ? "Old backup restored. Settings it did not have are back to their defaults."
+            : "Backup restored. It replaced the data on this device.",
         );
       } catch {
-        setImportMsg("Failed to parse file.");
+        setImportMsg("Could not read this file.");
       }
     };
     reader.readAsText(file);
@@ -419,7 +414,7 @@ export function Home() {
       : restSuggestion.type === "active-recovery"
         ? "bg-accent-blue"
         : "bg-accent-green";
-  const lastSessionTitle = lastSession ? formatSessionTitle(lastSession.day) : null;
+  const lastSessionTitle = lastSession ? getSessionTitle(lastSession.day) : null;
   const activeExerciseCount = activeWorkout
     ? activeWorkout.exercises.filter((exercise) => !exercise.skipped).length
     : 0;
@@ -494,7 +489,7 @@ export function Home() {
       return;
     } else {
       if (!logManualActivity(option.type, todayDateKey)) {
-        setCalendarActionError("That day already has a logged session.");
+        setCalendarActionError("You already logged a session on this day.");
       }
     }
   };
@@ -502,7 +497,7 @@ export function Home() {
   const handleCalendarActivity = (type: "cardio" | "rest") => {
     if (!selectedCalendarCell?.dateKey || activeWorkout) return;
     if (!logManualActivity(type, selectedCalendarCell.dateKey)) {
-      setCalendarActionError("That day already has a logged session.");
+      setCalendarActionError("You already logged a session on this day.");
       return;
     }
     closeCalendarActions();
@@ -562,7 +557,7 @@ export function Home() {
                 <span className="section-label text-text-secondary">In progress</span>
               </div>
               <h2 className="mt-2 text-[1.5rem] font-semibold leading-tight tracking-tight text-text-primary">
-                {formatSessionTitle(activeWorkout.dayName)}
+                {getSessionTitle(activeWorkout.dayName)}
               </h2>
               <p className="mt-1 text-[13px] text-text-muted">
                 Started {formatElapsed(activeWorkout.startedAt)} · {activeExerciseCount}{" "}
@@ -592,7 +587,7 @@ export function Home() {
               <span className="section-label">Done for today</span>
             </div>
             <h2 className="mt-2 text-[1.5rem] font-semibold leading-tight tracking-tight text-text-primary">
-              {formatSessionTitle(todayEntries[0].day)}
+              {getSessionTitle(todayEntries[0].day)}
             </h2>
             <p className="mt-1 text-[13px] text-text-muted">Undo or move it from the calendar below.</p>
           </div>
@@ -604,7 +599,7 @@ export function Home() {
               <span className="section-label">Suggested</span>
               {suggested.day.type === "lift" && suggestedDaysSince !== null && suggestedDaysSince >= 3 && (
                 <span className="rounded-full bg-accent-orange/12 px-2 py-0.5 text-[12px] font-medium leading-tight text-accent-orange">
-                  {suggestedDaysSince}d overdue
+                  Last done {suggestedDaysSince}d ago
                 </span>
               )}
             </div>
@@ -820,7 +815,7 @@ export function Home() {
           </div>
           <div className="min-w-0 px-4">
             <p className="stat-value truncate text-[1.5rem] text-text-primary">
-              {lastSession ? formatRelativeDateShort(lastSession.date) : "—"}
+              {lastSession ? formatRelativeDateShort(lastSession.date) : "None"}
             </p>
             <p className="mt-1.5 text-[12px] leading-snug break-words text-text-muted">
               {lastSessionTitle ?? "No sessions yet"}
@@ -873,7 +868,7 @@ export function Home() {
           </div>
         ) : (
           <p className="px-1 text-[13px] leading-relaxed text-text-muted">
-            Recovery tracking appears after your first logged lift workout.
+            Log your first lift to see muscle recovery.
           </p>
         )}
 
@@ -984,7 +979,7 @@ export function Home() {
                   {selectedCalendarCell.workout && (
                     <div className="mt-3">
                       <p className="text-[15px] font-medium text-text-primary">
-                        {formatSessionTitle(selectedCalendarCell.workout.day)}
+                        {getSessionTitle(selectedCalendarCell.workout.day)}
                       </p>
                       {selectedCalendarCell.workout.activityName && (
                         <p className="mt-0.5 text-[13px] text-text-secondary">
@@ -998,7 +993,7 @@ export function Home() {
                       ? "Nothing is logged here yet."
                       : selectedCalendarCell.entryKind === "lift"
                         ? "Choose an empty date to move this workout."
-                        : "Undo this cardio, recovery, or rest log if needed."}
+                        : "You can undo this log."}
                   </p>
                 </div>
                 <button onClick={closeCalendarActions} className="btn-tertiary -mr-2 -mt-2 shrink-0 px-3 text-[14px]">

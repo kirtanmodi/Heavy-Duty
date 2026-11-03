@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
+import { getSessionTitle } from "../data/programs";
 import { formatDayDate } from "../lib/dates";
 import { prefetchRoute } from "../lib/routePrefetch";
 import { calcProgress, calcStats, findPrevSession } from "../lib/stats";
@@ -67,7 +68,7 @@ export function WorkoutSummary() {
         </svg>
         <h1 className="page-title mt-4">Workout complete</h1>
         <p className="mt-2 text-[15px] leading-snug text-text-secondary">
-          {lastWorkout.day.includes(" — ") ? lastWorkout.day.split(" — ")[1] : lastWorkout.day}
+          {getSessionTitle(lastWorkout.day)}
         </p>
         <p className="mt-1 text-[13px] tabular-nums text-text-muted">
           Saved to history · {formatDayDate(lastWorkout.date)}

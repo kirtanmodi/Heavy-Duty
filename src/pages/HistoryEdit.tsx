@@ -4,6 +4,7 @@ import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
+import { getSessionTitle } from "../data/programs";
 import type { Exercise, ExerciseEntry, SetEntry } from "../types";
 import { formatRelativeDate } from "../lib/dates";
 
@@ -200,7 +201,7 @@ export function HistoryEdit() {
 
           <div className="min-w-0 px-1">
             <h1 className="page-title">
-              {workout.day.includes(" — ") ? workout.day.split(" — ")[1] : workout.day}
+              {getSessionTitle(workout.day)}
             </h1>
             <p className="mt-1 text-[13px] tabular-nums text-text-muted">
               {formatRelativeDate(workout.date)}
@@ -231,7 +232,7 @@ export function HistoryEdit() {
             <div className="flex max-w-[18rem] flex-col gap-1">
               <p className="section-title">No exercises in this workout</p>
               <p className="text-[15px] leading-relaxed text-text-muted">
-                Add an exercise if you want this logged session to include set details.
+                Add an exercise to log its sets.
               </p>
             </div>
           </section>
@@ -348,7 +349,7 @@ export function HistoryEdit() {
               Save changes
             </button>
             <p className="px-3 pb-1 text-center text-[12px] leading-snug text-text-muted">
-              Exercises without reps are removed when you save.
+              Saving removes exercises with no reps.
             </p>
           </div>
         </div>

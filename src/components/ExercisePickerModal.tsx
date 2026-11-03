@@ -22,10 +22,10 @@ const equipmentLabels: Record<Equipment, string> = {
 const muscleOptions: { label: string; value: MuscleGroup }[] = [
   { label: "Chest", value: "chest" },
   { label: "Lats", value: "lats" },
-  { label: "Mid Back", value: "mid-back" },
-  { label: "Front Delts", value: "front-delts" },
-  { label: "Side Delts", value: "side-delts" },
-  { label: "Rear Delts", value: "rear-delts" },
+  { label: "Mid back", value: "mid-back" },
+  { label: "Front delts", value: "front-delts" },
+  { label: "Side delts", value: "side-delts" },
+  { label: "Rear delts", value: "rear-delts" },
   { label: "Biceps", value: "biceps" },
   { label: "Triceps", value: "triceps" },
   { label: "Traps", value: "traps" },
@@ -83,8 +83,8 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
   const emptyMessage = search
     ? "No exercises match your search."
     : mode === "swap"
-      ? "No alternative exercises available."
-      : "No exercises available to add.";
+      ? "No other exercises to swap in."
+      : "No more exercises to add.";
 
   const chipClass = (active: boolean) =>
     `chip relative h-9 shrink-0 px-3.5 font-medium transition-colors after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] ${
@@ -220,7 +220,7 @@ export function ExercisePickerModal({ mode, activeExerciseIds, currentExerciseId
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="truncate text-[15px] font-medium leading-snug text-text-primary">{exercise.name}</span>
                         <span className="truncate text-[13px] text-text-muted">
-                          {groupLabel} · {equipmentLabels[exercise.equipment]} · {exercise.repRange[0]}–{exercise.repRange[1]} reps
+                          {groupLabel} · {equipmentLabels[exercise.equipment]} · {exercise.repRange[0]}-{exercise.repRange[1]} reps
                           {exercise.type === "compound" && " · Compound"}
                         </span>
                       </div>

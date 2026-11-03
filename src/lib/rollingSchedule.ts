@@ -1,4 +1,5 @@
 import type { ProgramDay, WorkoutEntry } from "../types";
+import { getSessionTitle } from "../data/programs";
 import { addDaysToDateKey, daysBetweenDateKeys, getIsoDateKey, getTodayDateKey, parseDateKey } from "./dates";
 
 export interface RollingProgramDay {
@@ -144,8 +145,7 @@ function getPrimaryWorkoutOnDate(history: WorkoutEntry[], dateKey: string): Work
 
 function createManualProgramDay(workout: WorkoutEntry, dateKey: string): ProgramDay {
   const date = parseDateKey(dateKey);
-  const fallbackFocus =
-    workout.day.includes("—") ? workout.day.split("—").pop()?.trim() ?? workout.day : workout.day;
+  const fallbackFocus = getSessionTitle(workout.day);
 
   return {
     id: workout.dayId,
@@ -155,14 +155,14 @@ function createManualProgramDay(workout: WorkoutEntry, dateKey: string): Program
     focus: fallbackFocus,
     exercises: [],
     description: workout.activityName
-      ? `Logged activity: ${workout.activityName}`
+      ? `You logged ${workout.activityName}.`
       : workout.dayType === "rest"
-        ? "Logged as a rest day."
+        ? "You logged this as a rest day."
         : workout.dayType === "cardio"
-          ? "Logged as a cardio day."
+          ? "You logged this as a cardio day."
           : workout.dayType === "recovery"
-            ? "Logged as a recovery day."
-            : "Logged session.",
+            ? "You logged this as a recovery day."
+            : "You logged a session on this day.",
   };
 }
 

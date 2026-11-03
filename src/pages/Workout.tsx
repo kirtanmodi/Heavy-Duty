@@ -4,10 +4,10 @@ import { ExerciseCard } from "../components/ExerciseCard";
 import { ExercisePickerModal } from "../components/ExercisePickerModal";
 import { PageLayout } from "../components/layout/PageLayout";
 import { getAutoReplacement, getEffectiveExercise } from "../data/exercises";
-import { cardioActivities, getDefaultExerciseIds, programs } from "../data/programs";
+import { cardioActivities, getDefaultExerciseIds, getSessionTitle, programs } from "../data/programs";
 
 import { useElapsedTimer } from "../hooks/useElapsedTimer";
-import { useTimer } from "../hooks/useTimer";
+import { useCountdown, useTimer } from "../hooks/useTimer";
 import { curateWorkoutForFocus, getGymEquipmentOptionsForFocus } from "../lib/curatedWorkout";
 import { formatDateKey, getIsoDateKey } from "../lib/dates";
 import { backOffSetsByOneStep, createMentzerSets, getOverloadSuggestion, needsWarmUpSet } from "../lib/overload";
@@ -64,6 +64,24 @@ function SwitchIndicator({ on }: { on: boolean }) {
 function ElapsedTime({ startedAt }: { startedAt: string }) {
   const { formatted } = useElapsedTimer(startedAt);
   return <>{formatted}</>;
+}
+
+/** Rest countdown and progress bar. Isolated for the same reason as ElapsedTime. */
+function RestCountdown({ endsAt, seconds }: { endsAt: number; seconds: number }) {
+  const secondsLeft = useCountdown(endsAt);
+  const fraction = seconds > 0 ? secondsLeft / seconds : 0;
+  return (
+    <>
+      <p className="stat-value text-[64px] text-text-primary">{formatDuration(secondsLeft)}</p>
+      <div className="mt-1 h-[3px] w-full max-w-[220px] overflow-hidden rounded-full bg-fill">
+        {/* scaleX runs on the compositor; animating width would re-run layout every frame */}
+        <div
+          className="h-full w-full origin-left rounded-full bg-accent-red"
+          style={{ transform: `scaleX(${fraction})`, transition: "transform 1s linear" }}
+        />
+      </div>
+    </>
+  );
 }
 
 /**
@@ -126,7 +144,7 @@ function CardioRecoveryView({
       selectedActivity ?? undefined,
     );
     if (!didLog) {
-      setLogError("This date already has a logged session.");
+      setLogError("You already logged a session on this day.");
       return;
     }
     navigate("/");
@@ -289,6 +307,8 @@ export function Workout() {
       playBeep(now, 880, 0.15);
       playBeep(now + 0.18, 880, 0.15);
       playBeep(now + 0.36, 1174.66, 0.3);
+      // Each context holds the audio hardware open until closed. The beeps last 0.66s.
+      window.setTimeout(() => void ctx.close().catch(() => {}), 1000);
     } catch { /* audio not available */ }
   }, [restTimerSound]);
   const timer = useTimer(playTimerSound);
@@ -316,6 +336,8 @@ export function Workout() {
   const [hasSessionSetInteraction, setHasSessionSetInteraction] = useState(false);
   const [finishBarRef, finishBarHeight] = useMeasuredHeight<HTMLDivElement>();
   const leavingRef = useRef(false);
+  // Set with leavingRef on finish/cancel, so the render during the exit animation can show a blank page
+  const [isLeaving, setIsLeaving] = useState(false);
   const sessionStartRef = useRef(activeWorkout?.startedAt);
   const restPresets = [60, 90, 120, 180, 300];
   const program = programs[0];
@@ -357,7 +379,7 @@ export function Workout() {
       if (activeWorkout && activeWorkout.dayId === "open") return;
       if (activeWorkout) return; // conflict — handled by hasDayConflict UI
       if (todayHasCompletedSession) return;
-      startWorkout("open", "Open Workout", "Freeform", []);
+      startWorkout("open", "Open workout", "Freeform", []);
       return;
     }
 
@@ -544,15 +566,17 @@ export function Workout() {
   const handleFinish = () => {
     const didFinish = finishWorkout();
     if (!didFinish) {
-      setSessionSaveError("This date already has a logged session. Move or undo that day from the calendar first.");
+      setSessionSaveError("You already logged a session on this day. Undo or move it from the Home calendar first.");
       return;
     }
     leavingRef.current = true;
+    setIsLeaving(true);
     navigate("/workout-summary");
   };
 
   const handleCancel = () => {
     leavingRef.current = true;
+    setIsLeaving(true);
     cancelWorkout();
     navigate("/");
   };
@@ -610,7 +634,7 @@ export function Workout() {
     if (replacement) {
       updateExercise(exerciseIndex, seedExerciseEntry(replacement.id, excludeIds.slice(0, exerciseIndex)));
     } else {
-      setCurationFeedback("No alternative exercises available for this muscle group.");
+      setCurationFeedback("No other exercises for this muscle group.");
     }
   };
 
@@ -629,7 +653,7 @@ export function Workout() {
     if (!activeWorkout || !liftFocus) return;
 
     if (hasLoggedSets) {
-      setCurationFeedback("Curating is locked after set changes so you do not overwrite workout data.");
+      setCurationFeedback("You changed a set, so building a new workout is off. This keeps your logged sets safe.");
       return;
     }
 
@@ -641,7 +665,7 @@ export function Workout() {
       : curatedResult;
 
     if (!result || result.exerciseIds.length === 0) {
-      setCurationFeedback("No matching exercises found. Turn on more equipment and try again.");
+      setCurationFeedback("No exercises fit your equipment. Turn on more items in My Gym.");
       return;
     }
 
@@ -649,11 +673,11 @@ export function Workout() {
     setShowWorkoutSetup(false);
 
     const skippedMsg = result.skippedSlots.length > 0
-      ? ` Skipped: ${result.skippedSlots.join(", ")}.`
+      ? ` Missing equipment for: ${result.skippedSlots.join(", ")}.`
       : "";
     setCurationFeedback(
       shuffle
-        ? `Shuffled ${liftFocus} workout — ${result.exerciseIds.length} exercises.${skippedMsg}`
+        ? `Built a new ${liftFocus} workout with ${result.exerciseIds.length} exercises.${skippedMsg}`
         : `Built a ${liftFocus} workout with ${result.exerciseIds.length} exercises.${skippedMsg}`,
     );
   };
@@ -675,13 +699,19 @@ export function Workout() {
     return <CardioRecoveryView day={day} program={program} history={history} />;
   }
 
+  // Finishing or cancelling clears the session while the exit animation still plays. Without this,
+  // that last frame shows "You already logged a session today" or "Loading workout...".
+  if (isLeaving && !activeWorkout) {
+    return <PageLayout withBottomNavPadding={false}>{null}</PageLayout>;
+  }
+
   if (todayHasCompletedSession && !activeWorkout) {
     return (
       <PageLayout withBottomNavPadding={false}>
         <div className="sheet-surface mx-auto mt-[18vh] flex max-w-[400px] flex-col gap-1.5 rounded-[1.25rem] p-5 text-center">
-          <p className="section-title">Today already has a logged session</p>
+          <p className="section-title">You already logged a session today</p>
           <p className="text-[15px] leading-relaxed text-text-muted">
-            One day can only hold one workout, cardio, or rest entry. Use the Home calendar to undo that day or move it.
+            You can log one session per day. To change today, undo or move it from the Home calendar.
           </p>
           <div className="mt-4 flex flex-col gap-2">
             <button type="button" onClick={() => navigate("/")} className="btn-primary w-full px-5 text-[15px]">
@@ -736,11 +766,8 @@ export function Workout() {
     };
   };
 
-  // Header context line: strip the "Day N — " prefix so only the target muscles remain
-  const dayDetail = isOpen ? "Freeform" : (day?.name ?? "").replace(/^Day\s+\d+\s*[—–-]\s*/, "");
-  const restRemainingPct = timer.isRunning
-    ? (timer.secondsLeft / (restPresets.find((p) => p >= timer.secondsLeft) ?? timer.secondsLeft + 1)) * 100
-    : 0;
+  // Header context line: the target muscles
+  const dayDetail = isOpen ? "Freeform" : getSessionTitle(day?.name ?? "");
   const feedbackToasts = [
     backOffFeedback ? { key: "back-off", text: backOffFeedback, dismiss: () => setBackOffFeedback(null) } : null,
     curationFeedback ? { key: "curation", text: curationFeedback, dismiss: () => setCurationFeedback(null) } : null,
@@ -778,15 +805,7 @@ export function Workout() {
           >
             <div className="flex flex-col items-center gap-3">
               <p className="section-label">{timer.label}</p>
-              <p className="stat-value text-[64px] text-text-primary">
-                {timer.formatTime(timer.secondsLeft)}
-              </p>
-              <div className="mt-1 h-[3px] w-full max-w-[220px] overflow-hidden rounded-full bg-fill">
-                <div
-                  className="h-full rounded-full bg-accent-red"
-                  style={{ width: `${restRemainingPct}%`, transition: "width 1s linear" }}
-                />
-              </div>
+              {timer.endsAt !== null && <RestCountdown endsAt={timer.endsAt} seconds={timer.seconds} />}
             </div>
 
             {/* Presets */}
@@ -844,7 +863,7 @@ export function Workout() {
             onClick={(e) => e.stopPropagation()}
             className="sheet-surface flex w-full max-w-[436px] flex-col gap-4 rounded-[1.25rem] p-4 pt-5 animate-slide-up"
           >
-            <p id="workout-exit-title" className="section-title px-1">What would you like to do?</p>
+            <p id="workout-exit-title" className="section-title px-1">Leave this workout?</p>
             <div className="flex flex-col gap-2">
               <button onClick={() => setShowCancel(false)} className="btn-primary w-full text-[15px]">
                 Keep going
@@ -953,7 +972,7 @@ export function Workout() {
           <section className="hero-surface flex flex-col gap-4 rounded-[1.25rem] p-5 animate-slide-up">
             <div className="min-w-0">
               <p className="section-title">You have a workout in progress</p>
-              <p className="mt-1 text-[13px] text-text-muted">{activeWorkout.dayName}</p>
+              <p className="mt-1 text-[13px] text-text-muted">{getSessionTitle(activeWorkout.dayName)}</p>
             </div>
             <div className="flex flex-col gap-1">
               <button
@@ -963,7 +982,7 @@ export function Workout() {
                 Resume
               </button>
               <button onClick={handleDiscardAndStart} className="btn-tertiary w-full text-[15px] text-accent-red">
-                Discard & start new
+                Discard and start new
               </button>
             </div>
           </section>
@@ -985,7 +1004,7 @@ export function Workout() {
             <div className="flex min-h-[3.25rem] items-center justify-between gap-3 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-[15px] text-text-primary">Back off today</p>
-                <p className="text-[13px] leading-snug text-text-muted">Use if warm-up feels heavy or form feels off.</p>
+                <p className="text-[13px] leading-snug text-text-muted">Use this if the warm-up feels heavy or your form slips.</p>
               </div>
               <button
                 onClick={handleBackOffWorkout}
@@ -1000,9 +1019,9 @@ export function Workout() {
               <div className="flex flex-col gap-3 px-4 py-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[15px] text-text-primary">Curate from My Gym</p>
+                    <p className="text-[15px] text-text-primary">Build from My Gym</p>
                     <p className="text-[13px] tabular-nums text-text-muted">
-                      {selectedEquipmentCount}/{gymEquipmentOptions.length} equipment · {curatedExerciseIds.length} matched
+                      {selectedEquipmentCount}/{gymEquipmentOptions.length} equipment · {curatedExerciseIds.length} exercises
                     </p>
                   </div>
                   <button
@@ -1019,7 +1038,7 @@ export function Workout() {
                 {hasLoggedSets && (
                   <p className="flex items-center gap-2.5 text-[13px] text-text-secondary">
                     <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-yellow" />
-                    Locked after set changes
+                    Off after you change a set
                   </p>
                 )}
 
@@ -1043,7 +1062,7 @@ export function Workout() {
                     disabled={hasLoggedSets || curatedExerciseIds.length === 0}
                     className="btn-secondary min-h-11 px-3 text-[14px]"
                   >
-                    Try another split
+                    Shuffle exercises
                   </button>
                 </div>
               </div>
@@ -1058,8 +1077,8 @@ export function Workout() {
               <span aria-hidden="true" className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-accent-orange" />
               <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-text-secondary">
                 {recoveringGroups.length === 1
-                  ? `${recoveringGroups[0].group} was trained recently. Review it before pushing hard again.`
-                  : `${recoveringGroups.length} target muscle groups were trained recently. Review them before logging.`}
+                  ? `${recoveringGroups[0].group} is still recovering.`
+                  : `${recoveringGroups.length} target muscle groups are still recovering.`}
               </p>
               <button
                 onClick={() => setShowRecoveryActions((value) => !value)}
@@ -1078,17 +1097,17 @@ export function Workout() {
               return (
                 <div key={groupStatus.group} className="mt-3 flex flex-col gap-2.5 border-t border-separator pt-3">
                   <p className="text-[13px] leading-relaxed text-text-secondary">
-                    <span className="font-medium text-text-primary">{groupStatus.group}</span> was trained {groupStatus.daysSinceLastTrained}d ago. Heavy Duty usually works best with 4-7 days rest.
+                    You trained <span className="font-medium text-text-primary">{groupStatus.group}</span> {groupStatus.daysSinceLastTrained === 1 ? "1 day" : `${groupStatus.daysSinceLastTrained} days`} ago. Heavy Duty works best with 4-7 days of rest.
                   </p>
 
                   {consecutiveSkips >= 2 ? (
                     <p className="text-[13px] font-medium leading-snug text-accent-red">
-                      {groupStatus.group} has been skipped {consecutiveSkips} sessions in a row. Train it today for balanced progress.
+                      You skipped {groupStatus.group} {consecutiveSkips} sessions in a row. Train it today so it does not fall behind.
                     </p>
                   ) : consecutiveSkips === 1 ? (
                     <div className="flex flex-col gap-2">
                       <p className="text-[13px] leading-snug text-accent-orange">
-                        {groupStatus.group} was also skipped last session. Skipping again may slow progress.
+                        You also skipped {groupStatus.group} last session. Skipping again can slow your progress.
                       </p>
                       <button
                         onClick={() => {
@@ -1125,7 +1144,7 @@ export function Workout() {
             <div className="flex max-w-[18rem] flex-col gap-1.5">
               <p className="section-title">No exercises yet</p>
               <p className="text-[15px] leading-relaxed text-text-muted">
-                {isOpen ? "Add your first exercise to start logging." : "No lift exercises are loaded for this day."}
+                {isOpen ? "Add your first exercise to start logging." : "This day has no exercises yet."}
               </p>
             </div>
             {!showWorkoutSetup && (

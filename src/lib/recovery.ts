@@ -4,6 +4,12 @@ import { cardioActivities } from "../data/programs";
 import type { CardioActivity } from "../data/programs";
 import { daysBetweenDateKeys, daysSinceIsoDate, getIsoDateKey, getTodayDateKey } from "./dates";
 
+/** "A", "A and B", "A, B and C" */
+function formatList(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
 export interface MuscleRecoveryStatus {
   group: string;
   daysSinceLastTrained: number | null;
@@ -74,7 +80,7 @@ export function getSmartProgramDaySuggestion(
 
   if (recoveringGroups.length === 0) return { type: "lift" };
 
-  const reason = `${recoveringGroups.join(", ")} still recovering`;
+  const reason = `${formatList(recoveringGroups)} ${recoveringGroups.length === 1 ? "is" : "are"} still recovering`;
 
   // Find alternative lift days ranked by recovery readiness
   const alternatives = programDays
@@ -93,14 +99,14 @@ export function getSmartProgramDaySuggestion(
   const best = alternatives[0];
 
   if (best && best.recovered.length === best.total) {
-    return { type: "lift", reason, suggestion: `Do ${best.day.focus} instead — fully recovered` };
+    return { type: "lift", reason, suggestion: `Do ${best.day.focus} instead. Its muscles are fully recovered` };
   }
 
   if (best) {
     return {
       type: "lift",
       reason,
-      suggestion: `Do ${best.day.focus} instead — ${best.recovered.join(", ")} recovered`,
+      suggestion: `Do ${best.day.focus} instead. ${formatList(best.recovered)} ${best.recovered.length === 1 ? "is" : "are"} recovered`,
     };
   }
 
@@ -241,7 +247,7 @@ export function getRestDaySuggestion(
   if (daysSinceLastActivity === 0) {
     return {
       type: "full-rest",
-      message: "You trained today. Full rest is fine — recovery is when muscles grow.",
+      message: "You trained today. Rest now, because muscles grow while you recover.",
       activities: pickRandom(recoveryActivities, 2),
     };
   }
@@ -249,7 +255,7 @@ export function getRestDaySuggestion(
   if (daysSinceLastActivity === 1) {
     return {
       type: "active-recovery",
-      message: "Light movement will boost recovery and keep your momentum going.",
+      message: "Light movement today helps you recover. Pick one of these.",
       activities: pickRandom(recoveryActivities, 3),
     };
   }
@@ -257,7 +263,7 @@ export function getRestDaySuggestion(
   // 2+ days
   return {
     type: "light-cardio",
-    message: "Time to move! Even 15-20 min of light cardio keeps you on track.",
+    message: "Do 15-20 min of light cardio today, or start your next lift.",
     activities: pickRandom(lightCardioActivities, 3),
   };
 }

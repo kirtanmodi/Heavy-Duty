@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { getEffectiveExercise } from "../data/exercises";
-import { getProgram } from "../data/programs";
+import { getProgram, getSessionTitle } from "../data/programs";
 import {
   addDaysToDateKey,
   createSessionIso,
@@ -25,7 +25,8 @@ const typeBadge: Record<string, { label: string; dot: string }> = {
 };
 
 function humanizeLabel(value: string): string {
-  return value.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  const words = value.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 // No trailing periods: the summary is joined into a " · " separated meta line.
@@ -65,19 +66,19 @@ function getCycleReason(cycleIndex: number, programDays: ProgramDay[]): string {
   }
 
   if (day.type === "rest" && prevLift && nextLift) {
-    return `Rest between ${prevLift.focus} and ${nextLift.focus}. Muscles need at least 48h before the next lift.`;
+    return `Rest between ${prevLift.focus} and ${nextLift.focus}. Muscles need at least 48 hours before the next lift.`;
   }
 
   if (day.type === "rest" && prevLift) {
-    return `Rest after ${prevLift.focus}. This closes your cycle before the next round starts.`;
+    return `Rest after ${prevLift.focus}. This is the last day of the cycle.`;
   }
 
   if (day.type === "cardio") {
-    return `Cardio after all 3 lifts. Keeps your heart healthy without taxing recovering muscles.`;
+    return `Cardio comes after all 3 lifts. It trains your heart without taxing tired muscles.`;
   }
 
   if (day.type === "recovery") {
-    return `Active recovery to boost blood flow and speed up healing before the next cycle.`;
+    return `Light movement gets blood flowing before the next cycle starts.`;
   }
 
   return `Day ${cycleIndex + 1} of ${total} in your cycle.`;
@@ -238,7 +239,7 @@ export function Schedule() {
       !isRest && !isLogged && leadDays === 0 ? (
         activeWorkout ? (
           <p className={`${inset} text-[13px] text-text-muted`}>
-            Start unavailable · finish or cancel the active session first.
+            Finish or cancel the workout in progress to start this one.
           </p>
         ) : (
           <div className={inset}>
@@ -279,7 +280,7 @@ export function Schedule() {
                     </p>
                   </div>
                   <span className="shrink-0 text-[13px] tabular-nums text-text-muted">
-                    {exercise.repRange[0]}–{exercise.repRange[1]}
+                    {exercise.repRange[0]}-{exercise.repRange[1]}
                   </span>
                 </div>
               ))}
@@ -438,7 +439,7 @@ export function Schedule() {
             <StatusDot className="mt-[0.45rem] bg-accent-red" />
             <p className="min-w-0 text-[13px] leading-relaxed text-text-secondary">
               <span className="font-medium text-text-primary">Workout in progress.</span>{" "}
-              Finish or cancel {activeWorkout.dayName} before starting another day from here.
+              Finish or cancel {getSessionTitle(activeWorkout.dayName)} before starting another day from here.
             </p>
           </div>
         ) : null}

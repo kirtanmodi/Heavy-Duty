@@ -76,14 +76,14 @@ export const defaultGymEquipmentProfile = gymEquipmentOptions.reduce((profile, o
 const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
   Push: [
     {
-      label: 'Chest Fly',
+      label: 'Chest fly',
       candidates: [
         { exerciseId: 'pec-deck-fly', isAvailable: (profile) => has(profile, 'fly-machine') },
         { exerciseId: 'dumbbell-flyes', isAvailable: (profile) => has(profile, 'dumbbells') && hasAnyBench(profile) },
       ],
     },
     {
-      label: 'Chest Press',
+      label: 'Chest press',
       candidates: [
         { exerciseId: 'machine-chest-press', isAvailable: (profile) => has(profile, 'chest-press-machine') },
         { exerciseId: 'incline-bench-press', isAvailable: (profile) => has(profile, 'barbells') && has(profile, 'incline-bench') },
@@ -91,14 +91,14 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      label: 'Lateral Raise',
+      label: 'Lateral raise',
       candidates: [
         { exerciseId: 'machine-lateral-raise', isAvailable: (profile) => has(profile, 'lateral-raise') },
         { exerciseId: 'side-lateral-raise', isAvailable: (profile) => has(profile, 'dumbbells') },
       ],
     },
     {
-      label: 'Rear Delt',
+      label: 'Rear delt',
       candidates: [
         { exerciseId: 'rear-delt-machine', isAvailable: (profile) => has(profile, 'rear-deltoid-machine') },
         { exerciseId: 'rear-delt-fly', isAvailable: (profile) => has(profile, 'dumbbells') },
@@ -123,14 +123,14 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
   ],
   Pull: [
     {
-      label: 'Lat Isolation',
+      label: 'Lat isolation',
       candidates: [
         { exerciseId: 'dumbbell-pullover', isAvailable: (profile) => has(profile, 'dumbbells') && hasAnyBench(profile) },
         { exerciseId: 'cable-pullover', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
       ],
     },
     {
-      label: 'Lat Compound',
+      label: 'Lat compound',
       candidates: [
         { exerciseId: 'lat-pulldown', isAvailable: (profile) => has(profile, 'lat-pulldown') },
         { exerciseId: 'assisted-chin-up', isAvailable: (profile) => has(profile, 'assisted-dip-chin-up') },
@@ -152,7 +152,7 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
       ],
     },
     {
-      label: 'Bicep Curl',
+      label: 'Bicep curl',
       candidates: [
         { exerciseId: 'machine-bicep-curl', isAvailable: (profile) => hasAny(profile, ['bicep-curl', 'front-bicep-curl']) },
         { exerciseId: 'barbell-curl', isAvailable: (profile) => has(profile, 'barbells') },
@@ -170,27 +170,27 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
   ],
   'Legs & Abs': [
     {
-      label: 'Quad Isolation',
+      label: 'Quad isolation',
       candidates: [
         { exerciseId: 'leg-extension', isAvailable: (profile) => has(profile, 'leg-extension-machine') },
       ],
     },
     {
-      label: 'Quad Compound',
+      label: 'Quad compound',
       candidates: [
         { exerciseId: 'leg-press', isAvailable: (profile) => hasAny(profile, ['linear-leg-press', 'seated-leg-press']) },
         { exerciseId: 'barbell-squat', isAvailable: (profile) => has(profile, 'squat-rack') && has(profile, 'barbells') },
       ],
     },
     {
-      label: 'Leg Curl',
+      label: 'Leg curl',
       candidates: [
         { exerciseId: 'leg-curl', isAvailable: (profile) => has(profile, 'leg-curl-machine') },
         { exerciseId: 'dumbbell-leg-curl', isAvailable: (profile) => has(profile, 'dumbbells') && hasAnyBench(profile) },
       ],
     },
     {
-      label: 'Calf Raise',
+      label: 'Calf raise',
       candidates: [
         { exerciseId: 'calf-raise', isAvailable: (profile) => has(profile, 'calf-raise-machine') },
         { exerciseId: 'standing-calf-raise', isAvailable: (profile) => has(profile, 'calf-raise-machine') },
@@ -199,7 +199,7 @@ const workoutTemplates: Record<LiftFocus, CuratedSlot[]> = {
     {
       // Second side-delt hit of the cycle. Cable first so it differs from
       // Push's machine/dumbbell raise.
-      label: 'Side Delt',
+      label: 'Side delt',
       candidates: [
         { exerciseId: 'cable-lateral-raise', isAvailable: (profile) => has(profile, 'dual-adjustable-pulley') },
         { exerciseId: 'machine-lateral-raise', isAvailable: (profile) => has(profile, 'lateral-raise') },

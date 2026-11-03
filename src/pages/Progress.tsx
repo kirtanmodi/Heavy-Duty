@@ -48,7 +48,8 @@ function formatAxisVolume(value: number): string {
 }
 
 function humanizeLabel(value: string): string {
-  return value.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  const words = value.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 const CHART_ACCENT = "#ff453a";
@@ -316,7 +317,7 @@ export function Progress() {
   const exerciseTitle = exercise?.name ?? activeTrackedExercise?.name ?? "Exercise";
   const exerciseMeta = exercise
     ? `${exercise.primaryMuscles.map(humanizeLabel).join(", ")} · ${humanizeLabel(exercise.equipment)} · ${humanizeLabel(exercise.type)}`
-    : "Saved from workout history";
+    : "No longer in your exercise list";
   const collapsedSessionCount = Math.min(2, sessions.length);
   const displayedSessions = useMemo(
     () => (showAllSessions ? sessions.slice().reverse() : sessions.slice().reverse().slice(0, collapsedSessionCount)),
@@ -349,7 +350,7 @@ export function Progress() {
       ) : tracked.length === 0 ? (
         <EmptyState
           title="No progress yet"
-          description="Log a few workouts to unlock charts and PRs."
+          description="Log a few workouts to see charts and PRs."
         />
       ) : (
         <>
@@ -506,7 +507,7 @@ export function Progress() {
                       </span>
                     </>
                   ) : (
-                    "—"
+                    "None"
                   )}
                 </p>
                 <SegmentedControl
@@ -622,7 +623,7 @@ export function Progress() {
             ) : (
               <div className="flex min-h-[8.5rem] items-center justify-center px-6 text-center">
                 <p className="text-[15px] text-text-muted">
-                  Need at least 2 sessions to show a chart.
+                  Log 2 sessions to see a chart.
                 </p>
               </div>
             )}

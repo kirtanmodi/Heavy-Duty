@@ -335,7 +335,7 @@ export function ExerciseCard({
   const completedCount = entry.sets.filter((s, i) => isSetComplete(s, i)).length;
   const totalSets = entry.sets.length;
   const equipmentLabel = formatEquipment(exercise.equipment);
-  const toolsLabel = showDetails ? "Done editing" : "Edit sets & equipment";
+  const toolsLabel = showDetails ? "Done editing" : "Edit sets and equipment";
 
   const getSetPR = (set: SetEntry, setIndex: number) => {
     if (!showOverloadBanner) return null;
@@ -396,7 +396,7 @@ export function ExerciseCard({
                 </svg>
               </button>
               <span className="ml-0.5">
-                {exercise.repRange[0]}–{exercise.repRange[1]} reps
+                {exercise.repRange[0]}-{exercise.repRange[1]} reps
               </span>
               {exercise.type === "compound" && (
                 <>
@@ -536,7 +536,7 @@ export function ExerciseCard({
                   : overloadSuggestion.type === "decrease"
                     ? "Weight down"
                     : overloadSuggestion.type === "testing"
-                      ? "Testing"
+                      ? "Baseline"
                       : "Building reps"}
               </span>
               <span aria-hidden className="mx-1.5 text-text-dim">·</span>
@@ -604,7 +604,7 @@ export function ExerciseCard({
                       onChange={(v) => onSetChange(exerciseIndex, setIndex, "weight", v)}
                       step={exercise.weightIncrement}
                       inputMode="decimal"
-                      prevHint={prevSet ? `prev: ${prevSet.weight}kg` : undefined}
+                      prevHint={prevSet ? `Last ${prevSet.weight}kg` : undefined}
                       onPrevTap={prevSet ? () => onSetChange(exerciseIndex, setIndex, "weight", prevSet.weight) : undefined}
                     />
                   )}
@@ -612,7 +612,7 @@ export function ExerciseCard({
                     value={set.reps}
                     onChange={(v) => onSetChange(exerciseIndex, setIndex, "reps", v)}
                     step={1}
-                    prevHint={prevSet ? `prev: ${prevSet.reps}` : undefined}
+                    prevHint={prevSet ? `Last ${prevSet.reps}` : undefined}
                     onPrevTap={prevSet ? () => onSetChange(exerciseIndex, setIndex, "reps", prevSet.reps) : undefined}
                   />
                   <button
@@ -625,7 +625,7 @@ export function ExerciseCard({
                     aria-pressed={set.toFailure}
                     aria-label={`Set ${setIndex + 1} to failure`}
                   >
-                    {set.toFailure ? "F" : "—"}
+                    F
                   </button>
                   {showSetRemoval && (
                     <button

@@ -38,8 +38,8 @@ export function hasPR(pr: PRCheck): boolean {
 }
 
 export function getPRLabel(pr: PRCheck): string {
-  if (pr.isWeightPR) return 'Weight PR!'
-  if (pr.isVolumePR) return 'Volume PR!'
-  if (pr.isRepsPR) return 'Reps PR!'
+  if (pr.isWeightPR) return 'Weight PR'
+  if (pr.isVolumePR) return 'Volume PR'
+  if (pr.isRepsPR) return 'Reps PR'
   return ''
 }

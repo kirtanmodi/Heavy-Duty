@@ -27,10 +27,10 @@ const equipmentLabels: Record<Equipment, string> = {
 const muscleOptions: { label: string; value: MuscleGroup }[] = [
   { label: "Chest", value: "chest" },
   { label: "Lats", value: "lats" },
-  { label: "Mid Back", value: "mid-back" },
-  { label: "Front Delts", value: "front-delts" },
-  { label: "Side Delts", value: "side-delts" },
-  { label: "Rear Delts", value: "rear-delts" },
+  { label: "Mid back", value: "mid-back" },
+  { label: "Front delts", value: "front-delts" },
+  { label: "Side delts", value: "side-delts" },
+  { label: "Rear delts", value: "rear-delts" },
   { label: "Biceps", value: "biceps" },
   { label: "Triceps", value: "triceps" },
   { label: "Traps", value: "traps" },
@@ -103,7 +103,7 @@ function ExerciseRow({ exercise, isCustom }: { exercise: Exercise; isCustom: boo
 
   const meta = [
     equipmentLabels[exercise.equipment] ?? exercise.equipment,
-    `${exercise.repRange[0]}–${exercise.repRange[1]} reps`,
+    `${exercise.repRange[0]}-${exercise.repRange[1]} reps`,
     exercise.type === "compound" ? "Compound" : null,
   ]
     .filter(Boolean)
@@ -582,7 +582,7 @@ export function Exercises() {
               <path d="M20 20l-3.5-3.5" />
             </svg>
             <p className="section-title mt-1 max-w-full break-words">
-              No exercises match &ldquo;{search}&rdquo;
+              No exercises match "{search}"
             </p>
             <div className="mt-2 grid w-full max-w-[20rem] grid-cols-2 gap-3">
               <button

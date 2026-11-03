@@ -127,7 +127,7 @@ function applyLayoffReduction(
   const weeks = Math.floor(daysSinceLast / 7)
   const [repMin] = exercise.repRange
   return {
-    message: `${weeks} weeks since you last did this, so easing back in at ${newWeight}kg (−${Math.round((1 - newWeight / weight) * 100)}%). Aim for ${repMin}+ reps with clean form; progression resumes from here.`,
+    message: `It has been ${weeks} weeks since you did this. Start lighter at ${newWeight}kg (${Math.round((1 - newWeight / weight) * 100)}% less) and aim for ${repMin}+ reps with clean form. Progress starts again from here.`,
     suggestedWeight: newWeight,
     suggestedReps: repMin,
     type: 'decrease',
@@ -161,8 +161,8 @@ function getBaseSuggestion(
   if (!lastSets || lastSets.length === 0) {
     return {
       message: isBodyweight
-        ? `First time. Aim for ${repMin}–${repMax} reps with controlled form.`
-        : `First time doing this exercise. Pick a weight you can handle for ${repMin}–${repMax} reps with good form.`,
+        ? `First time. Aim for ${repMin}-${repMax} reps with controlled form.`
+        : `First time. Pick a weight you can lift for ${repMin}-${repMax} reps with good form.`,
       suggestedWeight: null,
       suggestedReps: repMin,
       type: 'testing',
@@ -176,14 +176,14 @@ function getBaseSuggestion(
     const weight = working.plannedWeight
     if (weight <= 0 && !isBodyweight) {
       return {
-        message: `Last session's working set wasn't logged. Pick a weight you can handle for ${repMin}–${repMax} reps.`,
+        message: `Your working set was not logged last time. Pick a weight you can lift for ${repMin}-${repMax} reps.`,
         suggestedWeight: null,
         suggestedReps: repMin,
         type: 'testing',
       }
     }
     return {
-      message: `Last session's working set wasn't logged. Repeat ${weight > 0 ? `${weight}kg` : 'bodyweight'} and aim for ${repMin}–${repMax} reps.`,
+      message: `Your working set was not logged last time. Repeat ${weight > 0 ? `${weight}kg` : 'bodyweight'} and aim for ${repMin}-${repMax} reps.`,
       suggestedWeight: weight,
       suggestedReps: repMin,
       type: 'maintain',
@@ -194,11 +194,11 @@ function getBaseSuggestion(
   // expected to lose 1–3 reps to fatigue and shouldn't trigger weight drops.
   const workingSets = working.sets.slice(0, 1)
   const lastWeight = workingSets[0].weight
-  const lastRepsStr = lastSets.filter(s => s.reps > 0).map((s, i) => `Set ${i + 1}: ${s.reps}`).join(', ')
   const allHitTop = workingSets.every(s => s.reps >= repMax)
   const anyBelowBottom = workingSets.some(s => s.reps < repMin)
   const lastMaxReps = Math.max(...workingSets.map(s => s.reps))
   const lastMinReps = Math.min(...workingSets.map(s => s.reps))
+  const lastLine = `Last time your first working set was ${lastMaxReps} reps${lastWeight > 0 ? ` at ${lastWeight}kg` : ''}.`
 
   const isBodyweightOnly = isBodyweight && lastWeight === 0
 
@@ -213,7 +213,7 @@ function getBaseSuggestion(
   if (allHitTop) {
     if (isBodyweightOnly) {
       return {
-        message: `Last session — ${lastRepsStr}. First working set hit ${repMax}+ reps. Bodyweight mastered — consider adding weight, or maintain for endurance.`,
+        message: `${lastLine} That is the top of your range. Add weight today, or stay at bodyweight for endurance.`,
         suggestedWeight: 0,
         suggestedReps: repMax,
         type: 'increase',
@@ -225,8 +225,8 @@ function getBaseSuggestion(
     const added = roundWeight(newWeight - lastWeight)
     return {
       message: clearlyOver
-        ? `Last session @ ${lastWeight}kg — ${lastRepsStr}. That's ${lastMinReps - repMax} reps past the top of ${repMin}–${repMax}, so the weight was too light. Adding ${added}kg — aim for ${targetReps} reps.`
-        : `Last session @ ${lastWeight}kg — ${lastRepsStr}. First working set hit ${repMax}+ reps (top of ${repMin}–${repMax} range), so adding ${added}kg. Start at ${repMin} reps and build back up.`,
+        ? `${lastLine} That is ${lastMinReps - repMax} past the top of ${repMin}-${repMax}, so the weight was too light. Add ${added}kg and aim for ${targetReps} reps.`
+        : `${lastLine} That reaches the top of ${repMin}-${repMax}, so add ${added}kg and start at ${repMin} reps.`,
       suggestedWeight: newWeight,
       suggestedReps: targetReps,
       type: 'increase',
@@ -236,7 +236,7 @@ function getBaseSuggestion(
   if (anyBelowBottom) {
     if (isBodyweightOnly) {
       return {
-        message: `Last session — ${lastRepsStr}. First working set fell below ${repMin} reps. Focus on form and hit ${repMin} reps consistently.`,
+        message: `${lastLine} That is below ${repMin}. Focus on form and work up to ${repMin} reps.`,
         suggestedWeight: 0,
         suggestedReps: repMin,
         type: 'decrease',
@@ -248,7 +248,7 @@ function getBaseSuggestion(
     const missedBefore = sameWeightHistory.length > 0 && sameWeightHistory[0].some(s => s.reps < repMin)
     if (shortBy < 2 && !missedBefore) {
       return {
-        message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. ${shortBy} rep short of ${repMin} — could be an off day. Repeat ${lastWeight}kg and aim for ${repMin}. Miss again and the weight drops.`,
+        message: `${lastLine} That is ${shortBy} short of ${repMin}, which can be an off day. Repeat ${lastWeight}kg and aim for ${repMin}. If you miss again, the weight drops.`,
         suggestedWeight: lastWeight,
         suggestedReps: repMin,
         type: 'maintain',
@@ -256,10 +256,10 @@ function getBaseSuggestion(
     }
     const dropWeight = Math.max(0, roundWeight(lastWeight - exercise.weightIncrement))
     const reason = missedBefore
-      ? `Below ${repMin} reps two sessions in a row`
-      : `First working set fell below ${repMin} reps (bottom of ${repMin}–${repMax} range)`
+      ? `That is below ${repMin} for the second session in a row`
+      : `That is well below ${repMin}-${repMax}`
     return {
-      message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. ${reason}. Dropping to ${dropWeight}kg to rebuild with proper form.`,
+      message: `${lastLine} ${reason}, so drop to ${dropWeight}kg and rebuild with good form.`,
       suggestedWeight: dropWeight,
       suggestedReps: repMin,
       type: 'decrease',
@@ -273,12 +273,12 @@ function getBaseSuggestion(
   const stalled = sameWeightHistory.length >= 2
     && sameWeightHistory.slice(0, 2).every(sets => Math.max(...sets.map(s => s.reps)) >= lastMaxReps)
   const stallNote = stalled
-    ? ' No rep gain in 3 sessions — add an extra rest day before this workout.'
+    ? ' No rep gain in 3 sessions. Add an extra rest day before this workout.'
     : ''
 
   if (isBodyweightOnly) {
     return {
-      message: `Last session — ${lastRepsStr}. Best was ${lastMaxReps} reps. Aim for ${targetReps} reps — one more than last time.${stallNote}`,
+      message: `${lastLine} Aim for ${targetReps}, one more than last time.${stallNote}`,
       suggestedWeight: 0,
       suggestedReps: targetReps,
       type: 'maintain',
@@ -286,7 +286,7 @@ function getBaseSuggestion(
   }
 
   return {
-    message: `Last session @ ${lastWeight}kg — ${lastRepsStr}. Best was ${lastMaxReps} reps (within ${repMin}–${repMax} range). Same weight, aim for ${targetReps} reps — one more than last time.${stallNote}`,
+    message: `${lastLine} Keep ${lastWeight}kg and aim for ${targetReps} reps, one more than last time.${stallNote}`,
     suggestedWeight: lastWeight,
     suggestedReps: targetReps,
     type: 'maintain',

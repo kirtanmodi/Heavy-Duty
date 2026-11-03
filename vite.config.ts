@@ -56,21 +56,21 @@ export default defineConfig({
         ],
         shortcuts: [
           {
-            name: 'Start Open Workout',
-            short_name: 'Open Workout',
+            name: 'Start open workout',
+            short_name: 'Open workout',
             description: 'Jump straight into a freeform workout.',
             url: '/workout/open',
             icons: [{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
           },
           {
-            name: 'View Progress',
+            name: 'View progress',
             short_name: 'Progress',
             description: 'Open charts, PRs, and workout trends.',
             url: '/progress',
             icons: [{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
           },
           {
-            name: 'Workout History',
+            name: 'Workout history',
             short_name: 'History',
             description: 'Review past workouts and edit sessions.',
             url: '/history',

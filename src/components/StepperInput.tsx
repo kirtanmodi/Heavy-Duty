@@ -46,8 +46,13 @@ export function StepperInput({
     valueRef.current = value;
   }, [value]);
 
+  // Stop a long-press repeat if the input unmounts mid-press (e.g. its set is removed).
+  useEffect(() => clearTimers, [clearTimers]);
+
   const startLongPressWithRef = useCallback(
     (direction: 1 | -1) => {
+      // A second press start (touch plus emulated mouse, or two fingers) must not orphan the first repeat.
+      clearTimers();
       timeoutRef.current = window.setTimeout(() => {
         intervalRef.current = window.setInterval(() => {
           const next = Math.max(min, valueRef.current + step * direction);
@@ -56,7 +61,7 @@ export function StepperInput({
         }, 100);
       }, 400);
     },
-    [onChange, step, min],
+    [onChange, step, min, clearTimers],
   );
 
   const handleStep = (direction: 1 | -1) => {

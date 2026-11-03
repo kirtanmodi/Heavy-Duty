@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../components/layout/PageLayout";
 import { useWorkoutStore } from "../store/workoutStore";
-import { programs } from "../data/programs";
+import { getSessionTitle, programs } from "../data/programs";
 import type { WorkoutEntry, ExerciseEntry, SetEntry } from "../types";
 import { formatDayDate, formatMonthYear } from "../lib/dates";
 
@@ -72,7 +72,7 @@ function getDotClass(workout: WorkoutEntry): string {
 }
 
 function getWorkoutTitle(workout: WorkoutEntry): string {
-  return workout.day.includes(" — ") ? workout.day.split(" — ")[1] : workout.day;
+  return getSessionTitle(workout.day);
 }
 
 function getWorkoutTypeLabel(workout: WorkoutEntry): string {
@@ -194,7 +194,7 @@ export function History() {
                   aria-pressed={activeFilter === "cardio-all"}
                   className={filterChipClass(activeFilter === "cardio-all")}
                 >
-                  Cardio, recovery & rest
+                  Cardio, recovery and rest
                 </button>
               )}
             </div>
